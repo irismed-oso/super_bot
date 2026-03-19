@@ -172,7 +172,7 @@ Send the same @mention twice rapidly. Each message should get exactly one "Worki
 
 ### Test 5: /status Command
 
-Run `/status` in the channel.
+Run `/sb-status` in the channel.
 
 Expected: Response showing "Idle", uptime, no current task.
 
@@ -186,7 +186,7 @@ Expected: "Nothing is running."
 
 Run `/help` in the channel.
 
-Expected: Message listing /status, /cancel, /help with descriptions.
+Expected: Message listing /sb-status, /cancel, /help with descriptions.
 
 ### Test 8: Log Check
 

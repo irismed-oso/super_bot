@@ -17,7 +17,7 @@ features:
     display_name: SuperBot
     always_online: false
   slash_commands:
-    - command: /status
+    - command: /sb-status
       description: Show current task, recent history, and uptime
       should_escape: false
     - command: /cancel
