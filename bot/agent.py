@@ -1,0 +1,158 @@
+"""
+Claude Agent SDK wrapper with timeout and session capture.
+
+Provides run_agent() for direct invocation and run_agent_with_timeout()
+for wall-clock-limited execution. Both return a result dict with
+session_id, result, subtype, num_turns, and partial_texts.
+
+Key design decisions (from CONTEXT.md / RESEARCH.md):
+- MIC_TRANSFORMER_CWD resolved via os.path.realpath() to prevent cwd drift
+- Always uses explicit resume=session_id (never continue_conversation=True)
+- permission_mode="bypassPermissions" for headless non-interactive execution
+- session_id=None is valid for new sessions
+"""
+
+import asyncio
+import os
+
+import structlog
+from claude_agent_sdk import (
+    AssistantMessage,
+    ClaudeAgentOptions,
+    ResultMessage,
+    TextBlock,
+    query,
+)
+
+log = structlog.get_logger(__name__)
+
+# Constant CWD -- must match on every call or session resume silently
+# starts fresh (Pitfall 1 in RESEARCH.md). os.path.realpath() resolves
+# symlinks so the encoded path is always identical.
+MIC_TRANSFORMER_CWD = os.path.realpath(
+    os.environ.get("MIC_TRANSFORMER_CWD", "/home/bot/mic_transformer")
+)
+
+TIMEOUT_SECONDS = 600   # 10 minutes -- locked decision (CONTEXT.md Safety Limits)
+MAX_TURNS = 25          # locked decision (CONTEXT.md Safety Limits)
+
+
+async def run_agent(
+    prompt: str,
+    session_id: str | None,
+    *,
+    on_text=None,
+    max_turns: int = MAX_TURNS,
+) -> dict:
+    """
+    Run a Claude agent task and capture the session result.
+
+    Args:
+        prompt: The user's prompt text.
+        session_id: Session ID to resume, or None for a new session.
+        on_text: Optional async callback invoked with each AssistantMessage text.
+        max_turns: Maximum conversation turns (default 25).
+
+    Returns:
+        dict with keys: session_id, result, subtype, num_turns, partial_texts
+    """
+    log.info(
+        "agent.run_start",
+        prompt_preview=prompt[:80],
+        session_id=session_id,
+        max_turns=max_turns,
+    )
+
+    options = ClaudeAgentOptions(
+        cwd=MIC_TRANSFORMER_CWD,
+        resume=session_id,          # None for new session, str for resume
+        max_turns=max_turns,
+        permission_mode="bypassPermissions",
+    )
+
+    new_session_id = session_id
+    result_text = None
+    subtype = "unknown"
+    num_turns = 0
+    partial_texts = []
+
+    async for message in query(prompt=prompt, options=options):
+        if isinstance(message, AssistantMessage):
+            text_parts = [
+                b.text for b in message.content if isinstance(b, TextBlock)
+            ]
+            if text_parts:
+                combined = "\n".join(text_parts)
+                partial_texts.append(combined)
+                if on_text:
+                    await on_text(combined)
+        elif isinstance(message, ResultMessage):
+            new_session_id = message.session_id
+            result_text = message.result
+            subtype = message.subtype
+            num_turns = message.num_turns
+
+    log.info(
+        "agent.run_end",
+        subtype=subtype,
+        num_turns=num_turns,
+        session_id=new_session_id,
+    )
+
+    return {
+        "session_id": new_session_id,
+        "result": result_text,
+        "subtype": subtype,
+        "num_turns": num_turns,
+        "partial_texts": partial_texts,
+    }
+
+
+async def run_agent_with_timeout(
+    prompt: str,
+    session_id: str | None,
+    *,
+    on_text=None,
+    timeout_seconds: int = TIMEOUT_SECONDS,
+    max_turns: int = MAX_TURNS,
+) -> dict:
+    """
+    Run a Claude agent task with a wall-clock timeout.
+
+    Wraps run_agent() in asyncio.wait_for(). On timeout, returns a result
+    dict with subtype="error_timeout" and retains the prior session_id so
+    the caller can still resume the session.
+
+    Args:
+        prompt: The user's prompt text.
+        session_id: Session ID to resume, or None for a new session.
+        on_text: Optional async callback invoked with each AssistantMessage text.
+        timeout_seconds: Wall-clock timeout in seconds (default 600).
+        max_turns: Maximum conversation turns (default 25).
+
+    Returns:
+        dict with keys: session_id, result, subtype, num_turns, partial_texts
+    """
+    try:
+        return await asyncio.wait_for(
+            run_agent(
+                prompt,
+                session_id,
+                on_text=on_text,
+                max_turns=max_turns,
+            ),
+            timeout=timeout_seconds,
+        )
+    except asyncio.TimeoutError:
+        log.warning(
+            "agent.timeout",
+            session_id=session_id,
+            timeout_seconds=timeout_seconds,
+        )
+        return {
+            "session_id": session_id,   # Retain prior session_id -- can still resume
+            "result": None,
+            "subtype": "error_timeout",
+            "num_turns": -1,
+            "partial_texts": [],
+        }
