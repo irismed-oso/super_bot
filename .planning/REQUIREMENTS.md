@@ -20,10 +20,10 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [ ] **SLCK-01**: Slack bot app created with Socket Mode (outbound WebSocket, no public URL)
 - [ ] **SLCK-02**: Bot responds to @mentions in a designated team channel
-- [ ] **SLCK-03**: Named-user allowlist restricts who can trigger the bot (Nicole, Han, named users)
-- [ ] **SLCK-04**: Bot filters its own messages to prevent infinite response loops
+- [x] **SLCK-03**: Named-user allowlist restricts who can trigger the bot (Nicole, Han, named users)
+- [x] **SLCK-04**: Bot filters its own messages to prevent infinite response loops
 - [ ] **SLCK-05**: Lazy listener pattern: ACK within 3 seconds, process asynchronously
-- [ ] **SLCK-06**: Event deduplication prevents duplicate task execution on Slack retries
+- [x] **SLCK-06**: Event deduplication prevents duplicate task execution on Slack retries
 - [ ] **SLCK-07**: /status slash command shows currently running task and recent history
 - [ ] **SLCK-08**: /cancel slash command stops an in-flight Claude Code session
 
@@ -98,10 +98,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | INFRA-06 | Phase 1 | Pending |
 | SLCK-01 | Phase 1 | Pending |
 | SLCK-02 | Phase 1 | Pending |
-| SLCK-03 | Phase 1 | Pending |
-| SLCK-04 | Phase 1 | Pending |
+| SLCK-03 | Phase 1 | Complete |
+| SLCK-04 | Phase 1 | Complete |
 | SLCK-05 | Phase 1 | Pending |
-| SLCK-06 | Phase 1 | Pending |
+| SLCK-06 | Phase 1 | Complete |
 | SLCK-07 | Phase 1 | Pending |
 | SLCK-08 | Phase 1 | Pending |
 | AGNT-01 | Phase 2 | Pending |
