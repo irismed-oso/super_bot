@@ -39,7 +39,7 @@ resource "google_compute_instance" "superbot" {
 
   boot_disk {
     initialize_params {
-      image = "ubuntu-os-cloud/ubuntu-2404-lts"
+      image = "ubuntu-os-cloud/ubuntu-2404-lts-amd64"
       size  = var.bot_disk_size_gb
       type  = "pd-balanced"
     }
