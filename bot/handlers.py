@@ -28,9 +28,13 @@ def register(app: AsyncApp) -> None:
     @app.event("app_mention")
     async def handle_mention(body, client, event):
         import asyncio
+        import structlog
+        log = structlog.get_logger()
+        log.info("app_mention_received", event=event)
 
         # Guard 1: Filter bot's own messages (SLCK-04)
         if is_bot_message(event):
+            log.info("filtered_bot_message")
             return
 
         # Guard 2: Event deduplication (SLCK-06)
@@ -41,11 +45,13 @@ def register(app: AsyncApp) -> None:
         # Guard 3: Access control (SLCK-03)
         user_id = event.get("user", "")
         if not is_allowed(user_id):
-            return  # Silent ignore -- bot appears offline to unauthorized users
+            log.info("filtered_unauthorized_user", user_id=user_id)
+            return
 
         # Guard 4: Channel filter
         channel_id = event.get("channel", "")
         if not is_allowed_channel(channel_id):
+            log.info("filtered_channel", channel_id=channel_id)
             return
 
         # All guards passed -- mark as seen
