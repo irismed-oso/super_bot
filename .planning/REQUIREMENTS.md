@@ -12,20 +12,20 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **INFRA-01**: GCP VM provisioned with dedicated low-privilege bot user (not root)
 - [x] **INFRA-02**: mic_transformer repository cloned on VM with full Python environment and dependencies
 - [x] **INFRA-03**: Claude Code CLI installed and authenticated with Anthropic API key on the VM
-- [ ] **INFRA-04**: systemd service configured for auto-restart with journald logging
+- [x] **INFRA-04**: systemd service configured for auto-restart with journald logging
 - [x] **INFRA-05**: GCP Secret Manager used for all credentials (API keys, tokens) — no credential files on disk
 - [x] **INFRA-06**: GitLab SSH key or token configured on VM for push/MR operations
 
 ### Slack Integration
 
-- [ ] **SLCK-01**: Slack bot app created with Socket Mode (outbound WebSocket, no public URL)
-- [ ] **SLCK-02**: Bot responds to @mentions in a designated team channel
+- [x] **SLCK-01**: Slack bot app created with Socket Mode (outbound WebSocket, no public URL)
+- [x] **SLCK-02**: Bot responds to @mentions in a designated team channel
 - [x] **SLCK-03**: Named-user allowlist restricts who can trigger the bot (Nicole, Han, named users)
 - [x] **SLCK-04**: Bot filters its own messages to prevent infinite response loops
-- [ ] **SLCK-05**: Lazy listener pattern: ACK within 3 seconds, process asynchronously
+- [x] **SLCK-05**: Lazy listener pattern: ACK within 3 seconds, process asynchronously
 - [x] **SLCK-06**: Event deduplication prevents duplicate task execution on Slack retries
-- [ ] **SLCK-07**: /status slash command shows currently running task and recent history
-- [ ] **SLCK-08**: /cancel slash command stops an in-flight Claude Code session
+- [x] **SLCK-07**: /status slash command shows currently running task and recent history
+- [x] **SLCK-08**: /cancel slash command stops an in-flight Claude Code session
 
 ### Agent Core
 
@@ -93,17 +93,17 @@ Which phases cover which requirements. Updated during roadmap creation.
 | INFRA-01 | Phase 1 | Complete |
 | INFRA-02 | Phase 1 | Complete |
 | INFRA-03 | Phase 1 | Complete |
-| INFRA-04 | Phase 1 | Pending |
+| INFRA-04 | Phase 1 | Complete |
 | INFRA-05 | Phase 1 | Complete |
 | INFRA-06 | Phase 1 | Complete |
-| SLCK-01 | Phase 1 | Pending |
-| SLCK-02 | Phase 1 | Pending |
+| SLCK-01 | Phase 1 | Complete |
+| SLCK-02 | Phase 1 | Complete |
 | SLCK-03 | Phase 1 | Complete |
 | SLCK-04 | Phase 1 | Complete |
-| SLCK-05 | Phase 1 | Pending |
+| SLCK-05 | Phase 1 | Complete |
 | SLCK-06 | Phase 1 | Complete |
-| SLCK-07 | Phase 1 | Pending |
-| SLCK-08 | Phase 1 | Pending |
+| SLCK-07 | Phase 1 | Complete |
+| SLCK-08 | Phase 1 | Complete |
 | AGNT-01 | Phase 2 | Pending |
 | AGNT-02 | Phase 2 | Pending |
 | AGNT-06 | Phase 2 | Pending |
