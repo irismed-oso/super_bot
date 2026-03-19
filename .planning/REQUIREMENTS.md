@@ -9,12 +9,12 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Infrastructure
 
-- [ ] **INFRA-01**: GCP VM provisioned with dedicated low-privilege bot user (not root)
-- [ ] **INFRA-02**: mic_transformer repository cloned on VM with full Python environment and dependencies
-- [ ] **INFRA-03**: Claude Code CLI installed and authenticated with Anthropic API key on the VM
+- [x] **INFRA-01**: GCP VM provisioned with dedicated low-privilege bot user (not root)
+- [x] **INFRA-02**: mic_transformer repository cloned on VM with full Python environment and dependencies
+- [x] **INFRA-03**: Claude Code CLI installed and authenticated with Anthropic API key on the VM
 - [ ] **INFRA-04**: systemd service configured for auto-restart with journald logging
-- [ ] **INFRA-05**: GCP Secret Manager used for all credentials (API keys, tokens) — no credential files on disk
-- [ ] **INFRA-06**: GitLab SSH key or token configured on VM for push/MR operations
+- [x] **INFRA-05**: GCP Secret Manager used for all credentials (API keys, tokens) — no credential files on disk
+- [x] **INFRA-06**: GitLab SSH key or token configured on VM for push/MR operations
 
 ### Slack Integration
 
@@ -90,12 +90,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| INFRA-01 | Phase 1 | Pending |
-| INFRA-02 | Phase 1 | Pending |
-| INFRA-03 | Phase 1 | Pending |
+| INFRA-01 | Phase 1 | Complete |
+| INFRA-02 | Phase 1 | Complete |
+| INFRA-03 | Phase 1 | Complete |
 | INFRA-04 | Phase 1 | Pending |
-| INFRA-05 | Phase 1 | Pending |
-| INFRA-06 | Phase 1 | Pending |
+| INFRA-05 | Phase 1 | Complete |
+| INFRA-06 | Phase 1 | Complete |
 | SLCK-01 | Phase 1 | Pending |
 | SLCK-02 | Phase 1 | Pending |
 | SLCK-03 | Phase 1 | Complete |
