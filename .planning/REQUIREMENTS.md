@@ -1,0 +1,133 @@
+# Requirements: Super Bot
+
+**Defined:** 2026-03-18
+**Core Value:** Nicole can ask the bot to do anything on mic_transformer through Slack and it just does it — writes code, runs scripts, debugs issues, deploys — with full autonomy and persistent awareness.
+
+## v1 Requirements
+
+Requirements for initial release. Each maps to roadmap phases.
+
+### Infrastructure
+
+- [ ] **INFRA-01**: GCP VM provisioned with dedicated low-privilege bot user (not root)
+- [ ] **INFRA-02**: mic_transformer repository cloned on VM with full Python environment and dependencies
+- [ ] **INFRA-03**: Claude Code CLI installed and authenticated with Anthropic API key on the VM
+- [ ] **INFRA-04**: systemd service configured for auto-restart with journald logging
+- [ ] **INFRA-05**: GCP Secret Manager used for all credentials (API keys, tokens) — no credential files on disk
+- [ ] **INFRA-06**: GitLab SSH key or token configured on VM for push/MR operations
+
+### Slack Integration
+
+- [ ] **SLCK-01**: Slack bot app created with Socket Mode (outbound WebSocket, no public URL)
+- [ ] **SLCK-02**: Bot responds to @mentions in a designated team channel
+- [ ] **SLCK-03**: Named-user allowlist restricts who can trigger the bot (Nicole, Han, named users)
+- [ ] **SLCK-04**: Bot filters its own messages to prevent infinite response loops
+- [ ] **SLCK-05**: Lazy listener pattern: ACK within 3 seconds, process asynchronously
+- [ ] **SLCK-06**: Event deduplication prevents duplicate task execution on Slack retries
+- [ ] **SLCK-07**: /status slash command shows currently running task and recent history
+- [ ] **SLCK-08**: /cancel slash command stops an in-flight Claude Code session
+
+### Agent Core
+
+- [ ] **AGNT-01**: Claude Agent SDK bridges Slack messages to Claude Code sessions running in mic_transformer directory
+- [ ] **AGNT-02**: Full Slack thread context is passed to Claude Code session (not just the @mention message)
+- [ ] **AGNT-03**: Progress updates posted to Slack thread as Claude Code works (started, key steps, done)
+- [ ] **AGNT-04**: Completion summary posted to thread with what was done, files changed, and outcomes
+- [ ] **AGNT-05**: Error reporting: failures posted to Slack thread with error details and context
+- [ ] **AGNT-06**: Process-level timeout kills hung Claude Code sessions and notifies Slack
+- [ ] **AGNT-07**: Max-turns limit prevents runaway sessions from consuming excessive tokens
+- [ ] **AGNT-08**: Persistent session continuity: thread-to-session mapping so follow-up messages in a thread continue the same Claude session
+- [ ] **AGNT-09**: CLAUDE.md project memory: bot maintains persistent awareness of mic_transformer across conversations
+
+### Git & Code Operations
+
+- [ ] **GITC-01**: Bot can create branches, commit changes, and push to GitLab
+- [ ] **GITC-02**: Bot can create merge requests on GitLab from Slack requests
+- [ ] **GITC-03**: Bot can read, search, and answer questions about the mic_transformer codebase
+- [ ] **GITC-04**: Bot automatically runs pytest after code changes and reports results in Slack thread
+- [ ] **GITC-05**: Each task runs in an isolated git worktree to prevent concurrent task conflicts
+
+### Operations
+
+- [ ] **OPER-01**: Bot can execute shell commands and Python scripts on the VM
+- [ ] **OPER-02**: Bot can trigger and monitor Prefect flow runs
+- [ ] **OPER-03**: Bot can trigger deployments to environments from Slack
+- [ ] **OPER-04**: Daily activity digest posted to channel summarizing what the bot did
+
+## v2 Requirements
+
+### Enhanced Safety
+
+- **SAFE-01**: Configurable per-command approval gates (opt-in for high-risk operations)
+- **SAFE-02**: Audit log of all bot actions searchable by date/user/type
+
+### Multi-Repo
+
+- **MULT-01**: Support for additional repos beyond mic_transformer
+- **MULT-02**: Repo selection via Slack message context
+
+### Advanced Concurrency
+
+- **CONC-01**: Full task queue with priority ordering
+- **CONC-02**: Multiple simultaneous tasks across different worktrees
+
+## Out of Scope
+
+| Feature | Reason |
+|---------|--------|
+| Web UI or dashboard | Slack is the interface — no separate UI to build or maintain |
+| DM-based interaction | Channel mentions only for team visibility and transparency |
+| Mobile app | Slack mobile already provides access |
+| Multi-repo support (v1) | mic_transformer only — pin scope for initial release |
+| Per-user sandboxed environments | Unnecessary for 2-4 person team |
+| Token-by-token streaming to Slack | Rate limits will get the bot throttled/banned |
+| General chat assistant mode | Scoped to coding and operations on mic_transformer |
+| Webhook-based auto-retry | Report failures; let humans decide to retry |
+
+## Traceability
+
+Which phases cover which requirements. Updated during roadmap creation.
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| INFRA-01 | — | Pending |
+| INFRA-02 | — | Pending |
+| INFRA-03 | — | Pending |
+| INFRA-04 | — | Pending |
+| INFRA-05 | — | Pending |
+| INFRA-06 | — | Pending |
+| SLCK-01 | — | Pending |
+| SLCK-02 | — | Pending |
+| SLCK-03 | — | Pending |
+| SLCK-04 | — | Pending |
+| SLCK-05 | — | Pending |
+| SLCK-06 | — | Pending |
+| SLCK-07 | — | Pending |
+| SLCK-08 | — | Pending |
+| AGNT-01 | — | Pending |
+| AGNT-02 | — | Pending |
+| AGNT-03 | — | Pending |
+| AGNT-04 | — | Pending |
+| AGNT-05 | — | Pending |
+| AGNT-06 | — | Pending |
+| AGNT-07 | — | Pending |
+| AGNT-08 | — | Pending |
+| AGNT-09 | — | Pending |
+| GITC-01 | — | Pending |
+| GITC-02 | — | Pending |
+| GITC-03 | — | Pending |
+| GITC-04 | — | Pending |
+| GITC-05 | — | Pending |
+| OPER-01 | — | Pending |
+| OPER-02 | — | Pending |
+| OPER-03 | — | Pending |
+| OPER-04 | — | Pending |
+
+**Coverage:**
+- v1 requirements: 32 total
+- Mapped to phases: 0
+- Unmapped: 32
+
+---
+*Requirements defined: 2026-03-18*
+*Last updated: 2026-03-18 after initial definition*
