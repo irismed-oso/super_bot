@@ -2,6 +2,8 @@ import asyncio
 import time
 from typing import Optional
 
+from bot import queue_manager
+
 _start_time = time.time()
 _lock = asyncio.Lock()
 _current_task: Optional[dict] = None   # {"text": str, "user": str, "started_at": float, "ts": str}
@@ -50,3 +52,15 @@ def get_uptime() -> str:
     elif m:
         return f"{m}m {s}s"
     return f"{s}s"
+
+
+def get_queue_snapshot() -> dict:
+    """Return combined status snapshot for /sb-status. Reads from queue_manager."""
+    state = queue_manager.get_state()
+    return {
+        "current_task": state["current"],       # QueuedTask or None
+        "queue_depth": state["queue_depth"],    # 0-3
+        "is_full": state["is_full"],            # bool
+        "recent_tasks": get_recent(5),          # from existing get_recent()
+        "uptime": get_uptime(),                 # from existing get_uptime()
+    }
