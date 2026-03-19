@@ -82,7 +82,7 @@ def register(app: AsyncApp) -> None:
         uptime = task_state.get_uptime()
         await respond(formatter.format_status(current, recent, uptime))
 
-    @app.command("/sb-cancel")
+    @app.command("/cancel")
     async def handle_cancel(ack, respond):
         await ack()
         current = task_state.get_current()
@@ -92,16 +92,16 @@ def register(app: AsyncApp) -> None:
         elapsed = int(__import__("time").time() - current["started_at"])
         await respond(
             f"Running ({elapsed}s): _{current['text'][:100]}_\n"
-            "To stop it, reply `/sb-cancel confirm` -- not yet implemented in Phase 1."
+            "To stop it, reply `/cancel confirm` -- not yet implemented in Phase 1."
         )
 
-    @app.command("/sb-help")
+    @app.command("/help")
     async def handle_help(ack, respond):
         await ack()
         await respond(
             "*SuperBot* -- autonomous coding assistant for mic_transformer\n"
             "@mention me with a task and I will run Claude Code on it.\n"
             "*/sb-status* -- current task, recent history, uptime\n"
-            "*/sb-cancel* -- stop the currently running task (confirm step in Phase 2)\n"
-            "*/sb-help* -- this message"
+            "*/cancel* -- stop the currently running task (confirm step in Phase 2)\n"
+            "*/help* -- this message"
         )
