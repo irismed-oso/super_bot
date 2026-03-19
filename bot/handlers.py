@@ -25,37 +25,34 @@ def register(app: AsyncApp) -> None:
         )
         await task_state.clear_current()
 
-    @app.event("app_mention", lazy=[_run_agent_stub])
-    async def handle_mention_ack(ack, body, client, event):
+    @app.event("app_mention")
+    async def handle_mention(body, client, event):
+        import asyncio
+
         # Guard 1: Filter bot's own messages (SLCK-04)
         if is_bot_message(event):
-            await ack()
             return
 
         # Guard 2: Event deduplication (SLCK-06)
         event_id = body.get("event_id", "")
         if event_id and is_seen(event_id):
-            await ack()
             return
 
         # Guard 3: Access control (SLCK-03)
         user_id = event.get("user", "")
         if not is_allowed(user_id):
-            await ack()
             return  # Silent ignore -- bot appears offline to unauthorized users
 
         # Guard 4: Channel filter
         channel_id = event.get("channel", "")
         if not is_allowed_channel(channel_id):
-            await ack()
             return
 
-        # All guards passed -- mark as seen and ack immediately
+        # All guards passed -- mark as seen
         if event_id:
             mark_seen(event_id)
-        await ack()
 
-        # Immediate acknowledgment to user (within 3-second window)
+        # Immediate acknowledgment to user
         await client.reactions_add(
             channel=event["channel"],
             name="hourglass_flowing_sand",
@@ -67,6 +64,9 @@ def register(app: AsyncApp) -> None:
             thread_ts=thread_ts,
             text="Working on it."
         )
+
+        # Fire agent work in background
+        asyncio.create_task(_run_agent_stub(body, client, event))
 
     @app.command("/status")
     async def handle_status(ack, respond):
