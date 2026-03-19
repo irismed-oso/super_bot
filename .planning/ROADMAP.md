@@ -29,7 +29,13 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. The bot acknowledges @mentions within 3 seconds (Slack sees no timeout) even when processing takes longer
   4. Sending the same Slack event twice (simulated retry) does not trigger duplicate bot responses
   5. The bot never responds to its own messages, and /status and /cancel slash commands return a valid response in the channel
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — Terraform GCP VM + startup.sh bootstrap script
+- [ ] 01-02-PLAN.md — Bot Python foundations (config, access control, deduplication, task state, formatter)
+- [ ] 01-03-PLAN.md — App entry point, handlers (lazy listener, slash commands), systemd service, Slack manifest
+- [ ] 01-04-PLAN.md — Deployment runbook (DEPLOY.md) + live bot verification checkpoint
 
 ### Phase 2: Agent SDK Standalone
 **Goal**: The Claude Agent SDK can be invoked from a standalone Python script on the VM, with session resumption, concurrent request serialization, and timeout handling — validated in isolation before Slack wires to it
@@ -73,7 +79,7 @@ Phases execute in order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. VM and Slack Bridge | 0/TBD | Not started | - |
+| 1. VM and Slack Bridge | 0/4 | Not started | - |
 | 2. Agent SDK Standalone | 0/TBD | Not started | - |
 | 3. End-to-End Integration | 0/TBD | Not started | - |
 | 4. Operational Hardening | 0/TBD | Not started | - |
