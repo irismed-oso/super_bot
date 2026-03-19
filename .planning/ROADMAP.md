@@ -12,7 +12,7 @@ Super Bot is built in four architecture-dictated phases. Phase 1 establishes the
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: VM and Slack Bridge** - GCP VM provisioned, systemd service running, Slack bot live with access control, event deduplication, and correct lazy listener pattern
+- [x] **Phase 1: VM and Slack Bridge** - GCP VM provisioned, systemd service running, Slack bot live with access control, event deduplication, and correct lazy listener pattern
 - [ ] **Phase 2: Agent SDK Standalone** - Claude Agent SDK invocable in isolation with session management, serialization, and timeout handling — verified before connecting to Slack
 - [ ] **Phase 3: End-to-End Integration** - @mention triggers real Claude Code session, progress posted to thread, git operations and PR creation working end-to-end
 - [ ] **Phase 4: Operational Hardening** - Persistent CLAUDE.md project memory, shell/script execution, Prefect flow triggering, deployment capability, and daily digest
@@ -32,10 +32,10 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 4 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — Terraform GCP VM + startup.sh bootstrap script
-- [ ] 01-02-PLAN.md — Bot Python foundations (config, access control, deduplication, task state, formatter)
-- [ ] 01-03-PLAN.md — App entry point, handlers (lazy listener, slash commands), systemd service, Slack manifest
-- [ ] 01-04-PLAN.md — Deployment runbook (DEPLOY.md) + live bot verification checkpoint
+- [x] 01-01-PLAN.md — Terraform GCP VM + startup.sh bootstrap script
+- [x] 01-02-PLAN.md — Bot Python foundations (config, access control, deduplication, task state, formatter)
+- [x] 01-03-PLAN.md — App entry point, handlers (lazy listener, slash commands), systemd service, Slack manifest
+- [x] 01-04-PLAN.md — Deployment runbook (DEPLOY.md) + live bot verification checkpoint
 
 ### Phase 2: Agent SDK Standalone
 **Goal**: The Claude Agent SDK can be invoked from a standalone Python script on the VM, with session resumption, concurrent request serialization, and timeout handling — validated in isolation before Slack wires to it
@@ -79,7 +79,7 @@ Phases execute in order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. VM and Slack Bridge | 0/4 | Not started | - |
+| 1. VM and Slack Bridge | 4/4 | Complete | 2026-03-19 |
 | 2. Agent SDK Standalone | 0/TBD | Not started | - |
 | 3. End-to-End Integration | 0/TBD | Not started | - |
 | 4. Operational Hardening | 0/TBD | Not started | - |

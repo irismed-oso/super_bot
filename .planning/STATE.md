@@ -5,38 +5,39 @@
 See: .planning/PROJECT.md (updated 2026-03-18)
 
 **Core value:** Nicole can ask the bot to do anything on mic_transformer through Slack and it just does it — writes code, runs scripts, debugs issues, deploys — with full autonomy and persistent awareness.
-**Current focus:** Phase 1 — VM and Slack Bridge
+**Current focus:** Phase 1 complete — ready for Phase 2: Agent SDK Standalone
 
 ## Current Position
 
-Phase: 1 of 4 (VM and Slack Bridge)
-Plan: 3 of 4 in current phase
-Status: Executing
-Last activity: 2026-03-19 — Completed 01-03-PLAN.md
+Phase: 1 of 4 (VM and Slack Bridge) -- COMPLETE
+Plan: 4 of 4 in current phase (all done)
+Status: Phase 1 Complete
+Last activity: 2026-03-19 — Completed 01-04-PLAN.md (deployment + live verification)
 
-Progress: [██░░░░░░░░] 19%
+Progress: [██████████] 25% (1 of 4 phases complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 0
-- Average duration: —
-- Total execution time: 0 hours
+- Total plans completed: 4
+- Average duration: ~3min
+- Total execution time: ~11 min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| - | - | - | - |
+| Phase 1 | 4/4 | ~11min | ~3min |
 
 **Recent Trend:**
-- Last 5 plans: —
-- Trend: —
+- Last 5 plans: P01(2m), P02(2m), P03(2m), P04(5m)
+- Trend: Stable
 
 *Updated after each plan completion*
 | Phase 01 P01 | 2min | 2 tasks | 4 files |
 | Phase 01 P02 | 2min | 2 tasks | 6 files |
 | Phase 01 P03 | 2min | 2 tasks | 5 files |
+| Phase 01 P04 | 5min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -54,6 +55,9 @@ Recent decisions affecting current work:
 - [Phase 01-01]: uv for Python package management; systemd enabled but not started until .env populated
 - [Phase 01-03]: Lazy listener pattern with guard chain ordering: bot filter -> dedup -> access control -> channel filter
 - [Phase 01-03]: register(app) pattern avoids circular imports between app.py and handlers.py
+- [Phase 01-04]: Renamed /status to /sb-status because Slack reserves /status as a built-in command
+- [Phase 01-04]: Deferred repo clone and systemd install in startup.sh until after credentials populated
+- [Phase 01-04]: uv installed system-wide (/usr/local/bin) instead of root-only cargo path
 
 ### Pending Todos
 
@@ -68,5 +72,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-19
-Stopped at: Completed 01-03-PLAN.md
+Stopped at: Completed 01-04-PLAN.md — Phase 1 fully complete
 Resume file: None
