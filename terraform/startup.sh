@@ -34,10 +34,10 @@ echo "[5/10] Setting up venv (repo clone deferred until .env is populated)..."
 sudo -u bot bash << 'BOT'
     mkdir -p /home/bot/super_bot
 BOT
-# Clone is deferred — requires GITHUB_TOKEN from .env.
+# Clone is deferred — requires GITLAB_TOKEN from .env.
 # After .env is populated, run:
 #   source /home/bot/.env
-#   sudo -u bot bash -c "git clone https://${GITHUB_TOKEN}@github.com/irismed-oso/super_bot.git /home/bot/super_bot"
+#   sudo -u bot bash -c "git clone https://${GITLAB_TOKEN}@gitlab.com/irismed/super_bot.git /home/bot/super_bot"
 #   sudo -u bot bash -c "cd /home/bot/super_bot && uv venv .venv && source .venv/bin/activate && uv pip install -r requirements.txt"
 
 # 6. Create placeholder .env file for bot
@@ -46,7 +46,7 @@ sudo -u bot bash << 'BOTENV'
     cat > /home/bot/.env << 'ENV'
 SLACK_BOT_TOKEN=REPLACE_ME
 SLACK_APP_TOKEN=REPLACE_ME
-GITHUB_TOKEN=REPLACE_ME
+GITLAB_TOKEN=REPLACE_ME
 ALLOWED_USERS=REPLACE_ME
 ALLOWED_CHANNEL=REPLACE_ME
 ENV
@@ -57,17 +57,19 @@ BOTENV
 echo "[7/10] Configuring git credentials store..."
 sudo -u bot bash << 'GITBOT'
     git config --global credential.helper store
-    # Placeholder — operator populates GITHUB_TOKEN in .env, then runs:
-    # echo "https://${GITHUB_TOKEN}@github.com" > ~/.git-credentials
+    # Placeholder — operator populates GITLAB_TOKEN in .env, then runs:
+    # echo "https://${GITLAB_TOKEN}@gitlab.com" > ~/.git-credentials
     # chmod 600 ~/.git-credentials
     touch /home/bot/.git-credentials
     chmod 600 /home/bot/.git-credentials
     chown bot:bot /home/bot/.git-credentials
 GITBOT
 
-# 8. Install Claude Code CLI (global, needs root for -g)
+# 8. Install Claude Code CLI (global, then verify bot user can access it)
 echo "[8/10] Installing Claude Code CLI..."
 npm install -g @anthropic-ai/claude-code
+# Verify bot user can access the CLI via PATH
+sudo -u bot bash -c "which claude || echo 'WARNING: claude not in bot PATH — add /usr/bin or npm global bin to bot PATH'"
 # After deploy: SSH as bot user and run 'claude login' interactively once
 
 # 9. Systemd service (deferred — install after repo is cloned)
@@ -82,8 +84,8 @@ echo "=== SuperBot VM startup finished at: $(date -u +%Y-%m-%dT%H:%M:%SZ) ==="
 echo ""
 echo "NEXT STEPS:"
 echo "  1. Populate /home/bot/.env with real values"
-echo "  2. Run: echo 'https://\${GITHUB_TOKEN}@github.com' > /home/bot/.git-credentials && chmod 600 /home/bot/.git-credentials"
-echo "  3. Clone repo: sudo -u bot git clone https://\${GITHUB_TOKEN}@github.com/irismed-oso/super_bot.git /home/bot/super_bot"
+echo "  2. Run: echo 'https://\${GITLAB_TOKEN}@gitlab.com' > /home/bot/.git-credentials && chmod 600 /home/bot/.git-credentials"
+echo "  3. Clone repo: sudo -u bot git clone https://\${GITLAB_TOKEN}@gitlab.com/irismed/super_bot.git /home/bot/super_bot"
 echo "  4. Setup venv: sudo -u bot bash -c 'cd /home/bot/super_bot && uv venv .venv && source .venv/bin/activate && uv pip install -r requirements.txt'"
 echo "  5. Install service: cp /home/bot/super_bot/systemd/superbot.service /etc/systemd/system/ && systemctl daemon-reload && systemctl enable superbot"
 echo "  6. SSH as bot user and run: claude login"

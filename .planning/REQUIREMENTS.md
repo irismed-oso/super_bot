@@ -13,7 +13,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **INFRA-02**: mic_transformer repository cloned on VM with full Python environment and dependencies
 - [x] **INFRA-03**: Claude Code CLI installed and authenticated with Anthropic API key on the VM
 - [x] **INFRA-04**: systemd service configured for auto-restart with journald logging
-- [x] **INFRA-05**: GCP Secret Manager used for all credentials (API keys, tokens) — no credential files on disk
+- [x] **INFRA-05**: Credentials stored securely in .env files with chmod 600, owned by dedicated bot user
 - [x] **INFRA-06**: GitLab SSH key or token configured on VM for push/MR operations
 
 ### Slack Integration
@@ -24,7 +24,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **SLCK-04**: Bot filters its own messages to prevent infinite response loops
 - [x] **SLCK-05**: Lazy listener pattern: ACK within 3 seconds, process asynchronously
 - [x] **SLCK-06**: Event deduplication prevents duplicate task execution on Slack retries
-- [x] **SLCK-07**: /status slash command shows currently running task and recent history
+- [x] **SLCK-07**: /sb-status slash command shows currently running task and recent history (/status is Slack reserved)
 - [x] **SLCK-08**: /cancel slash command stops an in-flight Claude Code session
 
 ### Agent Core
