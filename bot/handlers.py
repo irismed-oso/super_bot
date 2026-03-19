@@ -30,7 +30,7 @@ def register(app: AsyncApp) -> None:
         import asyncio
         import structlog
         log = structlog.get_logger()
-        log.info("app_mention_received", event=event)
+        log.info("app_mention_received", slack_event=event)
 
         # Guard 1: Filter bot's own messages (SLCK-04)
         if is_bot_message(event):
