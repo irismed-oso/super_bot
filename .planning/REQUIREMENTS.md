@@ -90,44 +90,44 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| INFRA-01 | — | Pending |
-| INFRA-02 | — | Pending |
-| INFRA-03 | — | Pending |
-| INFRA-04 | — | Pending |
-| INFRA-05 | — | Pending |
-| INFRA-06 | — | Pending |
-| SLCK-01 | — | Pending |
-| SLCK-02 | — | Pending |
-| SLCK-03 | — | Pending |
-| SLCK-04 | — | Pending |
-| SLCK-05 | — | Pending |
-| SLCK-06 | — | Pending |
-| SLCK-07 | — | Pending |
-| SLCK-08 | — | Pending |
-| AGNT-01 | — | Pending |
-| AGNT-02 | — | Pending |
-| AGNT-03 | — | Pending |
-| AGNT-04 | — | Pending |
-| AGNT-05 | — | Pending |
-| AGNT-06 | — | Pending |
-| AGNT-07 | — | Pending |
-| AGNT-08 | — | Pending |
-| AGNT-09 | — | Pending |
-| GITC-01 | — | Pending |
-| GITC-02 | — | Pending |
-| GITC-03 | — | Pending |
-| GITC-04 | — | Pending |
-| GITC-05 | — | Pending |
-| OPER-01 | — | Pending |
-| OPER-02 | — | Pending |
-| OPER-03 | — | Pending |
-| OPER-04 | — | Pending |
+| INFRA-01 | Phase 1 | Pending |
+| INFRA-02 | Phase 1 | Pending |
+| INFRA-03 | Phase 1 | Pending |
+| INFRA-04 | Phase 1 | Pending |
+| INFRA-05 | Phase 1 | Pending |
+| INFRA-06 | Phase 1 | Pending |
+| SLCK-01 | Phase 1 | Pending |
+| SLCK-02 | Phase 1 | Pending |
+| SLCK-03 | Phase 1 | Pending |
+| SLCK-04 | Phase 1 | Pending |
+| SLCK-05 | Phase 1 | Pending |
+| SLCK-06 | Phase 1 | Pending |
+| SLCK-07 | Phase 1 | Pending |
+| SLCK-08 | Phase 1 | Pending |
+| AGNT-01 | Phase 2 | Pending |
+| AGNT-02 | Phase 2 | Pending |
+| AGNT-06 | Phase 2 | Pending |
+| AGNT-07 | Phase 2 | Pending |
+| AGNT-08 | Phase 2 | Pending |
+| AGNT-03 | Phase 3 | Pending |
+| AGNT-04 | Phase 3 | Pending |
+| AGNT-05 | Phase 3 | Pending |
+| GITC-01 | Phase 3 | Pending |
+| GITC-02 | Phase 3 | Pending |
+| GITC-03 | Phase 3 | Pending |
+| GITC-04 | Phase 3 | Pending |
+| GITC-05 | Phase 3 | Pending |
+| AGNT-09 | Phase 4 | Pending |
+| OPER-01 | Phase 4 | Pending |
+| OPER-02 | Phase 4 | Pending |
+| OPER-03 | Phase 4 | Pending |
+| OPER-04 | Phase 4 | Pending |
 
 **Coverage:**
 - v1 requirements: 32 total
-- Mapped to phases: 0
-- Unmapped: 32
+- Mapped to phases: 32
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-18*
-*Last updated: 2026-03-18 after initial definition*
+*Last updated: 2026-03-18 after roadmap creation*
