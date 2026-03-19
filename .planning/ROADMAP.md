@@ -47,7 +47,12 @@ Plans:
   3. Two simultaneous invocations execute sequentially rather than concurrently, with the second waiting for the first to finish
   4. A deliberately hung or overlong session is killed after the configured timeout and returns a clear error rather than hanging indefinitely
   5. A session hitting the max-turns limit terminates cleanly with a report of what was completed, not a crash
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 02-01-PLAN.md — Session map persistence (session_map.py) + Agent SDK wrapper with timeout (agent.py, requirements.txt)
+- [ ] 02-02-PLAN.md — FIFO queue manager with cancel support (queue_manager.py) + task_state/formatter queue extensions
+- [ ] 02-03-PLAN.md — CLI test harness (scripts/test_agent.py) + end-to-end VM validation checkpoint
 
 ### Phase 3: End-to-End Integration
 **Goal**: @mentions in Slack trigger real Claude Code sessions that can read, modify, and commit code, create MRs, run tests, and report outcomes back to the Slack thread
@@ -80,6 +85,6 @@ Phases execute in order: 1 → 2 → 3 → 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. VM and Slack Bridge | 4/4 | Complete    | 2026-03-19 |
-| 2. Agent SDK Standalone | 0/TBD | Not started | - |
+| 2. Agent SDK Standalone | 0/3 | Not started | - |
 | 3. End-to-End Integration | 0/TBD | Not started | - |
 | 4. Operational Hardening | 0/TBD | Not started | - |
