@@ -1,0 +1,36 @@
+_metadata:
+  major_version: 2
+  minor_version: 1
+
+display_information:
+  name: SuperBot
+  description: Autonomous coding assistant for mic_transformer
+
+settings:
+  socket_mode_enabled: true
+  event_subscriptions:
+    bot_events:
+      - app_mention
+
+features:
+  bot_user:
+    display_name: SuperBot
+    always_online: false
+  slash_commands:
+    - command: /status
+      description: Show current task, recent history, and uptime
+      should_escape: false
+    - command: /cancel
+      description: Stop the currently running task
+      should_escape: false
+    - command: /help
+      description: Show what SuperBot can do and available commands
+      should_escape: false
+
+oauth_config:
+  scopes:
+    bot:
+      - app_mentions:read
+      - chat:write
+      - reactions:write
+      - commands
