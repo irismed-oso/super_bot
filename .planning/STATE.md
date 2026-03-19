@@ -5,32 +5,33 @@
 See: .planning/PROJECT.md (updated 2026-03-18)
 
 **Core value:** Nicole can ask the bot to do anything on mic_transformer through Slack and it just does it — writes code, runs scripts, debugs issues, deploys — with full autonomy and persistent awareness.
-**Current focus:** Phase 1 complete — ready for Phase 2: Agent SDK Standalone
+**Current focus:** Phase 2: Agent SDK Standalone — Plan 01 complete, Plan 02 next
 
 ## Current Position
 
-Phase: 1 of 4 (VM and Slack Bridge) -- COMPLETE
-Plan: 4 of 4 in current phase (all done)
-Status: Phase 1 Complete
-Last activity: 2026-03-19 — Completed 01-04-PLAN.md (deployment + live verification)
+Phase: 2 of 4 (Agent SDK Standalone)
+Plan: 1 of 3 in current phase (02-01 complete)
+Status: Executing Phase 2
+Last activity: 2026-03-19 — Completed 02-01-PLAN.md (agent SDK core)
 
-Progress: [██████████] 25% (1 of 4 phases complete)
+Progress: [█████████████░░░░░░░] 35% (Phase 1 complete, Phase 2: 1/3 plans done)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 4
+- Total plans completed: 5
 - Average duration: ~3min
-- Total execution time: ~11 min
+- Total execution time: ~13 min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | Phase 1 | 4/4 | ~11min | ~3min |
+| Phase 2 | 1/3 | ~2min | ~2min |
 
 **Recent Trend:**
-- Last 5 plans: P01(2m), P02(2m), P03(2m), P04(5m)
+- Last 5 plans: P01(2m), P02(2m), P03(2m), P04(5m), P2-01(2m)
 - Trend: Stable
 
 *Updated after each plan completion*
@@ -38,6 +39,7 @@ Progress: [██████████] 25% (1 of 4 phases complete)
 | Phase 01 P02 | 2min | 2 tasks | 6 files |
 | Phase 01 P03 | 2min | 2 tasks | 5 files |
 | Phase 01 P04 | 5min | 2 tasks | 3 files |
+| Phase 02 P01 | 2min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -58,6 +60,9 @@ Recent decisions affecting current work:
 - [Phase 01-04]: Renamed /status to /sb-status because Slack reserves /status as a built-in command
 - [Phase 01-04]: Deferred repo clone and systemd install in startup.sh until after credentials populated
 - [Phase 01-04]: uv installed system-wide (/usr/local/bin) instead of root-only cargo path
+- [Phase 02-01]: Atomic JSON writes via tempfile + os.replace() for session_map crash safety
+- [Phase 02-01]: max_turns parameter on run_agent_with_timeout overrides module constant for test harness flexibility
+- [Phase 02-01]: partial_texts list accumulated from AssistantMessage stream for timeout recovery
 
 ### Pending Todos
 
@@ -72,5 +77,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-19
-Stopped at: Completed 01-04-PLAN.md — Phase 1 fully complete
+Stopped at: Completed 02-01-PLAN.md — agent SDK core (session_map + agent wrapper)
 Resume file: None
