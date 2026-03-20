@@ -64,7 +64,14 @@ Plans:
   3. Nicole can ask the bot to make a code change and receive a GitLab MR link in the Slack thread pointing to a real branch with the change committed
   4. After a code change, the bot automatically runs pytest and posts the pass/fail result to the thread without being asked
   5. Each task operates in its own isolated git worktree so a second @mention while a task is running does not corrupt the first task's working state
-**Plans**: TBD
+**Plans**: 5 plans
+
+Plans:
+- [ ] 03-01-PLAN.md — glab CLI install script (scripts/setup_glab.sh) + DEPLOY.md Phase 3 section + VM verification checkpoint
+- [ ] 03-02-PLAN.md — Worktree lifecycle module (bot/worktree.py) + agent cwd param + QueuedTask cwd field
+- [ ] 03-03-PLAN.md — Progress module (bot/progress.py) + formatter extensions (format_mr_link, format_test_result)
+- [ ] 03-04-PLAN.md — Handler wiring: replace _run_agent_stub with _run_agent_real + on_message threading
+- [ ] 03-05-PLAN.md — Deploy Phase 3 to VM + end-to-end Slack verification checkpoint
 
 ### Phase 4: Operational Hardening
 **Goal**: The bot has persistent project awareness, can execute operational tasks (scripts, Prefect flows, deployments), and posts a daily activity summary — the full intended operational capability
@@ -86,5 +93,5 @@ Phases execute in order: 1 → 2 → 3 → 4
 |-------|----------------|--------|-----------|
 | 1. VM and Slack Bridge | 4/4 | Complete    | 2026-03-19 |
 | 2. Agent SDK Standalone | 3/3 | Complete    | 2026-03-20 |
-| 3. End-to-End Integration | 0/TBD | Not started | - |
+| 3. End-to-End Integration | 0/5 | Not started | - |
 | 4. Operational Hardening | 0/TBD | Not started | - |
