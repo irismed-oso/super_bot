@@ -74,6 +74,7 @@ Recent decisions affecting current work:
 - [Phase 03-03]: Milestone detection uses ToolUseBlock.name matching against tool sets, not text parsing
 - [Phase 03-03]: Dedup via nonlocal closure variable avoids class state for a single-use callback
 - [Phase 03]: on_message callback added alongside on_text for backward compatibility with test harness
+- [Phase 03]: is_code_task defaults True (worktrees are cheap); QueuedTask.cwd defaults None
 
 ### Pending Todos
 
