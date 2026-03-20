@@ -265,3 +265,105 @@ The `glab` CLI enables Claude Code to create GitLab merge requests directly from
 - glab auth persists to `~/.config/glab-cli/` -- survives bot process restarts and VM reboots.
 - The setup script is idempotent; re-running it will skip the install step if glab is already present.
 - `GITLAB_REMOTE_URL` should be in `org/repo` format (e.g., `irismed/mic_transformer`).
+
+## v1.1: Capability Parity Setup
+
+**When to run:** After v1.0 is deployed and verified. These steps add Linear/Sentry MCP servers, multi-repo access, and custom skills.
+
+### Prerequisites
+
+- Linear API key (from Linear Settings > API > Personal API Keys)
+- Sentry auth token (from Sentry Settings > Auth Tokens)
+- GitLab PAT already configured (from Phase 1) with access to all 4 repos
+
+### Step 1: Add v1.1 Environment Variables
+
+Add these lines to `/home/bot/.env`:
+
+```bash
+gcloud compute ssh bot@superbot-vm --zone=us-west1-a -- "
+  sudo -u bot bash -c '
+    cat >> /home/bot/.env << \"ENV\"
+LINEAR_API_KEY=lin_api_YOUR_KEY
+SENTRY_AUTH_TOKEN=sntrys_YOUR_TOKEN
+ADDITIONAL_REPOS=/home/bot/oso-fe-gsnap,/home/bot/irismed-service,/home/bot/oso-desktop
+ENV
+  '
+"
+```
+
+### Step 2: Clone Additional Repositories
+
+```bash
+gcloud compute ssh bot@superbot-vm --zone=us-west1-a -- "
+  sudo -u bot bash -c '
+    source /home/bot/.env
+    git clone \"https://oauth2:\${GITLAB_TOKEN}@gitlab.com/irismed/oso-fe-gsnap.git\" /home/bot/oso-fe-gsnap
+    git clone \"https://oauth2:\${GITLAB_TOKEN}@gitlab.com/irismed/irismed-service.git\" /home/bot/irismed-service
+    git clone \"https://oauth2:\${GITLAB_TOKEN}@gitlab.com/irismed/oso-desktop.git\" /home/bot/oso-desktop
+  '
+"
+```
+
+### Step 3: Deploy Custom Skills
+
+Copy skill files to the bot user's Claude commands directory:
+
+```bash
+gcloud compute ssh bot@superbot-vm --zone=us-west1-a -- "
+  sudo -u bot mkdir -p /home/bot/.claude/commands
+"
+gcloud compute scp skills/*.md bot@superbot-vm:/home/bot/.claude/commands/ --zone=us-west1-a
+```
+
+### Step 4: Pull Latest Code and Restart
+
+```bash
+gcloud compute ssh bot@superbot-vm --zone=us-west1-a -- "
+  sudo -u bot bash -c 'cd /home/bot/super_bot && git pull origin main'
+  sudo -u bot bash -c 'cd /home/bot/super_bot && source .venv/bin/activate && uv pip install -r requirements.txt'
+  sudo systemctl restart superbot
+  sudo systemctl status superbot
+"
+```
+
+### Step 5: Verify MCP Servers
+
+Check journal logs for MCP server connection:
+
+```bash
+gcloud compute ssh bot@superbot-vm --zone=us-west1-a -- "
+  sudo journalctl -u superbot -n 50 --no-pager | grep -i 'mcp\|linear\|sentry\|add_dir'
+"
+```
+
+Expected: `mcp_server_count=2`, `add_dir_count=3` in agent startup logs.
+
+### Verification Tests
+
+**Test 1 -- Linear query:**
+```
+@SuperBot what's the status on eyemed all location prep today?
+```
+Expected: Bot returns real Linear issue data (not calendar/location results).
+
+**Test 2 -- Multi-repo query:**
+```
+@SuperBot what models does oso-fe-gsnap define for patient management?
+```
+Expected: Bot reads from `/home/bot/oso-fe-gsnap` and answers about the models.
+
+**Test 3 -- Custom skill (if deployed):**
+```
+@SuperBot /audit-sync
+```
+Expected: Bot executes the skill and returns results.
+
+### Troubleshooting
+
+| Symptom | Likely Cause | Fix |
+|---------|-------------|-----|
+| `mcp_server_count=0` in logs | `LINEAR_API_KEY` or `SENTRY_AUTH_TOKEN` empty in .env | Verify `/home/bot/.env` has non-empty values for both |
+| `add_dirs.skip_missing` warnings | Repo not cloned yet | Run Step 2 to clone the repos |
+| Linear MCP timeout on first use | npx downloading package | First query may be slow; subsequent queries use cached package |
+| Sentry MCP auth error | Token expired or wrong org | Regenerate token in Sentry settings |
