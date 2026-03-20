@@ -85,3 +85,13 @@ def split_long_message(text: str, max_chars: int = 3800) -> list[str]:
     if current:
         chunks.append("".join(current))
     return chunks
+
+
+def format_mr_link(mr_url: str) -> str:
+    """Return a formatted string for surfacing an MR URL in Slack."""
+    return f"MR ready for review: {mr_url}"
+
+
+def format_test_result(summary_line: str) -> str:
+    """Return a formatted one-liner for test results."""
+    return f"Tests: {summary_line}"
