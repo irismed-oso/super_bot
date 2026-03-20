@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Setup script for glab CLI on the GCP VM.
+# Setup script for gh (GitHub CLI) on the GCP VM.
 # Usage: chmod +x scripts/setup_glab.sh && bash scripts/setup_glab.sh
 # Idempotent — safe to re-run.
 set -euo pipefail
@@ -18,41 +18,44 @@ source "$BOT_ROOT/.env"
 set +a
 
 # ---------- Validate required vars ----------
-if [[ -z "${GITLAB_TOKEN:-}" ]]; then
-  echo "ERROR: GITLAB_TOKEN is not set in .env"
+if [[ -z "${GITHUB_TOKEN:-}" ]]; then
+  echo "ERROR: GITHUB_TOKEN is not set in .env"
   exit 1
 fi
 
-# ---------- Install glab (idempotent) ----------
-if command -v glab &>/dev/null; then
-  echo "glab already installed: $(glab --version)"
+# ---------- Install gh (idempotent) ----------
+if command -v gh &>/dev/null; then
+  echo "gh already installed: $(gh --version | head -1)"
 else
-  echo "Installing glab CLI..."
-  curl -s https://packagecloud.io/install/repositories/gitlab/cli/script.deb.sh | sudo bash
-  sudo apt install glab -y
-  echo "Installed: $(glab --version)"
+  echo "Installing GitHub CLI..."
+  curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+  sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
+  echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+  sudo apt update -qq
+  sudo apt install gh -y
+  echo "Installed: $(gh --version | head -1)"
 fi
 
 # ---------- Authenticate ----------
-echo "Authenticating glab against gitlab.com..."
-glab auth login --token "$GITLAB_TOKEN" --hostname gitlab.com
+echo "Authenticating gh with GITHUB_TOKEN..."
+echo "$GITHUB_TOKEN" | gh auth login --with-token
 echo "Auth complete."
 
 # ---------- Verify ----------
 echo ""
 echo "=== Verification ==="
-glab auth status
+gh auth status
 
-if [[ -n "${GITLAB_REMOTE_URL:-}" ]]; then
+if [[ -n "${GITHUB_REMOTE_URL:-}" ]]; then
   echo ""
-  echo "Testing MR list for $GITLAB_REMOTE_URL ..."
-  glab mr list --repo "$GITLAB_REMOTE_URL"
-  echo "MR list succeeded."
+  echo "Testing PR list for $GITHUB_REMOTE_URL ..."
+  gh pr list --repo "$GITHUB_REMOTE_URL"
+  echo "PR list succeeded."
 else
   echo ""
-  echo "WARN: GITLAB_REMOTE_URL not set in .env — skipping MR list test."
-  echo "Add GITLAB_REMOTE_URL=org/repo to .env for full verification."
+  echo "WARN: GITHUB_REMOTE_URL not set in .env — skipping PR list test."
+  echo "Add GITHUB_REMOTE_URL=org/repo to .env for full verification."
 fi
 
 echo ""
-echo "glab setup complete."
+echo "gh setup complete."
