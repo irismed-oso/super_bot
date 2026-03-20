@@ -41,7 +41,9 @@ async def run_agent(
     prompt: str,
     session_id: str | None,
     *,
+    cwd: str | None = None,
     on_text=None,
+    on_message=None,
     max_turns: int = MAX_TURNS,
 ) -> dict:
     """
@@ -50,21 +52,28 @@ async def run_agent(
     Args:
         prompt: The user's prompt text.
         session_id: Session ID to resume, or None for a new session.
+        cwd: Optional working directory override (e.g. worktree path).
+             Defaults to MIC_TRANSFORMER_CWD when None.
         on_text: Optional async callback invoked with each AssistantMessage text.
+        on_message: Optional async callback invoked with the full AssistantMessage
+                    object (enables ToolUseBlock inspection for milestone detection).
         max_turns: Maximum conversation turns (default 25).
 
     Returns:
         dict with keys: session_id, result, subtype, num_turns, partial_texts
     """
+    effective_cwd = os.path.realpath(cwd) if cwd else MIC_TRANSFORMER_CWD
+
     log.info(
         "agent.run_start",
         prompt_preview=prompt[:80],
         session_id=session_id,
+        cwd=effective_cwd,
         max_turns=max_turns,
     )
 
     options = ClaudeAgentOptions(
-        cwd=MIC_TRANSFORMER_CWD,
+        cwd=effective_cwd,
         resume=session_id,          # None for new session, str for resume
         max_turns=max_turns,
         permission_mode="bypassPermissions",
@@ -86,6 +95,8 @@ async def run_agent(
                 partial_texts.append(combined)
                 if on_text:
                     await on_text(combined)
+            if on_message:
+                await on_message(message)
         elif isinstance(message, ResultMessage):
             new_session_id = message.session_id
             result_text = message.result
@@ -112,7 +123,9 @@ async def run_agent_with_timeout(
     prompt: str,
     session_id: str | None,
     *,
+    cwd: str | None = None,
     on_text=None,
+    on_message=None,
     timeout_seconds: int = TIMEOUT_SECONDS,
     max_turns: int = MAX_TURNS,
 ) -> dict:
@@ -126,7 +139,9 @@ async def run_agent_with_timeout(
     Args:
         prompt: The user's prompt text.
         session_id: Session ID to resume, or None for a new session.
+        cwd: Optional working directory override (e.g. worktree path).
         on_text: Optional async callback invoked with each AssistantMessage text.
+        on_message: Optional async callback invoked with the full AssistantMessage.
         timeout_seconds: Wall-clock timeout in seconds (default 600).
         max_turns: Maximum conversation turns (default 25).
 
@@ -138,7 +153,9 @@ async def run_agent_with_timeout(
             run_agent(
                 prompt,
                 session_id,
+                cwd=cwd,
                 on_text=on_text,
+                on_message=on_message,
                 max_turns=max_turns,
             ),
             timeout=timeout_seconds,

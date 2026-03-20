@@ -37,8 +37,9 @@ class QueuedTask:
     channel: str
     thread_ts: str
     user_id: str
-    notify_callback: Callable   # async -- called when task starts
-    result_callback: Callable   # async -- called with result dict when done
+    cwd: str | None = None      # worktree path for code-change tasks
+    notify_callback: Callable = None   # async -- called when task starts
+    result_callback: Callable = None   # async -- called with result dict when done
 
 
 def enqueue(task: QueuedTask) -> bool:
@@ -110,7 +111,7 @@ async def run_queue_loop() -> None:
         )
         try:
             await task.notify_callback()
-            coro = run_agent_with_timeout(task.prompt, task.session_id)
+            coro = run_agent_with_timeout(task.prompt, task.session_id, cwd=task.cwd)
             _running_asyncio_task = asyncio.ensure_future(coro)
             result = await _running_asyncio_task
             await task.result_callback(result)
