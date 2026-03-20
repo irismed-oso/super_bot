@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-03-18)
 
 **Core value:** Nicole can ask the bot to do anything on mic_transformer through Slack and it just does it — writes code, runs scripts, debugs issues, deploys — with full autonomy and persistent awareness.
-**Current focus:** Phase 2: Agent SDK Standalone — Complete. Ready for Phase 3.
+**Current focus:** Phase 3: End-to-End Integration — In Progress.
 
 ## Current Position
 
-Phase: 2 of 4 (Agent SDK Standalone) -- COMPLETE
-Plan: 3 of 3 in current phase (02-03 complete)
-Status: Phase 2 Complete
-Last activity: 2026-03-19 — Completed 02-03-PLAN.md (E2E validation)
+Phase: 3 of 4 (End-to-End Integration)
+Plan: 4 of 5 in current phase (03-03 complete)
+Status: Executing Phase 3
+Last activity: 2026-03-20 — Completed 03-03-PLAN.md (Progress posting layer)
 
-Progress: [████████████████████░░░░░░░░░░] 50% (Phase 1 complete, Phase 2 complete)
+Progress: [██████████████████████░░░░░░░░] 60% (Phase 1-2 complete, Phase 3 plan 3/5)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 7
+- Total plans completed: 8
 - Average duration: ~3min
-- Total execution time: ~20 min
+- Total execution time: ~22 min
 
 **By Phase:**
 
@@ -29,9 +29,10 @@ Progress: [████████████████████░░░
 |-------|-------|-------|----------|
 | Phase 1 | 4/4 | ~11min | ~3min |
 | Phase 2 | 3/3 | ~9min | ~3min |
+| Phase 3 | 1/5 | ~2min | ~2min |
 
 **Recent Trend:**
-- Last 5 plans: P03(2m), P04(5m), P2-01(2m), P2-02(2m), P2-03(5m)
+- Last 5 plans: P04(5m), P2-01(2m), P2-02(2m), P2-03(5m), P3-03(2m)
 - Trend: Stable
 
 *Updated after each plan completion*
@@ -42,6 +43,8 @@ Progress: [████████████████████░░░
 | Phase 02 P01 | 2min | 2 tasks | 3 files |
 | Phase 02 P02 | 2min | 2 tasks | 3 files |
 | Phase 02 P03 | 5min | 2 tasks | 1 files |
+| Phase 03 P03 | 2min | 2 tasks | 2 files |
+| Phase 03 P02 | 2min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -68,6 +71,9 @@ Recent decisions affecting current work:
 - [Phase 02-02]: Lazy queue initialization inside run_queue_loop() to avoid asyncio event loop issues at import time
 - [Phase 02-02]: Hard-split fallback in split_long_message() for lines exceeding max_chars
 - [Phase 02-03]: Test 3 max-turns partial pass accepted -- mechanism works but single-turn text prompts don't trigger multi-turn. Full validation deferred to Phase 3.
+- [Phase 03-03]: Milestone detection uses ToolUseBlock.name matching against tool sets, not text parsing
+- [Phase 03-03]: Dedup via nonlocal closure variable avoids class state for a single-use callback
+- [Phase 03]: on_message callback added alongside on_text for backward compatibility with test harness
 
 ### Pending Todos
 
@@ -81,6 +87,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-19
-Stopped at: Completed 02-03-PLAN.md — E2E validation (Phase 2 complete)
+Last session: 2026-03-20
+Stopped at: Completed 03-03-PLAN.md — Progress posting layer
 Resume file: None

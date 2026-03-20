@@ -31,9 +31,9 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [x] **AGNT-01**: Claude Agent SDK bridges Slack messages to Claude Code sessions running in mic_transformer directory
 - [ ] **AGNT-02**: Full Slack thread context is passed to Claude Code session (not just the @mention message)
-- [ ] **AGNT-03**: Progress updates posted to Slack thread as Claude Code works (started, key steps, done)
-- [ ] **AGNT-04**: Completion summary posted to thread with what was done, files changed, and outcomes
-- [ ] **AGNT-05**: Error reporting: failures posted to Slack thread with error details and context
+- [x] **AGNT-03**: Progress updates posted to Slack thread as Claude Code works (started, key steps, done)
+- [x] **AGNT-04**: Completion summary posted to thread with what was done, files changed, and outcomes
+- [x] **AGNT-05**: Error reporting: failures posted to Slack thread with error details and context
 - [x] **AGNT-06**: Process-level timeout kills hung Claude Code sessions and notifies Slack
 - [x] **AGNT-07**: Max-turns limit prevents runaway sessions from consuming excessive tokens
 - [x] **AGNT-08**: Persistent session continuity: thread-to-session mapping so follow-up messages in a thread continue the same Claude session
@@ -109,9 +109,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | AGNT-06 | Phase 2 | Complete |
 | AGNT-07 | Phase 2 | Complete |
 | AGNT-08 | Phase 2 | Complete |
-| AGNT-03 | Phase 3 | Pending |
-| AGNT-04 | Phase 3 | Pending |
-| AGNT-05 | Phase 3 | Pending |
+| AGNT-03 | Phase 3 | Complete |
+| AGNT-04 | Phase 3 | Complete |
+| AGNT-05 | Phase 3 | Complete |
 | GITC-01 | Phase 3 | Pending |
 | GITC-02 | Phase 3 | Pending |
 | GITC-03 | Phase 3 | Pending |
