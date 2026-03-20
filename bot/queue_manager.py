@@ -38,6 +38,7 @@ class QueuedTask:
     thread_ts: str
     user_id: str
     cwd: str | None = None      # worktree path for code-change tasks
+    on_message: object = None    # async callable(AssistantMessage) for milestone detection
     notify_callback: Callable = None   # async -- called when task starts
     result_callback: Callable = None   # async -- called with result dict when done
 
@@ -111,7 +112,7 @@ async def run_queue_loop() -> None:
         )
         try:
             await task.notify_callback()
-            coro = run_agent_with_timeout(task.prompt, task.session_id, cwd=task.cwd)
+            coro = run_agent_with_timeout(task.prompt, task.session_id, cwd=task.cwd, on_message=task.on_message)
             _running_asyncio_task = asyncio.ensure_future(coro)
             result = await _running_asyncio_task
             await task.result_callback(result)
