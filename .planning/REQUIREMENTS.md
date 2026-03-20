@@ -41,10 +41,10 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Git & Code Operations
 
-- [ ] **GITC-01**: Bot can create branches, commit changes, and push to GitLab
+- [x] **GITC-01**: Bot can create branches, commit changes, and push to GitLab
 - [x] **GITC-02**: Bot can create merge requests on GitHub from Slack requests
-- [ ] **GITC-03**: Bot can read, search, and answer questions about the mic_transformer codebase
-- [ ] **GITC-04**: Bot automatically runs pytest after code changes and reports results in Slack thread
+- [x] **GITC-03**: Bot can read, search, and answer questions about the mic_transformer codebase
+- [x] **GITC-04**: Bot automatically runs pytest after code changes and reports results in Slack thread
 - [x] **GITC-05**: Each task runs in an isolated git worktree to prevent concurrent task conflicts
 
 ### Operations
@@ -112,10 +112,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | AGNT-03 | Phase 3 | Complete |
 | AGNT-04 | Phase 3 | Complete |
 | AGNT-05 | Phase 3 | Complete |
-| GITC-01 | Phase 3 | Pending |
+| GITC-01 | Phase 3 | Complete |
 | GITC-02 | Phase 3 | Complete |
-| GITC-03 | Phase 3 | Pending |
-| GITC-04 | Phase 3 | Pending |
+| GITC-03 | Phase 3 | Complete |
+| GITC-04 | Phase 3 | Complete |
 | GITC-05 | Phase 3 | Complete |
 | AGNT-09 | Phase 4 | Pending |
 | OPER-01 | Phase 4 | Pending |

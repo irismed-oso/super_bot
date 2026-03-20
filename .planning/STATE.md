@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-03-18)
 ## Current Position
 
 Phase: 3 of 4 (End-to-End Integration)
-Plan: 4 of 5 in current phase (03-01, 03-02, 03-03 complete)
+Plan: 5 of 5 in current phase (03-01, 03-02, 03-03, 03-04 complete)
 Status: Executing Phase 3
-Last activity: 2026-03-20 — Completed 03-01-PLAN.md (gh CLI setup on VM)
+Last activity: 2026-03-20 — Completed 03-04-PLAN.md (Handler integration)
 
-Progress: [██████████████████████░░░░░░░░] 63% (Phase 1-2 complete, Phase 3 plan 3/5)
+Progress: [████████████████████████░░░░░░] 70% (Phase 1-2 complete, Phase 3 plan 4/5)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 10
+- Total plans completed: 11
 - Average duration: ~3min
-- Total execution time: ~26 min
+- Total execution time: ~28 min
 
 **By Phase:**
 
@@ -29,10 +29,10 @@ Progress: [██████████████████████░
 |-------|-------|-------|----------|
 | Phase 1 | 4/4 | ~11min | ~3min |
 | Phase 2 | 3/3 | ~9min | ~3min |
-| Phase 3 | 3/5 | ~8min | ~3min |
+| Phase 3 | 4/5 | ~10min | ~3min |
 
 **Recent Trend:**
-- Last 5 plans: P2-02(2m), P2-03(5m), P3-03(2m), P3-02(2m), P3-01(4m)
+- Last 5 plans: P2-03(5m), P3-03(2m), P3-02(2m), P3-01(4m), P3-04(2m)
 - Trend: Stable
 
 *Updated after each plan completion*
@@ -46,6 +46,7 @@ Progress: [██████████████████████░
 | Phase 03 P03 | 2min | 2 tasks | 2 files |
 | Phase 03 P02 | 2min | 2 tasks | 3 files |
 | Phase 03 P01 | 4min | 3 tasks | 2 files |
+| Phase 03 P04 | 2min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -77,6 +78,7 @@ Recent decisions affecting current work:
 - [Phase 03]: on_message callback added alongside on_text for backward compatibility with test harness
 - [Phase 03]: is_code_task defaults True (worktrees are cheap); QueuedTask.cwd defaults None
 - [Phase 03-01]: Switched from glab (GitLab) to gh (GitHub) CLI -- repo is on GitHub, not GitLab
+- [Phase 03-04]: on_message field on QueuedTask (not bundled into notify_callback) for clean separation of concerns
 
 ### Pending Todos
 
@@ -91,5 +93,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-20
-Stopped at: Completed 03-01-PLAN.md — gh CLI setup on VM (checkpoint completed)
+Stopped at: Completed 03-04-PLAN.md — Handler integration (real agent wiring)
 Resume file: None
