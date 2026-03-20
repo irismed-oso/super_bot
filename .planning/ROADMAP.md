@@ -13,7 +13,7 @@ Super Bot is built in four architecture-dictated phases. Phase 1 establishes the
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: VM and Slack Bridge** - GCP VM provisioned, systemd service running, Slack bot live with access control, event deduplication, and correct lazy listener pattern
-- [ ] **Phase 2: Agent SDK Standalone** - Claude Agent SDK invocable in isolation with session management, serialization, and timeout handling — verified before connecting to Slack
+- [x] **Phase 2: Agent SDK Standalone** - Claude Agent SDK invocable in isolation with session management, serialization, and timeout handling — verified before connecting to Slack
 - [ ] **Phase 3: End-to-End Integration** - @mention triggers real Claude Code session, progress posted to thread, git operations and PR creation working end-to-end
 - [ ] **Phase 4: Operational Hardening** - Persistent CLAUDE.md project memory, shell/script execution, Prefect flow triggering, deployment capability, and daily digest
 
@@ -50,9 +50,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 02-01-PLAN.md — Session map persistence (session_map.py) + Agent SDK wrapper with timeout (agent.py, requirements.txt)
-- [ ] 02-02-PLAN.md — FIFO queue manager with cancel support (queue_manager.py) + task_state/formatter queue extensions
-- [ ] 02-03-PLAN.md — CLI test harness (scripts/test_agent.py) + end-to-end VM validation checkpoint
+- [x] 02-01-PLAN.md — Session map persistence (session_map.py) + Agent SDK wrapper with timeout (agent.py, requirements.txt)
+- [x] 02-02-PLAN.md — FIFO queue manager with cancel support (queue_manager.py) + task_state/formatter queue extensions
+- [x] 02-03-PLAN.md — CLI test harness (scripts/test_agent.py) + end-to-end VM validation checkpoint
 
 ### Phase 3: End-to-End Integration
 **Goal**: @mentions in Slack trigger real Claude Code sessions that can read, modify, and commit code, create MRs, run tests, and report outcomes back to the Slack thread
@@ -85,6 +85,6 @@ Phases execute in order: 1 → 2 → 3 → 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. VM and Slack Bridge | 4/4 | Complete    | 2026-03-19 |
-| 2. Agent SDK Standalone | 0/3 | Not started | - |
+| 2. Agent SDK Standalone | 3/3 | Complete    | 2026-03-19 |
 | 3. End-to-End Integration | 0/TBD | Not started | - |
 | 4. Operational Hardening | 0/TBD | Not started | - |

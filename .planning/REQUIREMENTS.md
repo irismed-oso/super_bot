@@ -105,7 +105,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SLCK-07 | Phase 1 | Complete |
 | SLCK-08 | Phase 1 | Complete |
 | AGNT-01 | Phase 2 | Complete |
-| AGNT-02 | Phase 2 | Pending |
+| AGNT-02 | Phase 2 | Complete |
 | AGNT-06 | Phase 2 | Complete |
 | AGNT-07 | Phase 2 | Complete |
 | AGNT-08 | Phase 2 | Complete |
@@ -130,4 +130,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-03-18*
-*Last updated: 2026-03-18 after roadmap creation*
+*Last updated: 2026-03-19 after Phase 2 completion*
