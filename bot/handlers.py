@@ -1,29 +1,101 @@
+import re
+
 from slack_bolt.app.async_app import AsyncApp
 from bot.access_control import is_allowed, is_allowed_channel, is_bot_message
 from bot.deduplication import is_seen, mark_seen
-from bot import task_state, formatter
+from bot import task_state, formatter, worktree, progress, session_map
+from bot.queue_manager import QueuedTask, enqueue, queue_depth
+
+
+def _build_prompt(
+    user_text: str,
+    worktree_path: str | None,
+    channel: str,
+    thread_ts: str,
+) -> str:
+    """Construct the agent prompt with operational context injected."""
+    ts_nodot = thread_ts.replace(".", "")
+    slack_link = f"https://slack.com/archives/{channel}/p{ts_nodot}"
+    lines = [user_text]
+    if worktree_path:
+        lines += [
+            "",
+            f"Working directory for this task: {worktree_path}",
+            "This is an isolated git worktree. Commit your changes to this worktree's branch.",
+            "When creating an MR, target the 'develop' branch.",
+            "MR description MUST include all four of the following sections:",
+            "  1. What was changed -- a brief summary of the change and its purpose",
+            "  2. Files changed -- a list of every file you created or modified",
+            "  3. Test results -- the pytest output (or 'No tests run' if tests were not relevant)",
+            f"  4. Slack thread link: {slack_link}",
+        ]
+    return "\n".join(lines)
 
 
 def register(app: AsyncApp) -> None:
     """Register all event and command handlers on the given app."""
 
-    async def _run_agent_stub(body, client, event):
-        """Phase 1 stub -- Phase 2 replaces this with real Claude Agent SDK invocation."""
+    async def _run_agent_real(body, client, event):
+        """Wire Slack event to the real agent stack with worktree isolation and progress."""
         import structlog
         log = structlog.get_logger()
+
         thread_ts = event.get("thread_ts") or event["ts"]
         channel = event["channel"]
         text = event.get("text", "")
-        log.info("agent_stub_called", channel=channel, thread_ts=thread_ts, text_preview=text[:80])
-        # Record task in state
-        await task_state.set_current({"text": text, "user": event.get("user", ""), "ts": event["ts"]})
-        # Post stub completion -- Phase 2 replaces this
-        await client.chat_postMessage(
+        user_id = event.get("user", "")
+        clean_text = re.sub(r"<@[A-Z0-9]+>", "", text).strip()
+
+        is_code_task_flag = worktree.is_code_task(clean_text)
+        worktree_path_val = None
+
+        if is_code_task_flag:
+            try:
+                worktree_path_val = await worktree.create(thread_ts, clean_text)
+            except Exception as exc:
+                log.error("worktree_create_failed", error=str(exc))
+                await client.chat_postMessage(
+                    channel=channel,
+                    thread_ts=thread_ts,
+                    text=formatter.format_error("Failed to create worktree", str(exc)),
+                )
+                return
+
+        session_id = session_map.get(channel, thread_ts)
+        prompt = _build_prompt(clean_text, worktree_path_val, channel, thread_ts)
+        on_message_cb = progress.make_on_message(client, channel, thread_ts)
+
+        async def notify_cb():
+            await progress.post_started(client, channel, thread_ts, clean_text)
+
+        async def result_cb(result: dict):
+            # Persist session for thread continuity
+            if result.get("session_id"):
+                session_map.set(channel, thread_ts, result["session_id"])
+            # On failure, stash uncommitted worktree changes
+            error_subtypes = {"error_timeout", "error_cancelled", "error_internal"}
+            if result.get("subtype") in error_subtypes:
+                await worktree.stash(thread_ts)
+            await progress.post_result(client, channel, thread_ts, result, is_code_task_flag)
+
+        task = QueuedTask(
+            prompt=prompt,
+            session_id=session_id,
             channel=channel,
             thread_ts=thread_ts,
-            text="[Phase 1 -- agent not yet connected. Phase 2 will wire Claude Code here.]"
+            user_id=user_id,
+            cwd=worktree_path_val,
+            notify_callback=notify_cb,
+            result_callback=result_cb,
+            on_message=on_message_cb,
         )
-        await task_state.clear_current()
+
+        if not enqueue(task):
+            await client.chat_postMessage(
+                channel=channel,
+                thread_ts=thread_ts,
+                text=formatter.format_queue_full(queue_depth(), clean_text),
+            )
 
     @app.event("app_mention")
     async def handle_mention(body, client, event):
@@ -72,7 +144,7 @@ def register(app: AsyncApp) -> None:
         )
 
         # Fire agent work in background
-        asyncio.create_task(_run_agent_stub(body, client, event))
+        asyncio.create_task(_run_agent_real(body, client, event))
 
     @app.command("/sb-status")
     async def handle_status(ack, respond):
