@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-03-18)
 ## Current Position
 
 Phase: 3 of 4 (End-to-End Integration)
-Plan: 4 of 5 in current phase (03-03 complete)
+Plan: 4 of 5 in current phase (03-01, 03-02, 03-03 complete)
 Status: Executing Phase 3
-Last activity: 2026-03-20 — Completed 03-03-PLAN.md (Progress posting layer)
+Last activity: 2026-03-20 — Completed 03-01-PLAN.md (gh CLI setup on VM)
 
-Progress: [██████████████████████░░░░░░░░] 60% (Phase 1-2 complete, Phase 3 plan 3/5)
+Progress: [██████████████████████░░░░░░░░] 63% (Phase 1-2 complete, Phase 3 plan 3/5)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 8
+- Total plans completed: 10
 - Average duration: ~3min
-- Total execution time: ~22 min
+- Total execution time: ~26 min
 
 **By Phase:**
 
@@ -29,10 +29,10 @@ Progress: [██████████████████████░
 |-------|-------|-------|----------|
 | Phase 1 | 4/4 | ~11min | ~3min |
 | Phase 2 | 3/3 | ~9min | ~3min |
-| Phase 3 | 1/5 | ~2min | ~2min |
+| Phase 3 | 3/5 | ~8min | ~3min |
 
 **Recent Trend:**
-- Last 5 plans: P04(5m), P2-01(2m), P2-02(2m), P2-03(5m), P3-03(2m)
+- Last 5 plans: P2-02(2m), P2-03(5m), P3-03(2m), P3-02(2m), P3-01(4m)
 - Trend: Stable
 
 *Updated after each plan completion*
@@ -45,6 +45,7 @@ Progress: [██████████████████████░
 | Phase 02 P03 | 5min | 2 tasks | 1 files |
 | Phase 03 P03 | 2min | 2 tasks | 2 files |
 | Phase 03 P02 | 2min | 2 tasks | 3 files |
+| Phase 03 P01 | 4min | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -75,6 +76,7 @@ Recent decisions affecting current work:
 - [Phase 03-03]: Dedup via nonlocal closure variable avoids class state for a single-use callback
 - [Phase 03]: on_message callback added alongside on_text for backward compatibility with test harness
 - [Phase 03]: is_code_task defaults True (worktrees are cheap); QueuedTask.cwd defaults None
+- [Phase 03-01]: Switched from glab (GitLab) to gh (GitHub) CLI -- repo is on GitHub, not GitLab
 
 ### Pending Todos
 
@@ -84,10 +86,10 @@ None yet.
 
 - Phase 1: GCP-specific IAM bindings for Secret Manager access need to be validated against actual GCP project during planning — exact `roles/secretmanager.secretAccessor` assignment and `ExecStartPre` secret injection syntax unknown
 - Phase 2: `claude-agent-sdk==0.1.49` streaming API `ResultMessage` field structure needs verification against live package before `bot/agent.py` is written
-- Phase 3: GitLab-specific `glab` CLI command syntax for MR creation on the VM's bot user needs verification during planning
+- Phase 3: RESOLVED -- switched to gh (GitHub CLI); repo is on GitHub not GitLab
 
 ## Session Continuity
 
 Last session: 2026-03-20
-Stopped at: Completed 03-03-PLAN.md — Progress posting layer
+Stopped at: Completed 03-01-PLAN.md — gh CLI setup on VM (checkpoint completed)
 Resume file: None

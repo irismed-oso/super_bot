@@ -67,7 +67,7 @@ Plans:
 **Plans**: 5 plans
 
 Plans:
-- [ ] 03-01-PLAN.md — glab CLI install script (scripts/setup_glab.sh) + DEPLOY.md Phase 3 section + VM verification checkpoint
+- [x] 03-01-PLAN.md — gh CLI install script (scripts/setup_glab.sh) + DEPLOY.md Phase 3 section + VM verification checkpoint
 - [ ] 03-02-PLAN.md — Worktree lifecycle module (bot/worktree.py) + agent cwd param + QueuedTask cwd field
 - [ ] 03-03-PLAN.md — Progress module (bot/progress.py) + formatter extensions (format_mr_link, format_test_result)
 - [ ] 03-04-PLAN.md — Handler wiring: replace _run_agent_stub with _run_agent_real + on_message threading
@@ -93,5 +93,5 @@ Phases execute in order: 1 → 2 → 3 → 4
 |-------|----------------|--------|-----------|
 | 1. VM and Slack Bridge | 4/4 | Complete    | 2026-03-19 |
 | 2. Agent SDK Standalone | 3/3 | Complete    | 2026-03-20 |
-| 3. End-to-End Integration | 0/5 | Not started | - |
+| 3. End-to-End Integration | 3/5 | In progress | - |
 | 4. Operational Hardening | 0/TBD | Not started | - |
