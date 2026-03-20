@@ -206,3 +206,62 @@ Expected: Clean log entries, no authentication errors, no import errors.
 | Startup script still running | VM just created | Check `/var/log/startup.log`; wait for "Bootstrap complete" |
 | Bot does not respond to @mention | Bot not invited to channel, or channel ID wrong | Run `/invite @SuperBot` in the channel; verify `ALLOWED_CHANNEL` value |
 | Bot responds but no emoji reaction | Missing `reactions:write` OAuth scope | Check Slack app OAuth scopes match `slack_manifest.yaml` |
+
+## Phase 3: glab Setup
+
+**When to run:** After Phase 1 deployment (bot user exists, `.env` populated with `GITLAB_TOKEN`).
+
+The `glab` CLI enables Claude Code to create GitLab merge requests directly from the VM via its Bash tool. Without it, code-change tasks cannot complete the MR creation step.
+
+### Steps
+
+1. **Ensure `.env` contains required variables:**
+
+   ```bash
+   # On the VM, verify these are set in /home/bot/.env:
+   GITLAB_TOKEN=glpat-YOUR-TOKEN
+   GITLAB_REMOTE_URL=irismed/mic_transformer
+   ```
+
+2. **Copy the setup script to the VM:**
+
+   ```bash
+   gcloud compute scp scripts/setup_glab.sh bot@superbot-vm:/home/bot/scripts/setup_glab.sh --zone=us-west1-a
+   ```
+
+3. **Run the setup script as the bot user:**
+
+   ```bash
+   gcloud compute ssh bot@superbot-vm --zone=us-west1-a -- "sudo -u bot bash /home/bot/scripts/setup_glab.sh"
+   ```
+
+4. **Verify glab is installed and authenticated:**
+
+   ```bash
+   gcloud compute ssh bot@superbot-vm --zone=us-west1-a -- "sudo -u bot glab auth status"
+   ```
+
+   Expected: `Logged in to gitlab.com as <bot-user>`
+
+5. **Verify MR access:**
+
+   ```bash
+   gcloud compute ssh bot@superbot-vm --zone=us-west1-a -- "sudo -u bot bash -c 'cd /home/bot/mic_transformer && glab mr list'"
+   ```
+
+   Expected: List of open MRs (or empty list), no authentication errors.
+
+### Troubleshooting
+
+| Symptom | Likely Cause | Fix |
+|---------|-------------|-----|
+| `GITLAB_TOKEN is not set` | `.env` missing or variable not defined | Check `/home/bot/.env` contains `GITLAB_TOKEN=glpat-...` |
+| packagecloud install fails | Network egress blocked | Verify Terraform firewall allows outbound HTTPS (port 443) |
+| `glab auth login` fails | Token expired or invalid scopes | Regenerate GitLab PAT with `api` scope |
+| `glab mr list` returns auth error | Token lacks repo access | Ensure PAT has `read_api` and `api` scopes for the target repo |
+
+### Notes
+
+- glab auth persists to `~/.config/glab-cli/` -- survives bot process restarts and VM reboots.
+- The setup script is idempotent; re-running it will skip the install step if glab is already present.
+- `GITLAB_REMOTE_URL` should be in `org/repo` format (e.g., `irismed/mic_transformer`).
