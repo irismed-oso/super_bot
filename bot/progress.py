@@ -13,7 +13,7 @@ import re
 import structlog
 from claude_agent_sdk import AssistantMessage, ToolUseBlock
 
-from bot.formatter import split_long_message
+from bot.formatter import markdown_to_mrkdwn, split_long_message
 
 log = structlog.get_logger(__name__)
 
@@ -108,6 +108,7 @@ async def post_result(
     if mr_match:
         msg += f"\n\nMR: {mr_match.group(0)}"
 
+    msg = markdown_to_mrkdwn(msg)
     chunks = split_long_message(msg)
     for chunk in chunks:
         try:

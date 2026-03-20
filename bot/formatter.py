@@ -1,5 +1,30 @@
+import re
 import time
 from typing import Optional
+
+
+def markdown_to_mrkdwn(text: str) -> str:
+    """Convert standard markdown to Slack mrkdwn format.
+
+    Preserves content inside ```code blocks``` — only converts non-code segments.
+    """
+    # Split into code blocks and non-code segments
+    parts = re.split(r"(```[\s\S]*?```)", text)
+    for i, part in enumerate(parts):
+        if part.startswith("```"):
+            continue  # skip code blocks
+        # Bold: **text** → *text*  (must come before header conversion)
+        part = re.sub(r"\*\*(.+?)\*\*", r"*\1*", part)
+        # Bold: __text__ → *text*
+        part = re.sub(r"__(.+?)__", r"*\1*", part)
+        # Headers: # Header → *Header*
+        part = re.sub(r"^#{1,6}\s+(.+)$", r"*\1*", part, flags=re.MULTILINE)
+        # Links: [text](url) → <url|text>
+        part = re.sub(r"\[(.+?)\]\((.+?)\)", r"<\2|\1>", part)
+        # Horizontal rules: ---, ***, ___
+        part = re.sub(r"^[-*_]{3,}\s*$", "", part, flags=re.MULTILINE)
+        parts[i] = part
+    return "".join(parts)
 
 
 def format_status(
