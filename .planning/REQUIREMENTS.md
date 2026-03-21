@@ -117,11 +117,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | GITC-03 | Phase 3 | Complete |
 | GITC-04 | Phase 3 | Complete |
 | GITC-05 | Phase 3 | Complete |
-| AGNT-09 | Phase 4 | Pending |
-| OPER-01 | Phase 4 | Pending |
-| OPER-02 | Phase 4 | Pending |
-| OPER-03 | Phase 4 | Pending |
-| OPER-04 | Phase 4 | Pending |
+| AGNT-09 | Phase 4 | Pending (VM deploy step) |
+| OPER-01 | Phase 4 | Complete (via Claude Bash tool) |
+| OPER-02 | Phase 4 | Complete (via Claude Bash tool) |
+| OPER-03 | Phase 4 | Complete (via Claude Bash tool) |
+| OPER-04 | Phase 4 | Complete |
 
 **Coverage:**
 - v1 requirements: 32 total
