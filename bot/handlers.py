@@ -3,7 +3,7 @@ import re
 from slack_bolt.app.async_app import AsyncApp
 from bot.access_control import is_allowed, is_allowed_channel, is_bot_message
 from bot.deduplication import is_seen, mark_seen
-from bot import task_state, formatter, worktree, progress, session_map
+from bot import task_state, formatter, worktree, progress, session_map, activity_log
 from bot.queue_manager import QueuedTask, enqueue, queue_depth
 
 
@@ -68,6 +68,8 @@ def register(app: AsyncApp) -> None:
         async def notify_cb():
             await progress.post_started(client, channel, thread_ts, clean_text)
 
+        task_started_at = __import__("time").time()
+
         async def result_cb(result: dict):
             # Persist session for thread continuity
             if result.get("session_id"):
@@ -77,6 +79,17 @@ def register(app: AsyncApp) -> None:
             if result.get("subtype") in error_subtypes:
                 await worktree.stash(thread_ts)
             await progress.post_result(client, channel, thread_ts, result, is_code_task_flag)
+            # Log activity for daily digest
+            activity_log.append({
+                "ts": thread_ts,
+                "user": user_id,
+                "text": clean_text[:200],
+                "subtype": result.get("subtype", "unknown"),
+                "num_turns": result.get("num_turns", 0),
+                "duration_s": int(__import__("time").time() - task_started_at),
+                "channel": channel,
+                "thread_ts": thread_ts,
+            })
 
         task = QueuedTask(
             prompt=prompt,
