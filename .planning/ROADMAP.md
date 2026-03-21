@@ -68,9 +68,9 @@ Plans:
 
 Plans:
 - [x] 03-01-PLAN.md — gh CLI install script (scripts/setup_glab.sh) + DEPLOY.md Phase 3 section + VM verification checkpoint
-- [ ] 03-02-PLAN.md — Worktree lifecycle module (bot/worktree.py) + agent cwd param + QueuedTask cwd field
-- [ ] 03-03-PLAN.md — Progress module (bot/progress.py) + formatter extensions (format_mr_link, format_test_result)
-- [ ] 03-04-PLAN.md — Handler wiring: replace _run_agent_stub with _run_agent_real + on_message threading
+- [x] 03-02-PLAN.md — Worktree lifecycle module (bot/worktree.py) + agent cwd param + QueuedTask cwd field
+- [x] 03-03-PLAN.md — Progress module (bot/progress.py) + formatter extensions (format_mr_link, format_test_result)
+- [x] 03-04-PLAN.md — Handler wiring: replace _run_agent_stub with _run_agent_real + on_message threading
 - [ ] 03-05-PLAN.md — Deploy Phase 3 to VM + end-to-end Slack verification checkpoint
 
 ### Phase 4: Operational Hardening
@@ -93,5 +93,23 @@ Phases execute in order: 1 → 2 → 3 → 4
 |-------|----------------|--------|-----------|
 | 1. VM and Slack Bridge | 4/4 | Complete    | 2026-03-19 |
 | 2. Agent SDK Standalone | 3/3 | Complete    | 2026-03-20 |
-| 3. End-to-End Integration | 3/5 | In progress | - |
+| 3. End-to-End Integration | 4/5 | In progress | - |
 | 4. Operational Hardening | 0/TBD | Not started | - |
+| v1.1 Capability Parity | 1/TBD | In progress | - |
+
+### v1.1: Capability Parity
+**Goal**: SuperBot reaches capability parity with local Claude Code for operational queries and workflows — Linear MCP, Sentry MCP, multi-repo access, and custom skills
+**Depends on**: Phase 3
+**Requirements**: (new) MCP-01, MCP-02, MULT-01, SKIL-01
+**Success Criteria** (what must be TRUE):
+  1. Asking "what's the status on eyemed all location prep?" returns real Linear issue data
+  2. Bot can query Sentry for error data when troubleshooting
+  3. Bot can read and answer questions about all 4 IrisMed repos (not just mic_transformer)
+  4. Custom operational skills (eyemed-crawl, audit-sync, etc.) are executable via Slack
+
+**Code changes**:
+- [x] config.py — LINEAR_API_KEY, SENTRY_AUTH_TOKEN, ADDITIONAL_REPOS env vars
+- [x] bot/agent.py — _build_mcp_servers(), _build_add_dirs(), wire into ClaudeAgentOptions
+- [x] terraform/startup.sh — Placeholder env vars for v1.1
+- [x] DEPLOY.md — v1.1 setup section with repo clone, env var, and skill deployment steps
+- [ ] VM deployment — Clone repos, populate env vars, deploy skills, restart service

@@ -24,6 +24,8 @@ from claude_agent_sdk import (
     query,
 )
 
+import config
+
 log = structlog.get_logger(__name__)
 
 # Constant CWD -- must match on every call or session resume silently
@@ -35,6 +37,39 @@ MIC_TRANSFORMER_CWD = os.path.realpath(
 
 TIMEOUT_SECONDS = 600   # 10 minutes -- locked decision (CONTEXT.md Safety Limits)
 MAX_TURNS = 25          # locked decision (CONTEXT.md Safety Limits)
+
+
+def _build_mcp_servers() -> dict:
+    """Build MCP server config dict from available credentials."""
+    servers = {}
+
+    if config.LINEAR_API_KEY:
+        servers["linear"] = {
+            "command": "npx",
+            "args": ["-y", "@anthropic/linear-mcp@latest"],
+            "env": {"LINEAR_API_KEY": config.LINEAR_API_KEY},
+        }
+
+    if config.SENTRY_AUTH_TOKEN:
+        servers["sentry"] = {
+            "command": "npx",
+            "args": ["-y", "@sentry/mcp-server@latest"],
+            "env": {"SENTRY_AUTH_TOKEN": config.SENTRY_AUTH_TOKEN},
+        }
+
+    return servers
+
+
+def _build_add_dirs() -> list[str]:
+    """Build list of additional repo directories from config."""
+    dirs = []
+    for repo_path in config.ADDITIONAL_REPOS:
+        real = os.path.realpath(repo_path)
+        if os.path.isdir(real):
+            dirs.append(real)
+        else:
+            log.warning("add_dirs.skip_missing", path=real)
+    return dirs
 
 
 async def run_agent(
@@ -63,6 +98,8 @@ async def run_agent(
         dict with keys: session_id, result, subtype, num_turns, partial_texts
     """
     effective_cwd = os.path.realpath(cwd) if cwd else MIC_TRANSFORMER_CWD
+    mcp_servers = _build_mcp_servers()
+    add_dirs = _build_add_dirs()
 
     log.info(
         "agent.run_start",
@@ -70,6 +107,8 @@ async def run_agent(
         session_id=session_id,
         cwd=effective_cwd,
         max_turns=max_turns,
+        mcp_server_count=len(mcp_servers),
+        add_dir_count=len(add_dirs),
     )
 
     options = ClaudeAgentOptions(
@@ -77,6 +116,8 @@ async def run_agent(
         resume=session_id,          # None for new session, str for resume
         max_turns=max_turns,
         permission_mode="bypassPermissions",
+        mcp_servers=mcp_servers,
+        add_dirs=add_dirs,
     )
 
     new_session_id = session_id
