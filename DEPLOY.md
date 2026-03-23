@@ -367,3 +367,88 @@ Expected: Bot executes the skill and returns results.
 | `add_dirs.skip_missing` warnings | Repo not cloned yet | Run Step 2 to clone the repos |
 | Linear MCP timeout on first use | npx downloading package | First query may be slow; subsequent queries use cached package |
 | Sentry MCP auth error | Token expired or wrong org | Regenerate token in Sentry settings |
+
+## v1.2: MCP Parity - Phase 5
+
+**When to run:** After v1.1 is deployed and verified. This phase adds the mic-transformer MCP server, giving SuperBot direct access to mic_transformer tools (pipeline status, deployment, benefits fetch, etc.) via the Claude Agent SDK's native MCP wiring.
+
+### Prerequisites
+
+Before running the deploy script, verify these prerequisites:
+
+1. **Config files copied to VM** -- The mic-transformer MCP server loads credentials from YAML config files. All 7 files must be present at `/home/bot/mic_transformer/config/`:
+
+   - `config.yml`
+   - `secrets.yml`
+   - `gcs_utils_config.yml`
+   - `db_irismedapp.yml`
+   - `db_crystalpm_mirror.yml`
+   - `clinic_gdrive_config.yml`
+   - `clinic_gdrive_eyemed_config.yml`
+
+   Copy from your local mic_transformer checkout:
+   ```bash
+   scp ~/mic_transformer/config/*.yml bot@VM_EXTERNAL_IP:/home/bot/mic_transformer/config/
+   ```
+
+   To find the VM external IP:
+   ```bash
+   gcloud compute instances describe superbot-vm --zone=us-west1-a --format='get(networkInterfaces[0].accessConfigs[0].natIP)'
+   ```
+
+2. **Network access from VM to production server** -- Several MCP tools need to reach the production API at `136.111.85.127:8080`. The deploy script tests this in Step 5.
+
+3. **mcp[cli]~=1.26.0 installed** -- The deploy script handles this in Step 1. The package provides `mcp.server.fastmcp.FastMCP` which the server imports.
+
+### Deployment Steps
+
+1. **Copy config files** (must be done before the deploy script):
+   ```bash
+   scp ~/mic_transformer/config/*.yml bot@VM_EXTERNAL_IP:/home/bot/mic_transformer/config/
+   ```
+
+2. **Run the deploy script:**
+   ```bash
+   bash scripts/deploy_v1.2_phase5.sh
+   ```
+
+   The script runs 8 steps: install MCP SDK, config file instructions, .env syntax audit, cold-start benchmark, network connectivity test, code pull + service restart, MCP registration check, and Slack verification instructions.
+
+### Troubleshooting
+
+| Symptom | Likely Cause | Fix |
+|---------|-------------|-----|
+| Cold-start exceeds 60s | First import compiles .pyc files | SSH to VM, run the import command from Step 4 manually once to pre-compile, then restart |
+| `mcp.mic_transformer_disabled_by_env` in logs | `MIC_TRANSFORMER_MCP_DISABLED=1` is set | Remove the line from `/home/bot/.env` and restart: `sudo systemctl restart superbot` |
+| Missing config files errors in stderr | config/*.yml not copied to VM | SCP the files: `scp ~/mic_transformer/config/*.yml bot@VM_IP:/home/bot/mic_transformer/config/` |
+| `mcp_server_count=0` but no disable log | mic_transformer path not found at `/home/bot/mic_transformer` | Verify the clone exists: `ls -la /home/bot/mic_transformer/.claude/mcp/mic-transformer/server.py` |
+| .env syntax audit flags lines | `export` or `$VAR` interpolation in .env | Edit `/home/bot/.env` to use bare `KEY=VALUE` syntax (no `export`, no `${VAR}` references) |
+| Network connectivity BLOCKED | VM firewall rules | Verify Terraform firewall allows outbound to `136.111.85.127:8080` |
+
+**Disabling mic-transformer MCP for troubleshooting:**
+
+Add this line to `/home/bot/.env` and restart the service:
+```
+MIC_TRANSFORMER_MCP_DISABLED=1
+```
+
+This cleanly disables the mic-transformer MCP server without affecting other MCP servers (Linear, Sentry). Check logs for confirmation:
+```bash
+sudo journalctl -u superbot -n 20 --no-pager | grep mic_transformer
+```
+Expected: `mcp.mic_transformer_disabled_by_env` log entry.
+
+To re-enable, remove the line and restart:
+```bash
+sudo systemctl restart superbot
+```
+
+### Verification
+
+Send this message in the SuperBot Slack channel:
+
+```
+@SuperBot check pipeline status for Beverly today
+```
+
+Expected: Bot responds in-thread with real pipeline status data from the mic-transformer MCP `check_pipeline_status` tool. If you see an error about missing tools or credentials, check the troubleshooting table above.
