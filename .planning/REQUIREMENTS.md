@@ -3,9 +3,7 @@
 **Defined:** 2026-03-18
 **Core Value:** Nicole can ask the bot to do anything on mic_transformer through Slack and it just does it — writes code, runs scripts, debugs issues, deploys — with full autonomy and persistent awareness.
 
-## v1 Requirements
-
-Requirements for initial release. Each maps to roadmap phases.
+## v1.0 Requirements (Complete)
 
 ### Infrastructure
 
@@ -30,14 +28,14 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Agent Core
 
 - [x] **AGNT-01**: Claude Agent SDK bridges Slack messages to Claude Code sessions running in mic_transformer directory
-- [ ] **AGNT-02**: Full Slack thread context is passed to Claude Code session (not just the @mention message)
+- [x] **AGNT-02**: Full Slack thread context is passed to Claude Code session (not just the @mention message)
 - [x] **AGNT-03**: Progress updates posted to Slack thread as Claude Code works (started, key steps, done)
 - [x] **AGNT-04**: Completion summary posted to thread with what was done, files changed, and outcomes
 - [x] **AGNT-05**: Error reporting: failures posted to Slack thread with error details and context
 - [x] **AGNT-06**: Process-level timeout kills hung Claude Code sessions and notifies Slack
 - [x] **AGNT-07**: Max-turns limit prevents runaway sessions from consuming excessive tokens
 - [x] **AGNT-08**: Persistent session continuity: thread-to-session mapping so follow-up messages in a thread continue the same Claude session
-- [ ] **AGNT-09**: CLAUDE.md project memory: bot maintains persistent awareness of mic_transformer across conversations
+- [x] **AGNT-09**: CLAUDE.md project memory: bot maintains persistent awareness of mic_transformer across conversations
 
 ### Git & Code Operations
 
@@ -49,22 +47,68 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Operations
 
-- [ ] **OPER-01**: Bot can execute shell commands and Python scripts on the VM
-- [ ] **OPER-02**: Bot can trigger and monitor Prefect flow runs
-- [ ] **OPER-03**: Bot can trigger deployments to environments from Slack
-- [ ] **OPER-04**: Daily activity digest posted to channel summarizing what the bot did
+- [x] **OPER-01**: Bot can execute shell commands and Python scripts on the VM
+- [x] **OPER-02**: Bot can trigger and monitor Prefect flow runs
+- [x] **OPER-03**: Bot can trigger deployments to environments from Slack
+- [x] **OPER-04**: Daily activity digest posted to channel summarizing what the bot did
 
-## v2 Requirements
+## v1.1 Requirements (Complete)
+
+### MCP & Multi-Repo
+
+- [x] **MCP-01**: Linear MCP server wired into Claude Agent SDK sessions
+- [x] **MCP-02**: Sentry MCP server wired into Claude Agent SDK sessions
+- [x] **MULT-01**: Bot can read and answer questions about all 4 IrisMed repos
+- [x] **SKIL-01**: Custom operational skills executable via Slack
+
+## v1.2 Requirements
+
+Requirements for MCP Parity milestone. Each maps to roadmap phases.
+
+### MCP Wiring
+
+- [ ] **MCPW-01**: mic-transformer MCP server added to _build_mcp_servers() in agent.py as stdio subprocess
+- [ ] **MCPW-02**: MIC_TRANSFORMER_MCP_ENABLED config flag controls whether mic-transformer MCP server is wired
+- [ ] **MCPW-03**: mcp[cli]~=1.26.0 installed in mic_transformer .venv on VM
+
+### VM Environment
+
+- [ ] **VMEV-01**: mic_transformer config/*.yml credential files present and valid on VM
+- [ ] **VMEV-02**: systemd EnvironmentFile syntax validated (no export, no interpolation)
+- [ ] **VMEV-03**: MCP server cold-start completes within 60-second SDK timeout on VM hardware
+
+### Read-Only Tools
+
+- [ ] **RDTL-01**: User can check VSP/EyeMed processing status via Slack
+- [ ] **RDTL-02**: User can browse S3 remits and GCS AIOUT files via Slack
+- [ ] **RDTL-03**: User can check full pipeline status and run pipeline audit via Slack
+- [ ] **RDTL-04**: User can check Azure mirror data freshness and run status via Slack
+- [ ] **RDTL-05**: User can audit IVT data ingestion health via Slack
+- [ ] **RDTL-06**: User can check Prefect flow status and get logs via Slack
+- [ ] **RDTL-07**: User can audit Google Drive folders via Slack
+- [ ] **RDTL-08**: User can list crawler locations via Slack
+
+### Mutation Tools
+
+- [ ] **MTTL-01**: User can trigger VSP/EyeMed Gemini extraction via Slack
+- [ ] **MTTL-02**: User can trigger AIOUT reduction via Slack
+- [ ] **MTTL-03**: User can trigger autopost (with dry_run default) via Slack
+- [ ] **MTTL-04**: User can trigger posting prep and GDrive upload via Slack
+- [ ] **MTTL-05**: User can ingest manual PDFs into the pipeline via Slack
+- [ ] **MTTL-06**: User can trigger Azure mirror sync via Slack
+- [ ] **MTTL-07**: User can fetch vision benefits via Slack
+- [ ] **MTTL-08**: User can requeue missing extraction pages via Slack
+
+## Future Requirements
+
+### Crawler
+
+- **CRWL-01**: User can trigger VSP/EyeMed portal crawlers via Slack (requires Chrome on VM)
 
 ### Enhanced Safety
 
 - **SAFE-01**: Configurable per-command approval gates (opt-in for high-risk operations)
 - **SAFE-02**: Audit log of all bot actions searchable by date/user/type
-
-### Multi-Repo
-
-- **MULT-01**: Support for additional repos beyond mic_transformer
-- **MULT-02**: Repo selection via Slack message context
 
 ### Advanced Concurrency
 
@@ -77,12 +121,9 @@ Requirements for initial release. Each maps to roadmap phases.
 |---------|--------|
 | Web UI or dashboard | Slack is the interface — no separate UI to build or maintain |
 | DM-based interaction | Channel mentions only for team visibility and transparency |
-| Mobile app | Slack mobile already provides access |
-| Multi-repo support (v1) | mic_transformer only — pin scope for initial release |
-| Per-user sandboxed environments | Unnecessary for 2-4 person team |
+| Crawler tools (v1.2) | Requires Chrome/Chromium on VM — deferred until confirmed available |
+| Flask API bridge | Direct stdio MCP is simpler and sufficient |
 | Token-by-token streaming to Slack | Rate limits will get the bot throttled/banned |
-| General chat assistant mode | Scoped to coding and operations on mic_transformer |
-| Webhook-based auto-retry | Report failures; let humans decide to retry |
 
 ## Traceability
 
@@ -117,17 +158,45 @@ Which phases cover which requirements. Updated during roadmap creation.
 | GITC-03 | Phase 3 | Complete |
 | GITC-04 | Phase 3 | Complete |
 | GITC-05 | Phase 3 | Complete |
-| AGNT-09 | Phase 4 | Pending (VM deploy step) |
-| OPER-01 | Phase 4 | Complete (via Claude Bash tool) |
-| OPER-02 | Phase 4 | Complete (via Claude Bash tool) |
-| OPER-03 | Phase 4 | Complete (via Claude Bash tool) |
+| AGNT-09 | Phase 4 | Complete |
+| OPER-01 | Phase 4 | Complete |
+| OPER-02 | Phase 4 | Complete |
+| OPER-03 | Phase 4 | Complete |
 | OPER-04 | Phase 4 | Complete |
+| MCP-01 | v1.1 | Complete |
+| MCP-02 | v1.1 | Complete |
+| MULT-01 | v1.1 | Complete |
+| SKIL-01 | v1.1 | Complete |
+| MCPW-01 | Phase TBD | Pending |
+| MCPW-02 | Phase TBD | Pending |
+| MCPW-03 | Phase TBD | Pending |
+| VMEV-01 | Phase TBD | Pending |
+| VMEV-02 | Phase TBD | Pending |
+| VMEV-03 | Phase TBD | Pending |
+| RDTL-01 | Phase TBD | Pending |
+| RDTL-02 | Phase TBD | Pending |
+| RDTL-03 | Phase TBD | Pending |
+| RDTL-04 | Phase TBD | Pending |
+| RDTL-05 | Phase TBD | Pending |
+| RDTL-06 | Phase TBD | Pending |
+| RDTL-07 | Phase TBD | Pending |
+| RDTL-08 | Phase TBD | Pending |
+| MTTL-01 | Phase TBD | Pending |
+| MTTL-02 | Phase TBD | Pending |
+| MTTL-03 | Phase TBD | Pending |
+| MTTL-04 | Phase TBD | Pending |
+| MTTL-05 | Phase TBD | Pending |
+| MTTL-06 | Phase TBD | Pending |
+| MTTL-07 | Phase TBD | Pending |
+| MTTL-08 | Phase TBD | Pending |
 
 **Coverage:**
-- v1 requirements: 32 total
-- Mapped to phases: 32
-- Unmapped: 0
+- v1.0 requirements: 32 total (all complete)
+- v1.1 requirements: 4 total (all complete)
+- v1.2 requirements: 19 total
+- Mapped to phases: 0 (pending roadmap)
+- Unmapped: 19
 
 ---
 *Requirements defined: 2026-03-18*
-*Last updated: 2026-03-19 after Phase 2 completion*
+*Last updated: 2026-03-23 after milestone v1.2 requirements defined*
