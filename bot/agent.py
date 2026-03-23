@@ -19,6 +19,7 @@ import structlog
 from claude_agent_sdk import (
     AssistantMessage,
     ClaudeAgentOptions,
+    ProcessError,
     ResultMessage,
     TextBlock,
     query,
@@ -111,6 +112,8 @@ async def run_agent(
         add_dir_count=len(add_dirs),
     )
 
+    stderr_lines: list[str] = []
+
     options = ClaudeAgentOptions(
         cwd=effective_cwd,
         resume=session_id,          # None for new session, str for resume
@@ -118,6 +121,7 @@ async def run_agent(
         permission_mode="bypassPermissions",
         mcp_servers=mcp_servers,
         add_dirs=add_dirs,
+        stderr=lambda line: stderr_lines.append(line),
     )
 
     new_session_id = session_id
@@ -126,23 +130,39 @@ async def run_agent(
     num_turns = 0
     partial_texts = []
 
-    async for message in query(prompt=prompt, options=options):
-        if isinstance(message, AssistantMessage):
-            text_parts = [
-                b.text for b in message.content if isinstance(b, TextBlock)
-            ]
-            if text_parts:
-                combined = "\n".join(text_parts)
-                partial_texts.append(combined)
-                if on_text:
-                    await on_text(combined)
-            if on_message:
-                await on_message(message)
-        elif isinstance(message, ResultMessage):
-            new_session_id = message.session_id
-            result_text = message.result
-            subtype = message.subtype
-            num_turns = message.num_turns
+    try:
+        async for message in query(prompt=prompt, options=options):
+            if isinstance(message, AssistantMessage):
+                text_parts = [
+                    b.text for b in message.content if isinstance(b, TextBlock)
+                ]
+                if text_parts:
+                    combined = "\n".join(text_parts)
+                    partial_texts.append(combined)
+                    if on_text:
+                        await on_text(combined)
+                if on_message:
+                    await on_message(message)
+            elif isinstance(message, ResultMessage):
+                new_session_id = message.session_id
+                result_text = message.result
+                subtype = message.subtype
+                num_turns = message.num_turns
+    except ProcessError as exc:
+        stderr_output = "\n".join(stderr_lines[-20:])
+        log.error(
+            "agent.process_error",
+            session_id=session_id,
+            exit_code=exc.exit_code,
+            stderr_preview=stderr_output[:200],
+        )
+        return {
+            "session_id": session_id,
+            "result": stderr_output or str(exc),
+            "subtype": "error_internal",
+            "num_turns": num_turns,
+            "partial_texts": partial_texts,
+        }
 
     log.info(
         "agent.run_end",
