@@ -9,6 +9,9 @@ ALLOWED_USERS: frozenset[str] = frozenset(
 )
 ALLOWED_CHANNEL: str = os.environ.get("ALLOWED_CHANNEL", "")
 
+# Bot's own Slack user ID (needed to filter self-mentions in thread replies)
+BOT_USER_ID: str = os.environ.get("BOT_USER_ID", "")
+
 # v1.1: MCP server credentials
 LINEAR_API_KEY: str = os.environ.get("LINEAR_API_KEY", "")
 SENTRY_AUTH_TOKEN: str = os.environ.get("SENTRY_AUTH_TOKEN", "")

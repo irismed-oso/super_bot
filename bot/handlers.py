@@ -5,6 +5,7 @@ from bot.access_control import is_allowed, is_allowed_channel, is_bot_message
 from bot.deduplication import is_seen, mark_seen
 from bot import task_state, formatter, worktree, progress, session_map, activity_log
 from bot.queue_manager import QueuedTask, enqueue, queue_depth
+from config import BOT_USER_ID
 
 
 def _build_prompt(
@@ -162,6 +163,59 @@ def register(app: AsyncApp) -> None:
         )
 
         # Fire agent work in background
+        asyncio.create_task(_run_agent_real(body, client, event))
+
+    @app.event("message")
+    async def handle_thread_reply(body, client, event):
+        import asyncio
+        import structlog
+        log = structlog.get_logger()
+
+        # Only process threaded replies (not top-level channel messages)
+        thread_ts = event.get("thread_ts")
+        if not thread_ts or thread_ts == event.get("ts"):
+            return
+
+        # Skip subtypes (channel_join, bot_message, message_changed, etc.)
+        if event.get("subtype"):
+            return
+
+        # Only respond in threads where bot has an active session
+        channel = event.get("channel", "")
+        if not session_map.get(channel, thread_ts):
+            return
+
+        # Skip bot's own messages
+        if is_bot_message(event):
+            return
+
+        # Skip @mentions -- already handled by handle_mention
+        text = event.get("text", "")
+        if BOT_USER_ID and f"<@{BOT_USER_ID}>" in text:
+            return
+
+        # Access control
+        user_id = event.get("user", "")
+        if not is_allowed(user_id):
+            return
+        if not is_allowed_channel(channel):
+            return
+
+        # Dedup
+        event_id = body.get("event_id", "")
+        if event_id and is_seen(event_id):
+            return
+        if event_id:
+            mark_seen(event_id)
+
+        log.info("thread_reply_received", channel=channel, thread_ts=thread_ts)
+
+        # Acknowledge and process
+        await client.reactions_add(
+            channel=channel,
+            name="hourglass_flowing_sand",
+            timestamp=event["ts"],
+        )
         asyncio.create_task(_run_agent_real(body, client, event))
 
     @app.command("/sb-status")
