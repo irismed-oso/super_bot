@@ -135,7 +135,11 @@ Plans:
   3. User can ask "run a pipeline audit" and receive a cross-system health report covering pipeline stages, Prefect flows, and Azure mirror freshness
   4. User can ask about Google Drive folder contents, crawler locations, and IVT ingestion health and receive real data from each respective system
   5. At least one tool from each credential category (GCS, S3, Google Drive, PostgreSQL) returns valid data, confirming all credential pathways work under systemd
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 06-01-PLAN.md — Core credential pathway validation (GCS, S3, PostgreSQL): vsp_status, eyemed_status, list_gcs_aiout, check_pipeline_status, list_s3_remits, pipeline_audit, pipeline_stage_view
+- [ ] 06-02-PLAN.md — Extended credential pathway validation (SSH, GDrive, secondary DBs): azure_mirror_audit, ivt_ingestion_audit, check_prefect_flow_status, gdrive_audit, list_crawler_locations
 
 ### Phase 7: Mutation Tools
 **Goal**: Nicole can trigger the full daily pipeline workflow from Slack — extraction, reduction, posting prep, ingestion, sync, and benefits operations all execute through MCP tools
@@ -162,5 +166,5 @@ Phases execute in order: 1 → 2 → 3 → 4 → v1.1 → 5 → 6 → 7
 | 4. Operational Hardening | v1.0 | 0/TBD | Not started | - |
 | v1.1 Capability Parity | v1.1 | 1/TBD | In progress | - |
 | 5. VM Validation and MCP Wiring | v1.2 | Complete    | 2026-03-23 | 2026-03-23 |
-| 6. Read-Only Status and Storage Tools | v1.2 | 0/TBD | Not started | - |
+| 6. Read-Only Status and Storage Tools | v1.2 | 0/2 | Not started | - |
 | 7. Mutation Tools | v1.2 | 0/TBD | Not started | - |
