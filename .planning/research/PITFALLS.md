@@ -1,278 +1,287 @@
-# Pitfalls Research
+# Domain Pitfalls: MCP Parity Integration
 
-**Domain:** Slack-to-Claude-Code autonomous agent on GCP VM
-**Researched:** 2026-03-18
-**Confidence:** HIGH (critical pitfalls verified across official docs and multiple community sources)
+**Domain:** Adding a custom Python MCP server (fastmcp, stdio) to a Claude Agent SDK agent running as a systemd service on GCP VM
+**Researched:** 2026-03-23
+**Confidence:** HIGH (verified against Claude Agent SDK official docs, systemd behavior, and known GitHub issues)
 
 ---
 
 ## Critical Pitfalls
 
-### Pitfall 1: Slack 3-Second Timeout Kills Long-Running Agent Sessions
+Mistakes that cause the MCP server to fail silently, leak credentials, or require architectural rework.
+
+### Pitfall 1: MCP Server Missing Environment Variables Because `env` Field Replaces Instead of Extends
 
 **What goes wrong:**
-Slack requires an HTTP 200 acknowledgment within 3 seconds of receiving an event. Claude Code sessions running real tasks take 30 seconds to several minutes. If your bridge doesn't ack immediately and instead waits for Claude to finish, Slack times out and retries the event — triggering duplicate Claude Code sessions for the same request.
+The mic-transformer MCP server needs dozens of environment variables (GCS credentials, S3 keys, Azure tokens, Prefect API URL, Revolution credentials, database connection strings). If you pass an `env` dict in the MCP server config, depending on how Claude Code internally spawns the subprocess, it may **replace** the inherited environment rather than extend it. The MCP server starts but every tool call fails with missing credential errors. The server itself appears "connected" in the init message -- the failure only surfaces when a tool is actually invoked.
 
 **Why it happens:**
-Developers build the simplest path: receive event → run Claude → return result. This works for instant responses but not for operations lasting more than 3 seconds, which is every real Claude Code task.
+Python's `subprocess.Popen` behavior: if you pass `env={"KEY": "val"}`, it **replaces** the entire environment -- the subprocess gets ONLY that dict, losing PATH, HOME, and every other variable. The Claude Agent SDK's Python implementation currently spreads `os.environ` into the subprocess env (confirmed via [GitHub issue #573](https://github.com/anthropics/claude-agent-sdk-python/issues/573)), but this behavior is an implementation detail, not a documented guarantee. A future SDK update could change this.
 
-**How to avoid:**
-Implement the mandatory two-phase pattern:
-1. Immediately call `ack()` (or return HTTP 200) within 1 second of receiving the event
-2. Hand off the Claude Code invocation to a background worker/thread
-3. Post results back to Slack via `chat.postMessage` using `response_url` or the channel ID once complete
+**Consequences:**
+- MCP server reports "connected" but every tool call returns cryptic errors about missing configs
+- Hard to debug because the connection succeeds -- only tool execution fails
+- If you add an `env` field to the mic-transformer config (e.g., to pass one extra variable), you might accidentally switch from "inherit everything" mode to "only these variables" mode
 
-With Slack Bolt Python, use the lazy listener pattern: one function calls `ack()`, a separate `lazy` function does the actual work.
+**Prevention:**
+1. Do NOT pass an `env` field for the mic-transformer MCP server if all needed variables are already in the parent process environment (loaded via systemd `EnvironmentFile`). The current code correctly omits `env` for mic-transformer.
+2. If you must add specific env vars, always merge with the parent environment explicitly:
+   ```python
+   "env": {**os.environ, "EXTRA_VAR": "value"}
+   ```
+3. Add a smoke test that invokes one MCP tool immediately after connection and verifies it returns real data, not an auth error.
+4. Log the MCP server's stderr output -- fastmcp prints startup errors to stderr which the Claude Agent SDK captures via the `stderr` callback.
 
-**Warning signs:**
-- Slack logs show `operation_timeout` errors
-- Users see the bot respond twice to the same message
-- Event processing logs show the same `event_id` appearing multiple times
+**Detection:**
+- MCP server shows "connected" in init message but tool calls return errors
+- Tool errors mention missing environment variables, config files, or credentials
+- Works locally but fails under systemd
 
-**Phase to address:**
-Phase 1 (Slack bridge foundation) — must be correct from day one, not retrofitted.
+**Phase to address:** Phase 1 (wiring the MCP server into the agent) -- verify on first integration test.
 
 ---
 
-### Pitfall 2: Duplicate Event Processing (No Deduplication)
+### Pitfall 2: systemd EnvironmentFile Does Not Reach the MCP Subprocess
 
 **What goes wrong:**
-Slack retries events when it doesn't receive a timely ack. If your bridge processes an event before the retry window, you can end up with two Claude Code sessions running the same task simultaneously — committing code twice, running scripts twice, posting duplicate results to Slack.
+The superbot systemd service uses `EnvironmentFile=/home/bot/.env` to load variables. These variables are available to the Python bot process. When the Claude Agent SDK spawns the mic-transformer MCP subprocess, those variables should be inherited -- but they might not be, for several reasons:
+
+1. The `.env` file uses shell syntax (e.g., `export VAR=val` or `VAR="val with spaces"`) that systemd's `EnvironmentFile` parser does not support. systemd's parser is NOT bash -- it handles simple `KEY=VALUE` lines only. Quoted values work but `export` prefixes, variable interpolation (`$OTHER_VAR`), and command substitution do not.
+2. The MCP subprocess is spawned by Claude Code (a Node.js binary), which may apply its own environment filtering before spawning the stdio subprocess.
+3. `PrivateTmp=true` in the systemd unit (line 24 of superbot.service) creates an isolated `/tmp` namespace. If the MCP server or any mic-transformer code writes to `/tmp` expecting shared access with other processes, it will silently use a private mount.
 
 **Why it happens:**
-Slack's retry behavior is correct behavior on Slack's side. The bug is that the receiving application doesn't track which events have already been processed. In-memory deduplication fails after process restarts or if you ever scale to multiple workers.
+Developers write `.env` files for local development using `dotenv` conventions (which support shell-like syntax). systemd `EnvironmentFile` has a much more restrictive parser. The file "works" locally because `python-dotenv` handles the shell syntax, but under systemd, variables with unsupported syntax are silently dropped.
 
-**How to avoid:**
-Track processed `event_id` values in a persistent store (Redis SET NX with TTL, or a simple SQLite/PostgreSQL table with a unique constraint on `event_id`). For a single-VM deployment, Redis with a 10-minute TTL per event_id is the minimal correct solution. Check before processing: if the event_id is already claimed, return 200 immediately and do nothing.
+**Consequences:**
+- Some env vars present, others silently missing -- partial functionality
+- MCP server works for some tools (those using present vars) but fails for others
+- Extremely confusing to debug because it works locally
 
-**Warning signs:**
-- Bot posts duplicate replies to the same message
-- Git history shows the same commit appearing twice
-- Logs show two Claude sessions with identical prompts starting within seconds of each other
+**Prevention:**
+1. Ensure `/home/bot/.env` uses **only** systemd-compatible syntax: `KEY=VALUE` lines, no `export`, no `$VAR` interpolation, no backticks.
+2. After deploying, SSH into the VM and verify: `sudo -u bot env | grep EXPECTED_VAR` to confirm the variable is actually set in the bot user's environment.
+3. Add a startup health check in the bot that logs the presence (not values) of all required environment variables for mic-transformer tools.
+4. Consider using a separate `EnvironmentFile` for mic-transformer-specific credentials to keep concerns isolated.
 
-**Phase to address:**
-Phase 1 (Slack bridge foundation) — implement with deduplication from the start.
+**Detection:**
+- `systemctl show superbot --property=Environment` shows fewer variables than expected
+- MCP tools that need specific credentials fail while others work
+- Works when run manually (`sudo -u bot .venv/bin/python -m bot.app`) but fails under systemd
+
+**Phase to address:** Phase 1 (VM environment setup) -- validate before wiring MCP.
 
 ---
 
-### Pitfall 3: Running Claude Code as Root / Without Credential Isolation
+### Pitfall 3: MCP Server `os.chdir()` Pollutes the Parent Process Working Directory
 
 **What goes wrong:**
-Running the Claude Code process as root, or as a user whose home directory contains production credentials (SSH keys to other servers, `.aws/credentials`, GitLab deploy tokens), means Claude Code has unrestricted access to exfiltrate or destroy those credentials. A prompt injection attack in a malicious file in the repo can trigger credential theft. CVE-2025-59536 and CVE-2026-21852 demonstrated that malicious `.claude/settings.json` files can redirect API traffic to attacker-controlled servers and steal the Anthropic API key.
+If the mic-transformer MCP server code (or any library it imports) calls `os.chdir()` at module import time or during initialization, and the MCP server runs **in-process** rather than as a true subprocess, the working directory change affects the entire bot process. Claude Agent SDK sessions that depend on `cwd` being the mic_transformer directory suddenly find themselves in a different directory.
 
 **Why it happens:**
-It's easiest to SSH into the VM as your own user and run Claude Code there. That user naturally has all your credentials. Developers don't think of the Claude Code process as an untrusted execution environment.
+`os.chdir()` changes the process-wide working directory -- it affects all threads. In a stdio MCP server, this is a non-issue because the server runs as a separate process. But if someone refactors to use an in-process SDK MCP server (which the Claude Agent SDK supports as "SDK MCP servers"), or if a library uses `os.chdir()` during import and the import happens in the parent process, the CWD shifts globally.
 
-**How to avoid:**
-- Create a dedicated `bot` OS user with no SSH keys, no cloud credentials, no `.aws/` directory
-- Store all secrets (Anthropic API key, Slack bot token, GitLab access token) in GCP Secret Manager; inject at runtime via environment variables only
-- Never run Claude Code as root — it is explicitly documented as a security violation
-- Scope the GitLab access token used on the VM to only the `mic_transformer` repo with push access to non-protected branches only
-- Deny Claude Code access to sensitive files via `settings.json` denylist: `~/.ssh/`, `~/.aws/`, `.env`
+**Consequences:**
+- Claude Agent SDK sessions fail because `cwd` no longer points where expected
+- Git operations fail (wrong repository)
+- File reads/writes go to wrong locations
+- Intermittent -- only happens after certain MCP tool calls
 
-**Warning signs:**
-- Claude Code process running as a user with SSH keys in `~/.ssh/`
-- Anthropic API key stored in a `.env` file inside the repo
-- Claude Code process has write access outside the `mic_transformer` repo directory
+**Prevention:**
+1. **Always use stdio transport** for the mic-transformer MCP server (the current architecture correctly does this). Never refactor to in-process.
+2. Audit the MCP server's `server.py` and its imports for any `os.chdir()` calls. Grep the mic-transformer codebase: `grep -r "os.chdir" .`
+3. If any mic-transformer tool needs to operate in a specific directory, use `subprocess.run(cwd=...)` or `contextlib.contextmanager` to scope the change, never bare `os.chdir()`.
+4. The existing `MIC_TRANSFORMER_CWD = os.path.realpath(...)` pattern in `agent.py` is a good defensive measure -- keep it.
 
-**Phase to address:**
-Phase 1 (VM provisioning and security hardening) — before any other work begins.
+**Detection:**
+- Agent errors mentioning "not a git repository" or "file not found" after MCP tool calls
+- `os.getcwd()` returns unexpected path in logs
+- Intermittent failures that correlate with specific MCP tool usage
+
+**Phase to address:** Phase 1 (MCP server development/audit) -- verify before deployment.
 
 ---
 
-### Pitfall 4: Context Window Exhaustion Mid-Task
+### Pitfall 4: Credential Leaking Between MCP Servers via Inherited Environment
 
 **What goes wrong:**
-Claude Code's context window is 200K tokens. For a codebase like mic_transformer (Flask, Prefect, multiple services), a single complex investigation that reads many files can exhaust the context window before the task completes. The session fails mid-execution, potentially leaving the repo in a partially modified state. Bug documented in GitHub issue #4722: users report exhaustion errors at what appears to be ~2% of expected usage due to system prompt overhead, tool call history, and file contents accumulating.
+The Linear MCP server gets `LINEAR_API_KEY` via its `env` field. The Sentry MCP server gets `SENTRY_AUTH_TOKEN`. But because the Claude Agent SDK spreads `os.environ` into subprocess environments, **all** MCP servers receive **all** environment variables from the parent process. The mic-transformer MCP server (which has no `env` field) inherits LINEAR_API_KEY, SENTRY_AUTH_TOKEN, SLACK_BOT_TOKEN, SLACK_APP_TOKEN, and ANTHROPIC_API_KEY. A bug or prompt injection in any MCP server tool can access credentials meant for other servers.
 
 **Why it happens:**
-Each turn in a multi-step task accumulates: system prompt (~10K tokens), CLAUDE.md contents, every file read, every bash output, every tool call result. A task that reads 20 files averaging 5K lines each consumes the context before doing any real work. The "30-50% more tokens in multi-turn sessions" effect compounds this.
+The `env` field in MCP server config is designed for adding variables the server needs, not for isolation. The underlying subprocess inherits the parent's full environment. This is standard Unix behavior but violates the principle of least privilege.
 
-**How to avoid:**
-- Set `--max-turns` explicitly to prevent runaway sessions (start with 30, tune from there)
-- Break large tasks into focused, single-purpose Claude invocations rather than one mega-session
-- Design the bridge to detect context exhaustion errors and report them clearly to Slack rather than silently failing
-- Instruct Claude (via system prompt or task preamble) to use targeted file reads rather than reading entire files when possible
+**Consequences:**
+- A compromised or buggy MCP tool can read any credential in the environment
+- Prompt injection in mic-transformer data (e.g., malicious content in a remittance PDF) could instruct Claude to use an MCP tool to exfiltrate env vars
+- All credentials are one `os.environ` call away from any MCP server subprocess
 
-**Warning signs:**
-- Claude stops mid-task with "prompt is too long" error
-- Tasks involving large codebases or many file reads fail consistently
-- Session token usage spikes unexpectedly for "simple" requests
+**Prevention:**
+1. **Accept the risk for this internal tool.** Full environment isolation for stdio MCP servers requires containerization (Docker) or separate systemd services per MCP server, which is overengineering for a small internal team.
+2. Ensure the MCP server does NOT expose any tool that can read arbitrary environment variables or execute arbitrary code. Audit each tool function.
+3. Never pass credentials as command-line arguments (visible in `ps aux`). Always use environment variables.
+4. Keep the bot user's environment minimal -- only variables actually needed by any component. Do not put unrelated secrets in `/home/bot/.env`.
 
-**Phase to address:**
-Phase 2 (Claude Code integration) — design session management with this constraint in mind.
+**Detection:**
+- Run `cat /proc/<mcp-pid>/environ | tr '\0' '\n'` on the VM to see what the MCP subprocess actually has
+- Audit MCP tool functions for `os.environ` access or shell command execution
+
+**Phase to address:** Phase 1 (security review) -- document as accepted risk with mitigations.
 
 ---
 
-### Pitfall 5: Bot Infinite Loop (Responding to Own Messages)
+### Pitfall 5: fastmcp Version Incompatibility with mcp Package Version
 
 **What goes wrong:**
-The Slack bot posts a result message to the channel. That message triggers another `app_mention` or `message` event. The bridge processes it, starts another Claude Code session, and the loop continues until rate limits or manual intervention stop it.
+The mic-transformer MCP server imports from `fastmcp` (standalone package). The Claude Agent SDK's MCP client uses the `mcp` package internally. If the mic-transformer venv has `fastmcp==2.x` which depends on `mcp>=1.3`, but the superbot venv has a different `mcp` version, the MCP protocol negotiation can fail silently -- the server starts but protocol version mismatch causes tool calls to fail or return malformed responses.
 
 **Why it happens:**
-Developers subscribe to `message` events rather than `app_mention` events, or they subscribe to `app_mention` without filtering out bot-authored messages. Slack's event payload includes a `bot_id` field on messages from bots — failing to check this field is the single root cause.
+fastmcp is a standalone project that includes `mcp` as a dependency. The MCP protocol has evolved through versions (2024-11-05, 2025-03-26, etc.). If the server (fastmcp) and client (Claude Agent SDK / Claude Code) disagree on protocol version, the handshake may succeed but subsequent operations fail. FastMCP 1.0 was merged into the official `mcp` package, then FastMCP 2.0+ diverged as a standalone package with additional features.
 
-**How to avoid:**
-- Subscribe only to `app_mention` events, not generic `message` events
-- In every event handler, check `event.bot_id` — if present, return 200 immediately without processing
-- Check `event.subtype` — if it equals `bot_message`, skip
-- Never `@mention` the bot in the bot's own response messages
+**Consequences:**
+- MCP server appears connected but tool calls return protocol errors
+- Mysterious JSON-RPC errors in stderr
+- Works with one version of Claude Code but breaks after an update
 
-**Warning signs:**
-- Bot starts responding to its own response messages
-- Slack rate limit errors appear in logs
-- Token usage spikes dramatically with no user activity
+**Prevention:**
+1. Pin `fastmcp` and `mcp` versions in the mic-transformer `requirements.txt`. Do not use `>=` -- use exact pins.
+2. After any Claude Code update on the VM, test MCP connectivity before declaring the update complete.
+3. Use the `system` init message to verify MCP server status is "connected" and tools are enumerated.
+4. If fastmcp 2.x causes issues, consider using `from mcp.server.fastmcp import FastMCP` (the version bundled in the official `mcp` package) as a fallback.
 
-**Phase to address:**
-Phase 1 (Slack bridge foundation) — a filter that must exist before any event processing logic.
+**Detection:**
+- stderr from MCP server contains JSON-RPC version mismatch errors
+- MCP server shows "connected" but `mcp_servers` in init message shows 0 tools
+- Tool calls return `MethodNotFound` or `InvalidRequest` errors
+
+**Phase to address:** Phase 1 (dependency installation on VM) -- pin and verify versions.
 
 ---
 
-### Pitfall 6: Concurrent Claude Sessions Corrupting the Shared Repo
+### Pitfall 6: MCP Server Startup Timeout Kills Claude Session
 
 **What goes wrong:**
-Two team members send requests to the bot simultaneously. Two Claude Code sessions start concurrently, both working in the same `mic_transformer` working directory. They race on file edits — one session's writes are overwritten by the other, or both sessions attempt to commit to the same branch at the same time. Git history becomes corrupted or force-pushes happen.
+The MCP SDK has a **default 60-second timeout** for server connections (documented in [Claude Agent SDK MCP docs](https://platform.claude.com/docs/en/agent-sdk/mcp)). The mic-transformer MCP server imports heavy dependencies (Flask, SQLAlchemy, boto3, google-cloud-storage, Prefect, etc.). On a cold start or an e2-small/medium VM with limited CPU, these imports can take 30-60+ seconds. If the server doesn't complete initialization within the timeout, it reports as "failed" and Claude has no MCP tools for the entire session.
 
 **Why it happens:**
-There is one repo on the VM. Claude Code's write scope is confined to the working directory it was started in. If both sessions share that working directory, they share all files.
+Python's import-time initialization is sequential. Large dependency trees (boto3 alone imports hundreds of modules) take measurable time on resource-constrained VMs. The 60-second timeout is fixed in the SDK and not configurable via the `mcp_servers` config.
 
-**How to avoid:**
-- Queue incoming requests: process one Claude session at a time using a simple job queue (even a threading.Lock or asyncio.Queue suffices for a small team)
-- For parallel work, use git worktrees: each task gets its own worktree (`git worktree add /home/bot/tasks/<task-id> -b task/<task-id>`), isolating file operations
-- When a task is queued, notify the requesting user in Slack that their request is queued and will run after the current task completes
+**Consequences:**
+- First request after VM restart or service restart fails because MCP server times out
+- Intermittent failures under memory pressure when the VM is swapping
+- Users see "MCP server failed to connect" in Claude's output
 
-**Warning signs:**
-- Git log shows merge conflicts or force-push events
-- Files have garbled content mixing two tasks' changes
-- Two Claude processes visible in `ps aux` simultaneously
+**Prevention:**
+1. **Lazy-import heavy dependencies** in the MCP server. Only import boto3, google-cloud-storage, etc., inside the tool functions that use them, not at module top level.
+2. Benchmark the MCP server startup time on the target VM: `time /path/to/venv/bin/python server.py` and ensure it completes well under 60 seconds.
+3. Consider pre-warming: start the MCP server once at bot startup to populate Python's bytecode cache (`.pyc` files), then let the SDK restart it per session.
+4. If the VM is too small, upgrade from e2-small to e2-medium. The $15/month difference is trivial compared to debugging timeout issues.
 
-**Phase to address:**
-Phase 2 (Claude Code integration) — the queue/worktree strategy must be decided before connecting the Slack trigger.
+**Detection:**
+- MCP server status is "failed" in the init message
+- Works on the second request (bytecode cache warm) but fails on first
+- `time python -c "import server"` shows >30 seconds
+
+**Phase to address:** Phase 1 (VM sizing and MCP server optimization) -- test before deployment.
 
 ---
 
-### Pitfall 7: Missing `--output-format stream-json` Causes Process Hang
+## Moderate Pitfalls
+
+### Pitfall 7: MCP Server Crashes Silently, Claude Session Continues Without Tools
 
 **What goes wrong:**
-When invoking Claude Code with `-p` (headless/programmatic mode), the process can hang indefinitely when reading from stdin if output format isn't explicitly set. Documented in GitHub issue #7497: "Process Hangs Indefinitely When Reading InputStream from Claude Code Headless Execution." The bridge waits forever for Claude to finish, holding the Slack response connection open, eventually timing out with no result.
+The mic-transformer MCP server crashes mid-session (unhandled exception, OOM kill, segfault in a C extension). Claude continues the session but all subsequent MCP tool calls fail. Claude may attempt to accomplish the task using its other tools (Read, Bash, etc.) which may produce incorrect or incomplete results, or it may report that the tool is unavailable -- but the user doesn't get a clear "MCP server died" notification.
 
-**Why it happens:**
-Without explicit output format flags, Claude Code's output behavior in non-interactive mode is ambiguous. The process may wait for input it will never receive, or the bridge code may block on stdout/stderr in a way that deadlocks.
-
-**How to avoid:**
-Always invoke Claude Code with explicit flags for non-interactive use:
-```bash
-claude -p "task" \
-  --output-format stream-json \
-  --allowedTools "Read,Edit,Bash" \
-  --max-turns 30
-```
-Set a process-level timeout (e.g., 10 minutes) in the bridge code independent of Claude's own flags. Kill the subprocess and notify Slack if the timeout is exceeded.
-
-**Warning signs:**
-- Claude invocations never return; bridge worker threads accumulate
-- No output or logs from Claude for minutes on end
-- VM CPU is idle but the bridge is blocked waiting
-
-**Phase to address:**
-Phase 2 (Claude Code integration) — test headless invocation with explicit flags before wiring to Slack.
+**Prevention:**
+1. Wrap all MCP tool functions in try/except with structured error responses rather than letting exceptions propagate.
+2. Monitor the bot's stderr callback for MCP-related error messages and alert the user in Slack.
+3. Add a health check tool to the MCP server (e.g., `mcp__mic-transformer__health_check`) that Claude can call to verify the server is alive.
 
 ---
 
-### Pitfall 8: Slack Webhook Signature Not Verified (Replay Attack / Spoofing)
+### Pitfall 8: venv Python Path Breaks After mic-transformer Dependency Update
 
 **What goes wrong:**
-Any HTTP client that knows your Slack event URL can send forged events to trigger Claude Code sessions. Without signature verification, an attacker sends a crafted payload that makes Claude push malicious code, delete files, or exfiltrate credentials.
+The MCP server is invoked as `/home/bot/mic_transformer/.venv/bin/python server.py`. If someone rebuilds the venv (deletes and recreates `.venv/`), the absolute path still exists but the venv may have a different Python version, missing packages, or broken symlinks. The MCP server fails to import `fastmcp` or other dependencies.
 
-**Why it happens:**
-Developers focus on getting the bot working and treat the event URL as a secret. Slack's signature verification is an opt-in step that's easy to skip during development and forget to add in production.
-
-**How to avoid:**
-- Verify every incoming request using Slack's HMAC-SHA256 signature: `X-Slack-Signature` header against `X-Slack-Request-Timestamp` + raw body
-- Use `hmac.compare_digest()` (Python) or `crypto.timingSafeEqual` (Node.js) — not `==` — to prevent timing attacks
-- Reject requests where the timestamp is more than 5 minutes old (prevents replay attacks)
-- Never log the raw request body in a way that exposes the signing secret
-
-**Warning signs:**
-- Event processing logs show requests from unexpected IP ranges
-- Bot performs actions nobody on the team requested
-- `X-Slack-Signature` header absent on some requests (they're forged)
-
-**Phase to address:**
-Phase 1 (Slack bridge foundation) — must exist before the endpoint is deployed.
+**Prevention:**
+1. After any venv rebuild on the VM, restart the superbot service (`systemctl restart superbot`).
+2. Add a deployment check that verifies `mcp_python` can actually import `fastmcp`: `subprocess.run([mcp_python, "-c", "import fastmcp"], check=True)` during bot startup.
+3. Log a clear error in `_build_mcp_servers()` if the python binary exists but cannot import the MCP server module.
 
 ---
 
-## Technical Debt Patterns
+### Pitfall 9: MCP Server stdout Pollution Breaks JSON-RPC Protocol
 
-| Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
-|----------|-------------------|----------------|-----------------|
-| `--dangerously-skip-permissions` in non-containerized process | Avoid configuring `--allowedTools` list | Any prompt injection or misconfiguration becomes full system compromise; documented CVEs exploit this vector | Never in production; only in throwaway local dev |
-| In-memory event deduplication (Python `set`) | Simple, no dependencies | Fails after process restart; duplicates resume | Only if you never restart the process — i.e., never |
-| Single shared working directory for all tasks | Simple to set up | Concurrent sessions corrupt each other | Only if you enforce strict single-session-at-a-time with a lock |
-| Hardcoded Anthropic API key in systemd unit file | Quick to deploy | Key is visible in `systemctl show`, `ps aux`, and process environment dumps | Never; use GCP Secret Manager |
-| Polling Slack API for messages instead of events | No webhook infrastructure | Polling adds latency, hits rate limits, misses messages during downtime | Never; Events API is the correct approach |
+**What goes wrong:**
+The MCP stdio protocol uses stdout for JSON-RPC messages. If any code in the mic-transformer MCP server (or its dependencies) prints to stdout (via `print()`, logging to stdout, or a library that defaults to stdout), it corrupts the JSON-RPC stream. The Claude Agent SDK receives malformed JSON and the MCP connection dies.
 
----
-
-## Integration Gotchas
-
-| Integration | Common Mistake | Correct Approach |
-|-------------|----------------|------------------|
-| Slack Events API | Subscribing to `message` events in addition to `app_mention`, triggering on all channel activity | Subscribe only to `app_mention`; check `bot_id` field before processing |
-| Claude Code `-p` mode | Quoting the prompt incorrectly in shell, causing partial prompt interpretation | Always double-quote the prompt: `claude -p "full prompt here"` |
-| Claude Code `-p` mode | Not setting `--allowedTools`, causing Claude to ask for permission mid-session (which hangs non-interactively) | Always specify `--allowedTools` explicitly for headless use |
-| GitLab via bot user | Using a personal access token tied to a real user account — if that user is deactivated, the bot breaks | Create a dedicated GitLab bot user with scoped project access token |
-| GCP VM → GitLab SSH | Using the bot user's personal SSH key stored as a file on the VM | Use GCP Secret Manager to inject the deploy key at startup; restrict key to read+write on `mic_transformer` only |
-| Slack `response_url` | Using `response_url` to post long task outputs — it expires after 30 minutes and has a 5-response limit | Use `chat.postMessage` with the channel ID for all task result posts |
+**Prevention:**
+1. **Never use `print()` in the MCP server.** Use `logging` module configured to write to stderr only.
+2. Redirect any library that defaults to stdout (e.g., some Prefect client logging) to stderr.
+3. In the MCP server entrypoint, add: `sys.stdout = sys.stderr` before starting fastmcp if you want to be extra safe (but test this -- fastmcp needs the real stdout for protocol messages).
+4. Actually, the correct approach: configure Python logging to stderr only, and ensure no `print()` calls exist in any code path the MCP server executes.
 
 ---
 
-## Performance Traps
+### Pitfall 10: Multiple Claude Sessions Share One MCP Server Instance
 
-| Trap | Symptoms | Prevention | When It Breaks |
-|------|----------|------------|----------------|
-| Reading entire large files into context | Context exhaustion on `mic_transformer`'s larger modules; session fails mid-task | Instruct Claude to use `grep` or targeted reads; set explicit line limits in task prompts | Any task reading 3+ large files simultaneously |
-| No `--max-turns` limit | Runaway sessions consuming thousands of dollars of API credits on a misunderstood task | Always set `--max-turns 30` or lower; alert in Slack when limit is hit | Any open-ended task (investigate X, fix everything) |
-| Synchronous Slack event handler waiting for Claude | VM thread pool exhausted under concurrent requests; bot becomes unresponsive | Async hand-off to background worker immediately on event receipt | Second concurrent request when first is still running |
-| Streaming Claude output line-by-line to Slack | Slack rate limits (1 message/second per channel); bot gets throttled or banned | Buffer output, post summary + file attachment for long outputs; post updates every 30 seconds not every line | Any Claude output longer than ~10 lines |
+**What goes wrong:**
+If two Slack requests come in close together and the queue processes them sequentially (which it does), each `query()` call creates its own MCP server subprocess. But if there's any shared state on the filesystem (e.g., mic-transformer tools write to a shared temp file or lock file), the second session's MCP server may conflict with lingering resources from the first.
 
----
-
-## Security Mistakes
-
-| Mistake | Risk | Prevention |
-|---------|------|------------|
-| Anthropic API key on the VM as a plaintext file or env var in systemd | Key scraped from VM metadata, process environment, or leaked logs; attacker runs unlimited API calls billed to you | Store in GCP Secret Manager; inject via `secretmanager.versions.access` at startup only |
-| Bot accessible from all Slack users in the workspace | Any workspace member can trigger arbitrary code execution on the VM | Check `event.user` against an allowlist (Nicole, Han, named users) before processing; reject with a message if not allowlisted |
-| No access log for Claude Code actions | Impossible to audit what the bot did, investigate incidents, or recover from mistakes | Log every Claude invocation: who asked, what prompt, when, session ID, exit code; store logs in Cloud Logging |
-| Prompt injection via repo content | Malicious content in `mic_transformer` files (comments, test fixtures, documentation) manipulates Claude into unintended actions | Scope Claude's working directory strictly; review critical file denylist in `settings.json`; run Claude as a low-privilege user |
-| Bot token committed to the repo | Token exposure allows impersonating the bot from any machine | Use GCP Secret Manager; add `SLACK_BOT_TOKEN` to `.gitignore`; rotate immediately if ever committed |
+**Prevention:**
+1. Ensure MCP server tools use unique temp directories per invocation (use `tempfile.mkdtemp()`).
+2. The queue serialization in the current architecture mitigates this -- sessions don't run concurrently. But verify that MCP server subprocesses from the previous session are fully terminated before the next starts.
+3. Check for stale `.lock` files or PID files that mic-transformer tools might create.
 
 ---
 
-## UX Pitfalls
+## Minor Pitfalls
 
-| Pitfall | User Impact | Better Approach |
-|---------|-------------|-----------------|
-| Silent failures — Claude errors logged but not reported to Slack | User thinks bot is working; actually nothing happened; they repeat the request triggering duplicates | Always post to Slack on both success and failure; include error summary and session ID for debugging |
-| Bot starts task but never posts completion | User has no idea if the task is running, done, or failed; they re-send the request | Post "Starting task..." immediately after ack; post result (or error) when complete |
-| Raw Claude output dumped as a 5000-character Slack message | Unreadable; Slack truncates at 40K characters; formatting is lost | Format output: post key result as message text, attach full output as a snippet/file |
-| Bot ignores the thread context | User replies in the thread to clarify; bot doesn't see it | Use `--continue` with the session ID if replying in the same thread; or document that the bot only reads the triggering message |
-| No acknowledgment of queued requests | User sends a second request while first is running; both requests vanish into silence | Post "Your request is queued (#2 in line, estimated wait: X min)" when a request is queued |
+### Pitfall 11: Tool Names Collide Between MCP Servers
+
+**What goes wrong:**
+If the mic-transformer MCP server exposes a tool named `status` and another MCP server also has a `status` tool, the namespacing `mcp__mic-transformer__status` vs `mcp__other__status` prevents collision at the protocol level. But Claude might get confused about which to call if the descriptions are similar.
+
+**Prevention:**
+Use descriptive, domain-specific tool names in the MCP server (e.g., `eyemed_status` not `status`). The current mic-transformer MCP server already follows this convention.
 
 ---
 
-## "Looks Done But Isn't" Checklist
+### Pitfall 12: `PrivateTmp=true` Breaks Temp File Sharing
 
-- [ ] **Slack verification:** Signature is actually verified on every request — not just during testing. Confirm by sending a forged request and watching it be rejected.
-- [ ] **Deduplication:** Event IDs are tracked persistently (not in memory). Confirm by restarting the bridge process and re-sending an already-processed event ID.
-- [ ] **Bot message filter:** Bot cannot respond to its own messages. Confirm by checking whether the bot's output messages trigger new events in the logs.
-- [ ] **Process timeout:** Claude Code subprocess has an enforced wall-clock timeout. Confirm by asking the bot an unanswerable question and watching it time out and report to Slack rather than hang forever.
-- [ ] **User allowlist:** Non-authorized users cannot trigger Claude. Confirm by mentioning the bot from a test account that is not on the allowlist.
-- [ ] **Credential isolation:** Claude Code process cannot read `~/.ssh/`, `~/.aws/`, or any secret outside its working directory. Confirm by asking the bot to `cat ~/.ssh/id_rsa` and observing the deny.
-- [ ] **Concurrent request safety:** Two simultaneous requests either queue properly or use isolated worktrees without corrupting each other. Confirm by sending two requests within 1 second.
-- [ ] **Task result always posted:** Slack always receives a result (or explicit error) for every request. Confirm by triggering a task that intentionally fails and watching Slack receive the failure message.
+**What goes wrong:**
+The superbot.service has `PrivateTmp=true`. The MCP subprocess (spawned by the bot process) inherits this private `/tmp` namespace. If any mic-transformer tool writes files to `/tmp` expecting them to be readable by other processes (e.g., writing a CSV for later retrieval), those files are invisible outside the service's namespace.
+
+**Prevention:**
+Use a dedicated directory under `/home/bot/` for shared files instead of `/tmp`. The `PrivateTmp` isolation is good security practice -- do not remove it. Instead, configure mic-transformer tools to use a specific output directory.
+
+---
+
+## Phase-Specific Warnings
+
+| Phase Topic | Likely Pitfall | Mitigation |
+|-------------|---------------|------------|
+| Wiring MCP server into agent.py | Pitfall 1 (env not reaching subprocess) | Test with one tool call immediately after connection |
+| Installing dependencies on VM | Pitfall 5 (version mismatch) | Pin fastmcp and mcp versions; test protocol handshake |
+| VM environment setup | Pitfall 2 (systemd EnvironmentFile syntax) | Validate all env vars are present via startup health check |
+| First end-to-end test | Pitfall 6 (startup timeout) | Benchmark import time; lazy-load heavy deps |
+| Security review | Pitfall 4 (credential leaking) | Accept risk, audit tools for env access |
+| Production deployment | Pitfall 9 (stdout pollution) | Audit for print() statements; redirect logging to stderr |
+| MCP server development | Pitfall 3 (os.chdir) | Grep codebase; use subprocess cwd param |
+
+---
+
+## "Looks Done But Isn't" Checklist for MCP Parity
+
+- [ ] **Every env var reaches MCP subprocess:** Run a tool that uses GCS credentials, S3 credentials, and Prefect API -- all three work, not just the first one tested.
+- [ ] **Works under systemd, not just manual run:** Do NOT test only with `sudo -u bot python -m bot.app`. Test via `systemctl start superbot` specifically.
+- [ ] **Startup time under 60 seconds:** Time the MCP server cold start on the actual VM. Not on your local machine.
+- [ ] **No print() in MCP server code path:** `grep -r "print(" server.py tools/` returns zero hits in production code paths.
+- [ ] **Tool calls return real data:** At least one tool from each of the 13 modules returns actual production data, not just "connected successfully."
+- [ ] **MCP server crash doesn't crash the bot:** Kill the MCP server process mid-session; verify the bot reports the error to Slack and recovers for the next request.
+- [ ] **Second request works after first:** The first Slack request uses MCP tools successfully. The second request (new session) also works -- no stale state.
+- [ ] **fastmcp version pinned:** `pip freeze | grep fastmcp` on the VM shows an exact version, not a range.
 
 ---
 
@@ -280,51 +289,27 @@ Phase 1 (Slack bridge foundation) — must exist before the endpoint is deployed
 
 | Pitfall | Recovery Cost | Recovery Steps |
 |---------|---------------|----------------|
-| Anthropic API key leaked | HIGH | Rotate key immediately in Anthropic console; audit usage logs for unauthorized calls; rotate GCP Secret Manager secret |
-| Bot infinite loop hit Slack rate limits | LOW | Delete or disable the event trigger; restart bridge with bot message filter in place; Slack rate limits reset within minutes |
-| Concurrent sessions corrupted repo | MEDIUM | `git reset --hard` to last known good commit; force-push to VM clone; implement queue/lock before re-enabling |
-| Context exhaustion left repo in partial state | MEDIUM | Check git status; revert uncommitted changes; break the original task into smaller chunks with explicit scope |
-| Bot token committed to git | HIGH | Immediately rotate in Slack app settings; audit Slack audit logs for unauthorized usage; add pre-commit hook to block token patterns |
-| Process hang — Claude never returns | LOW | Kill subprocess by PID; post error to Slack; restart bridge; investigate which task caused the hang |
-
----
-
-## Pitfall-to-Phase Mapping
-
-| Pitfall | Prevention Phase | Verification |
-|---------|------------------|--------------|
-| Slack 3-second timeout | Phase 1: Slack bridge | Send a long-running task; confirm Slack shows no timeout error |
-| Duplicate event processing | Phase 1: Slack bridge | Manually replay an event_id; confirm single execution |
-| Bot infinite loop | Phase 1: Slack bridge | Bot responds; confirm no second event fires from the response |
-| Slack signature verification | Phase 1: Slack bridge | Send forged request; confirm 400 rejection |
-| Credential isolation / running as root | Phase 1: VM provisioning | Ask bot to read `~/.ssh/`; confirm denial |
-| Context window exhaustion | Phase 2: Claude integration | Run a large file investigation; confirm graceful failure message |
-| Process hanging (headless mode) | Phase 2: Claude integration | Send unanswerable task; confirm timeout and Slack notification |
-| Concurrent session corruption | Phase 2: Claude integration | Two simultaneous requests; confirm queue or worktree isolation |
-| User allowlist enforcement | Phase 2: Claude integration | Unauthorized user mention; confirm rejection |
-| Claude output formatting in Slack | Phase 3: UX polish | Run verbose task; confirm readable, non-truncated Slack output |
+| Env vars missing in MCP subprocess | LOW | Add vars to EnvironmentFile, restart service, verify |
+| MCP server timeout on startup | LOW | Lazy-load imports, restart service, or upgrade VM |
+| Protocol version mismatch | MEDIUM | Pin correct fastmcp version, rebuild venv, restart |
+| stdout pollution killing JSON-RPC | MEDIUM | Find and fix print() call, restart service |
+| Credential leak via env inheritance | HIGH | Rotate leaked credentials, audit MCP tool functions, restrict env |
+| os.chdir corrupting CWD | MEDIUM | Restart service, fix offending code, add defensive checks |
 
 ---
 
 ## Sources
 
-- [Claude Code Security Docs](https://code.claude.com/docs/en/security) — official, HIGH confidence
-- [Claude Code Headless/Programmatic Mode Docs](https://code.claude.com/docs/en/headless) — official, HIGH confidence
-- [Verifying Requests from Slack (Official)](https://api.slack.com/authentication/verifying-requests-from-slack) — official, HIGH confidence
-- [Slack Events API Documentation](https://api.slack.com/events-api) — official, HIGH confidence
-- [Slack Bolt Python Lazy Listeners](https://docs.slack.dev/tools/bolt-python/concepts/lazy-listeners/) — official, HIGH confidence
-- [Claude Code Best Practices Docs](https://code.claude.com/docs/en/best-practices) — official, HIGH confidence
-- [GitHub Issue #7497: Process Hangs Indefinitely in Headless Mode](https://github.com/anthropics/claude-code/issues/7497) — official GitHub, HIGH confidence
-- [GitHub Issue #4722: Context Window Exhaustion](https://github.com/anthropics/claude-code/issues/4722) — official GitHub, HIGH confidence
-- [Check Point Research: CVE-2025-59536 / CVE-2026-21852](https://research.checkpoint.com/2026/rce-and-api-token-exfiltration-through-claude-code-project-files-cve-2025-59536/) — MEDIUM confidence (security research, verified CVEs)
-- [--dangerously-skip-permissions Usage Guide](https://www.ksred.com/claude-code-dangerously-skip-permissions-when-to-use-it-and-when-you-absolutely-shouldnt/) — MEDIUM confidence (community, verified against official docs)
-- [PromptArmor: Prompt Injection via .docx (Jan 2026)](https://blog.promptlayer.com/claude-dangerously-skip-permissions/) — MEDIUM confidence (community-reported, describes real attack)
-- [Redis Distributed Locking for Slack Bots](https://redis.io/tutorials/chat-sdk-slackbot-distributed-locking/) — MEDIUM confidence (official Redis, describes correct deduplication pattern)
-- [Git Worktrees for Parallel AI Agents](https://www.nrmitchi.com/2025/10/using-git-worktrees-for-multi-feature-development-with-ai-agents/) — MEDIUM confidence (community, widely corroborated)
-- [GCP Secret Manager Guide](https://blog.gitguardian.com/how-to-handle-secrets-with-google-cloud-secret-manager/) — MEDIUM confidence (community, corroborated by GCP official docs)
-- [SFEIR Institute: Claude Code Headless Mode Errors](https://institute.sfeir.com/en/claude-code/claude-code-headless-mode-and-ci-cd/errors/) — LOW confidence (third-party training material, statistics unverified)
-- [OpenClaw Security Crisis Analysis](https://www.reco.ai/blog/openclaw-the-ai-agent-security-crisis-unfolding-right-now) — LOW confidence (vendor analysis of similar project's CVEs, directionally useful)
+- [Claude Agent SDK MCP Documentation](https://platform.claude.com/docs/en/agent-sdk/mcp) -- official, HIGH confidence (60-second timeout, env field usage, init message for status checking)
+- [Claude Agent SDK Python GitHub Issue #573: Subprocess inherits CLAUDECODE=1](https://github.com/anthropics/claude-agent-sdk-python/issues/573) -- official GitHub, HIGH confidence (confirms os.environ spreading to subprocess)
+- [FastMCP GitHub Issue #399: STDIO initialize succeeds, subsequent requests crash](https://github.com/jlowin/fastmcp/issues/399) -- official GitHub, HIGH confidence (known RuntimeError after init)
+- [FastMCP GitHub Issue #1311: Client doesn't properly close stdio MCP](https://github.com/jlowin/fastmcp/issues/1311) -- official GitHub, HIGH confidence (subprocess cleanup issues)
+- [MCP Python SDK Issue #671: Tool execution hangs in stdio mode](https://github.com/modelcontextprotocol/python-sdk/issues/671) -- official GitHub, HIGH confidence (external script hanging)
+- [Setting Environment Variables for systemd Services (Baeldung)](https://www.baeldung.com/linux/systemd-services-environment-variables) -- MEDIUM confidence (well-known reference, verified against systemd docs)
+- [Python venv and systemd interaction](https://www.pythontutorials.net/blog/how-to-enable-a-virtualenv-in-a-systemd-service-unit/) -- MEDIUM confidence (community, widely corroborated)
+- [FastMCP PyPI page](https://pypi.org/project/fastmcp/) -- official, HIGH confidence (version history, dependency chain)
+- [FastMCP 2.0 vs MCP Python SDK Server (GitHub Issue #1068)](https://github.com/modelcontextprotocol/python-sdk/issues/1068) -- official GitHub, MEDIUM confidence (version compatibility discussion)
 
 ---
-*Pitfalls research for: Slack-integrated Claude Code autonomous agent on GCP VM*
-*Researched: 2026-03-18*
+*Pitfalls research for: v1.2 MCP Parity -- adding mic-transformer MCP server to SuperBot*
+*Researched: 2026-03-23*

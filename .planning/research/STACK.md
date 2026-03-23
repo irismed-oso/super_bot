@@ -1,147 +1,204 @@
-# Stack Research
+# Technology Stack
 
-**Domain:** Slack bot bridging to autonomous code agent on GCP VM
-**Researched:** 2026-03-18
-**Confidence:** HIGH (core decisions verified against official docs and PyPI)
-
----
-
-## Recommended Stack
-
-### Core Technologies
-
-| Technology | Version | Purpose | Why Recommended |
-|------------|---------|---------|-----------------|
-| `claude-agent-sdk` (Python) | 0.1.49 | Claude Code agent engine | Official Anthropic SDK. Bundles the Claude CLI automatically — no separate `claude` binary install needed. Avoids the documented TTY-hang bug in raw `claude -p` subprocess invocations (issues #9026, #13598). Provides `query()` with `resume=session_id` for persistent conversation across Slack messages. Async-native. |
-| `slack-bolt` (Python) | 1.27.0 | Slack event handling framework | Official Slack SDK. Handles OAuth, signature verification, event routing, and message posting. Socket Mode adapter included — no public URL needed for a VM. Async variant (`AsyncApp`) pairs cleanly with `claude-agent-sdk`'s async API. |
-| Python | 3.12 | Runtime | `claude-agent-sdk` requires >=3.10. Python 3.12 is current stable (3.13 is newest but 3.12 is better tested in production as of March 2026). |
-| systemd | (OS-provided) | Process management | The bot is a long-lived daemon. systemd's `Restart=always`, journald logging, and `ExecStartPre` dependency ordering are standard on any GCP Debian/Ubuntu VM. No extra install. Simpler than Supervisor or Docker for a single-process service. |
-| GCP Secret Manager | 2.26.0 (`google-cloud-secret-manager`) | Secrets storage | Stores `SLACK_BOT_TOKEN`, `SLACK_APP_TOKEN`, and `ANTHROPIC_API_KEY`. On a GCP VM with the right service account, secret access requires zero credential management — the VM's metadata server handles auth. Avoids `.env` files on disk. |
-
-### Supporting Libraries
-
-| Library | Version | Purpose | When to Use |
-|---------|---------|---------|-------------|
-| `aiohttp` | 3.x (latest) | Async HTTP + Socket Mode transport | Required when using `AsyncSocketModeHandler` with `slack-bolt`'s async app. The sync `SocketModeHandler` uses `websocket-client` (bundled with `slack-bolt`) but the async variant needs `aiohttp`. Use async throughout — `claude-agent-sdk` is async-only. |
-| `python-dotenv` | 1.x | Local development secrets | Load `.env` files in dev, fall back to Secret Manager in production. Never needed in production; only in the dev workflow. |
-| `structlog` | 24.x | Structured logging | Produces JSON logs that GCP Cloud Logging can ingest and query. More useful than plain `logging` when you need to correlate a Slack `ts` (thread timestamp) with a Claude session ID. |
-
-### Development Tools
-
-| Tool | Purpose | Notes |
-|------|---------|-------|
-| `uv` | Python dependency and venv management | Faster than pip. Use `uv pip install` and `uv venv`. Keeps the VM environment reproducible. |
-| systemd journal (`journalctl`) | Log tailing in production | `journalctl -u super-bot -f` streams logs. No additional log aggregator needed for a small team. |
-| `gh` CLI | GitLab/GitHub PR and repo operations | Pre-installed on the VM; Claude's Bash tool can call it. Needed for the deploy-from-VM flow. |
+**Project:** SuperBot v1.2 MCP Parity
+**Researched:** 2026-03-23
+**Scope:** Additions needed to wire mic-transformer MCP server into SuperBot's Claude Agent SDK sessions
 
 ---
 
-## Installation
+## Existing Stack (NOT re-researched)
+
+Already validated and running in production (v1.0/v1.1):
+
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| `claude-agent-sdk` | 0.1.49 | Claude Code agent engine with `mcp_servers` support |
+| `slack-bolt` | 1.27.0 | Slack event handling (Socket Mode) |
+| `mcp` (Python SDK) | 1.26.0 | MCP protocol (dependency of claude-agent-sdk in super_bot venv) |
+| Python | 3.10+ | Runtime on VM |
+| systemd | OS-provided | Process management |
+| Linear MCP, Sentry MCP | via npx | Already configured in `_build_mcp_servers()` |
+
+---
+
+## New Stack for v1.2
+
+### mic-transformer MCP Server Dependencies
+
+These go in **mic_transformer's .venv** (NOT super_bot's venv). The server subprocess runs with mic_transformer's Python interpreter.
+
+| Technology | Version | Purpose | Why |
+|------------|---------|---------|-----|
+| `mcp[cli]` | >=1.0.0, pin to ~=1.26.0 | MCP Python SDK with FastMCP bundled | The server imports `from mcp.server.fastmcp import FastMCP`. FastMCP 1.0 is bundled inside the `mcp` package (not the standalone `fastmcp` PyPI package). The `[cli]` extra adds the `mcp` CLI entry point used by `server.run()`. Pin to 1.26.x for compatibility with the claude-agent-sdk 0.1.49 that SuperBot runs. |
+
+**Do NOT install the standalone `fastmcp` package** (PyPI: `fastmcp>=2.0`). That is a separate project by Prefect/jlowin. The mic-transformer server uses `from mcp.server.fastmcp import FastMCP` which is the version bundled in the official `mcp` SDK package. Installing standalone `fastmcp` would be unused and could cause import confusion.
+
+### No Changes to SuperBot's Own Stack
+
+SuperBot already has `mcp==1.26.0` as a dependency of `claude-agent-sdk`. No new packages needed in super_bot's venv. The MCP server runs as a separate subprocess using mic_transformer's Python.
+
+---
+
+## ClaudeAgentOptions.mcp_servers Config Format
+
+### Type Definition (from claude-agent-sdk 0.1.49)
+
+```python
+class McpStdioServerConfig(TypedDict):
+    """MCP stdio server configuration."""
+    type: NotRequired[Literal["stdio"]]  # Optional for backwards compatibility
+    command: str
+    args: NotRequired[list[str]]
+    env: NotRequired[dict[str, str]]
+    # NOTE: No `cwd` field exists. The server must handle its own working directory.
+```
+
+The `mcp_servers` parameter on `ClaudeAgentOptions` accepts `dict[str, McpServerConfig]` where keys are server names and values are config dicts.
+
+### Current Config in agent.py (Already Correct)
+
+```python
+servers["mic-transformer"] = {
+    "command": mcp_python,       # /home/bot/mic_transformer/.venv/bin/python
+    "args": [mcp_server_script], # /home/bot/mic_transformer/.claude/mcp/mic-transformer/server.py
+}
+```
+
+This is already wired in `_build_mcp_servers()` at `bot/agent.py:43-56`. The config:
+- Uses mic_transformer's venv Python as the command
+- Passes the server.py path as the sole arg
+- Does NOT need `cwd` because server.py calls `os.chdir(PROJECT_ROOT)` internally
+- Does NOT need `env` because the tools use hardcoded API URLs and SSH for Prefect
+
+### How the SDK Passes Config to Claude CLI
+
+The SDK serializes the dict to JSON and passes it as `--mcp-config '{"mcpServers": {...}}'` to the underlying Claude CLI process. For stdio servers, Claude CLI spawns the subprocess directly. The server communicates via stdin/stdout using the MCP stdio protocol.
+
+### Optional: Adding env for MIC_TRANSFORMER_API_URL
+
+If the API URL needs to differ on the VM (unlikely since tools hardcode `136.111.85.127:8080`):
+
+```python
+servers["mic-transformer"] = {
+    "command": mcp_python,
+    "args": [mcp_server_script],
+    "env": {"MIC_TRANSFORMER_API_URL": "http://136.111.85.127:8080"},
+}
+```
+
+The `env` dict in `McpStdioServerConfig` is passed to the subprocess environment. Use this only if you need to override the default API URL.
+
+---
+
+## What mic-transformer's .venv Needs on the VM
+
+### Required Python Packages
+
+The MCP server subprocess needs these in `/home/bot/mic_transformer/.venv`:
+
+| Package | Why Needed |
+|---------|-----------|
+| `mcp[cli]~=1.26.0` | Core MCP server framework (`from mcp.server.fastmcp import FastMCP`, `server.run()`) |
+| `requests` | HTTP calls to mic-transformer API, Prefect API, Google Drive |
+| All existing mic_transformer deps | Storage tools import `from lib.models.S3Remits import S3Remits` etc. |
+
+The server.py adds `PROJECT_ROOT` and `PROJECT_ROOT/lib` to `sys.path`, so the full mic_transformer project dependencies must be installed.
+
+### Installation on VM
 
 ```bash
-# Create virtualenv
-uv venv /opt/super_bot/.venv
-source /opt/super_bot/.venv/bin/activate
+# Activate mic_transformer's venv (NOT super_bot's)
+source /home/bot/mic_transformer/.venv/bin/activate
 
-# Core
-uv pip install claude-agent-sdk==0.1.49 slack-bolt==1.27.0 aiohttp
+# Install MCP SDK (the only NEW dependency)
+pip install "mcp[cli]~=1.26.0"
 
-# Secrets
-uv pip install google-cloud-secret-manager==2.26.0
-
-# Logging
-uv pip install structlog
-
-# Dev only
-uv pip install python-dotenv
+# Verify
+python -c "from mcp.server.fastmcp import FastMCP; print('OK')"
 ```
+
+### Credentials Already on VM (No New Config)
+
+The MCP tools use these credentials, which should already be available on the VM:
+
+| Credential | How Used | How Available |
+|------------|----------|---------------|
+| AWS credentials | S3 storage access (`S3Remits` model) | `~/.aws/credentials` or instance profile |
+| GCS service account | Google Cloud Storage access | `GOOGLE_APPLICATION_CREDENTIALS` env var |
+| SSH key for Prefect host | `ssh ansible@136.111.85.127` for journalctl | `~/.ssh/` key |
+| Google Drive service account | Drive folder audit | Service account JSON in mic_transformer config |
+
+---
+
+## Subprocess Lifecycle
+
+### How Claude CLI Manages MCP Server Subprocesses
+
+1. SuperBot calls `claude_agent_sdk.query()` with `mcp_servers={"mic-transformer": {...}}`
+2. SDK spawns Claude CLI with `--mcp-config '{"mcpServers": {"mic-transformer": {"command": "...", "args": [...]}}}'`
+3. Claude CLI spawns the MCP server as a stdio subprocess at session start
+4. Claude calls MCP tools via stdin/stdout JSON-RPC during the session
+5. Claude CLI kills the MCP subprocess when the session ends
+
+The MCP server lives for the duration of a single `query()` call (one Slack message processing). It is spawned fresh each time. There is no persistent MCP server process.
+
+### Implications
+
+- **No long-running process management needed** -- Claude CLI handles subprocess lifecycle
+- **Cold start per message** -- server.py imports and `os.chdir()` on every invocation. With mic_transformer's large dependency tree, this may add 2-5 seconds of startup. Acceptable for a Slack bot (users expect some latency).
+- **Crash isolation** -- if the MCP server crashes, it only affects the current session. Next message spawns a fresh one.
+
+---
+
+## What NOT to Add
+
+| Avoid | Why |
+|-------|-----|
+| Standalone `fastmcp` PyPI package | Different project from `mcp.server.fastmcp`. Would be unused, wastes space, risks import shadowing. |
+| `mcp` package in super_bot's venv | Already there as a dependency of `claude-agent-sdk`. No action needed. |
+| Custom subprocess management for MCP server | Claude CLI handles spawning/killing. Do not wrap in your own `Popen`. |
+| `cwd` in mcp_servers config | `McpStdioServerConfig` does not have a `cwd` field. The server handles this internally via `os.chdir(PROJECT_ROOT)`. |
+| HTTP/SSE transport for mic-transformer MCP | stdio is simpler, lower latency, no port management. HTTP/SSE only needed for remote MCP servers. |
+| Environment variable passthrough for most tools | Tools hardcode API URLs and credentials paths. Only `MIC_TRANSFORMER_API_URL` is configurable via env, and the default is correct. |
+| New config.py variables | The current `_build_mcp_servers()` already reads `MIC_TRANSFORMER_CWD` from env to find the server script. No new config needed. |
 
 ---
 
 ## Alternatives Considered
 
-| Recommended | Alternative | When to Use Alternative |
-|-------------|-------------|-------------------------|
-| `claude-agent-sdk` | Raw `claude -p` subprocess | Never on a VM daemon. The SDK wraps the same underlying CLI but handles TTY allocation internally and provides a proper async Python API. Use raw subprocess only for one-off shell scripts in CI/CD where a PTY exists. |
-| Socket Mode (`AsyncSocketModeHandler`) | HTTP Events API (public URL) | Use HTTP if you later want to publish this app to Slack Marketplace (Socket Mode is ineligible) or need more than 10 concurrent WebSocket connections. For an internal VM with no public DNS, Socket Mode eliminates the need for a reverse proxy, Cloud NAT rule, or load balancer. |
-| systemd | Docker / Cloud Run | Use Docker/Cloud Run if you want container isolation or auto-scaling. For a single-process bot on one VM with no scaling requirements, systemd is strictly simpler — no image builds, no registry, no container runtime to maintain. |
-| GCP Secret Manager | Environment variables in `.env` | Use `.env` only in local development. On GCP VMs the metadata server handles IAM auth to Secret Manager without any key files. |
-| `AsyncApp` + `AsyncSocketModeHandler` | Sync `App` + `SocketModeHandler` | Use sync only if you must support Python <3.10 or need to prototype quickly. The sync handler blocks the thread per Claude invocation, meaning concurrent Slack messages would queue. The async variant handles multiple requests without spawning threads. |
+| Category | Recommended | Alternative | Why Not Alternative |
+|----------|-------------|-------------|---------------------|
+| MCP package | `mcp[cli]~=1.26.0` | Standalone `fastmcp>=3.0` | The server already uses `from mcp.server.fastmcp import FastMCP` (bundled FastMCP 1.0 in `mcp` package). Switching to standalone FastMCP 3.x would require rewriting all tool registrations. |
+| Transport | stdio (current) | HTTP/SSE server | Adds port management, health checks, firewall rules. stdio is local-only, zero config, managed by Claude CLI. |
+| MCP version pinning | `~=1.26.0` (compatible release) | `>=1.0.0` (loose) | Loose pinning risks breaking changes. The `mcp` package has had breaking API changes between major versions. Pin to what super_bot's claude-agent-sdk depends on. |
+| Server process model | Per-session (Claude CLI manages) | Long-running daemon | Would need systemd unit, health checks, restart logic. Per-session is simpler, crash-isolated, and adequate for Slack bot latency. |
 
 ---
 
-## What NOT to Use
+## Version Compatibility Matrix
 
-| Avoid | Why | Use Instead |
-|-------|-----|-------------|
-| Raw `subprocess.Popen(["claude", "-p", ...])` | Documented TTY-hang bug (GitHub issue #9026, unresolved Jan 2026): the CLI opens `/dev/tty` and blocks in a daemon context. The `workaround` (wrapping in `script -q /dev/null`) is fragile and unsupported. | `claude-agent-sdk` `query()` — same engine, proper async API, no TTY dependency. |
-| Polling Slack REST API | Requires exposing a URL or running a tight poll loop. High API quota consumption, adds latency. | Socket Mode WebSocket — Slack pushes events in real time. |
-| Flask / FastAPI for the bot server | HTTP mode needs a public HTTPS endpoint, TLS termination, and either a load balancer or `ngrok`-equivalent for the VM. Adds infrastructure for zero benefit on an internal tool. | Socket Mode — no HTTP server needed at all. |
-| `Supervisor` | Additional install and config format to learn. No advantage over systemd on GCP Debian/Ubuntu. | systemd — already present, better journald integration. |
-| Storing secrets in CLAUDE.md or `.env` committed to git | Secrets in plaintext in the repo would give anyone with repo access full bot + API key access. | GCP Secret Manager with VM service account IAM binding. |
-
----
-
-## Stack Patterns by Variant
-
-**If you need multi-user concurrency (>2 simultaneous requests):**
-- Replace the single `AsyncApp` coroutine with a task queue (e.g., `asyncio.Queue`) so requests are processed in order per channel thread, not dropped.
-- Claude Agent SDK sessions are per-process; concurrent `query()` calls for different Slack threads are fine (each has its own `session_id`).
-
-**If the team grows and wants approval gates later:**
-- Add a `PreToolUse` hook from the SDK's hook system to intercept destructive Bash commands and post a Slack confirmation message before proceeding.
-- This is additive — no architecture change needed.
-
-**If GitLab CI/CD integration is needed on the VM:**
-- Add `GITLAB_TOKEN` to Secret Manager. The bot can call `gh`/`glab` CLI via the `Bash` tool — no separate integration layer needed.
-
----
-
-## Version Compatibility
-
-| Package | Compatible With | Notes |
-|---------|-----------------|-------|
-| `claude-agent-sdk==0.1.49` | Python >=3.10 | Bundles claude CLI 2.1.71 internally. Do not install `claude` CLI separately — SDK uses its own bundled binary. |
-| `slack-bolt==1.27.0` | Python 3.7+ | `AsyncApp` + `AsyncSocketModeHandler` require `aiohttp`. The sync `SocketModeHandler` uses `websocket-client` (bundled). |
-| `aiohttp` 3.x | Python 3.8+ | Use latest 3.x. No known breaking changes with `slack-bolt` async adapters. |
-| `google-cloud-secret-manager==2.26.0` | Python 3.7+ | GCP VM must have `roles/secretmanager.secretAccessor` on its service account. |
-
----
-
-## Architecture Note for the Roadmap
-
-The central integration pattern is:
-
-```
-Slack (Socket Mode WS) → AsyncSocketModeHandler
-  → @app.event("app_mention") handler
-  → claude_agent_sdk.query(prompt, options=ClaudeAgentOptions(
-        cwd="/opt/mic_transformer",
-        resume=session_id,           # per Slack channel thread ts
-        allowed_tools=["Bash", "Read", "Edit", "Write", "Glob", "Grep"],
-        permission_mode="acceptEdits"
-    ))
-  → stream assistant messages back to Slack thread via WebClient.chat_postMessage
-```
-
-Session IDs are stored in a simple in-memory dict keyed by Slack thread `ts`. For the current scale (4 users, 1 channel), no persistent session store is needed — the SDK saves sessions to disk automatically under `~/.claude/projects/`.
+| Component | Version | Constraint Source |
+|-----------|---------|-------------------|
+| `claude-agent-sdk` (super_bot) | 0.1.49 | Depends on `mcp` -- drives version alignment |
+| `mcp` (super_bot, transitive) | 1.26.0 | Installed by claude-agent-sdk |
+| `mcp[cli]` (mic_transformer) | ~=1.26.0 | Must be compatible with CLI that claude-agent-sdk bundles |
+| Python (mic_transformer) | 3.10 | Existing venv on VM |
+| Python (super_bot) | 3.10 | Existing venv on VM |
+| `server.py` import | `from mcp.server.fastmcp import FastMCP` | Requires `mcp>=1.0.0` (FastMCP 1.0 bundled) |
+| `server.run()` | stdio transport | Default for `FastMCP.run()` when invoked as subprocess |
 
 ---
 
 ## Sources
 
-- `claude-agent-sdk` PyPI — version 0.1.49, Python >=3.10 requirement: https://pypi.org/project/claude-agent-sdk/
-- Agent SDK overview (official Anthropic docs): https://platform.claude.com/docs/en/agent-sdk/overview
-- Agent SDK Python reference: https://platform.claude.com/docs/en/agent-sdk/python
-- Claude Code headless/CLI reference: https://code.claude.com/docs/en/headless
-- Claude Code CLI flags reference: https://code.claude.com/docs/en/cli-reference
-- TTY hang bug (unresolved): https://github.com/anthropics/claude-code/issues/9026
-- Spurious /dev/tty reader bug: https://github.com/anthropics/claude-code/issues/13598
-- `slack-bolt` PyPI — version 1.27.0: https://pypi.org/project/slack-bolt/
-- Slack Socket Mode vs HTTP comparison: https://docs.slack.dev/apis/events-api/comparing-http-socket-mode/
-- Slack Bolt Python Socket Mode adapter docs: https://docs.slack.dev/tools/bolt-python/concepts/socket-mode/
-- `google-cloud-secret-manager` PyPI — version 2.26.0: https://pypi.org/project/google-cloud-secret-manager/
+- `mcp` PyPI package -- version 1.26.0, includes `mcp.server.fastmcp`: https://pypi.org/project/mcp/
+- `fastmcp` PyPI package (standalone, NOT used) -- version 3.1.1: https://pypi.org/project/fastmcp/
+- `claude-agent-sdk` PyPI -- version 0.1.49: https://pypi.org/project/claude-agent-sdk/
+- `McpStdioServerConfig` type definition: verified from `claude_agent_sdk/types.py` line 498-504 in installed package
+- `_build_mcp_servers()` implementation: verified from `bot/agent.py` lines 43-78
+- mic-transformer MCP server: verified from `.claude/mcp/mic-transformer/server.py` and `requirements.txt`
+- MCP Python SDK GitHub: https://github.com/modelcontextprotocol/python-sdk
 
 ---
-*Stack research for: Slack-integrated Claude Code agent on GCP VM*
-*Researched: 2026-03-18*
+*Stack research for: SuperBot v1.2 MCP Parity -- mic-transformer MCP integration*
+*Researched: 2026-03-23*

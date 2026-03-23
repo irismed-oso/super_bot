@@ -1,178 +1,201 @@
 # Project Research Summary
 
-**Project:** super_bot — Slack-integrated Claude Code autonomous agent
-**Domain:** ChatOps / autonomous coding agent bridge on GCP VM
-**Researched:** 2026-03-18
+**Project:** SuperBot v1.2 MCP Parity
+**Domain:** Slack-integrated autonomous coding and operations agent with mic-transformer MCP tool integration
+**Researched:** 2026-03-23 (v1.2 update; baseline research 2026-03-18)
 **Confidence:** HIGH
 
 ## Executive Summary
 
-Super Bot is a ChatOps automation system that bridges Slack @mentions to a Claude Code agent running on a GCP VM, giving a small trusted team (Nicole, Han) the ability to trigger autonomous coding operations — git commits, PR creation, script execution, codebase Q&A — directly from Slack without approval gates or a web UI. The established pattern for this class of product is: Socket Mode WebSocket inbound (no public URL required), `claude-agent-sdk` for agent invocation (avoiding the documented TTY-hang bug in raw subprocess calls), lazy listener for Slack's 3-second ack requirement, and thread-to-session mapping for multi-turn conversation continuity. This pattern is validated by official Anthropic docs, official Slack Bolt docs, and multiple production implementations (Kilo, Mintlify, sleepless-agent).
+SuperBot v1.2 is a tightly scoped integration milestone: wire the existing mic-transformer MCP server (35+ operational tools across 13 modules) into SuperBot's Claude Agent SDK sessions so Nicole and Han can invoke production pipeline operations directly from Slack. The architecture is already correct — `_build_mcp_servers()` in `bot/agent.py` already wires the mic-transformer server as a stdio subprocess using mic_transformer's own Python interpreter. The code changes required are minimal (under 10 lines across two files). The real work is VM prerequisite validation and systematic credential verification across four distinct credential pathways (GCS, S3, Google Drive, PostgreSQL).
 
-The recommended stack is minimal and well-justified: `slack-bolt` AsyncApp with `AsyncSocketModeHandler` for event handling, `claude-agent-sdk==0.1.49` for agent invocation, `google-cloud-secret-manager` for credentials on GCP, and systemd for process management. All major technology choices have strong official documentation backing and the async stack is required (not optional) because `claude-agent-sdk` is async-only and the lazy listener pattern requires non-blocking event handling. The build order is dictated by architecture: VM and agent SDK must work in isolation before the Slack bridge is connected, because debugging a broken agent loop through Slack is significantly harder than testing the agent standalone.
+The recommended approach is to deploy in four phases ordered by credential complexity and operational blast radius: start with the 20+ read-only status and audit tools (no risk to production data), then API-triggered mutating tools (validated by the production Flask API before reaching Celery workers), then SSH and Prefect tools (remote execution but no local subprocess exposure), and finally subprocess-based mutating tools (autopost, posting prep) which interact with Revolution EMR and require the most careful dry-run testing. The key distinction from all commercial agents (Claude Code in Slack, Kilo, GitHub Copilot) is that no commercial product ships with 35+ domain-specific operational tools. MCP integration transforms SuperBot from a coding agent into an operational platform where Nicole can ask "what's the VSP status for today?" and get a real answer pulling from GCS, S3, Google Drive, and PostgreSQL simultaneously.
 
-The top risks are correctness risks that must be addressed in Phase 1, not retrofitted: the Slack 3-second timeout (requires lazy listener from day one), duplicate event processing (requires persistent event ID deduplication), credential exposure (requires a dedicated `bot` OS user with no SSH keys, secrets in GCP Secret Manager), and the bot infinite loop (requires `bot_id` filter on every event handler). Context window exhaustion and concurrent session corruption are Phase 2 concerns that shape the agent integration design — specifically, a serialization queue and a `--max-turns` cap must be built in before the Slack trigger is connected to avoid partial-state repo corruption.
+The most significant risks are environment variable propagation under systemd and MCP server startup timeout due to heavy Python dependency imports. Both are addressable before any feature testing: validate that `/home/bot/.env` uses strict `KEY=VALUE` systemd syntax (no `export` prefix, no shell variable interpolation), and benchmark the MCP server cold-start time on the actual GCP VM — it must complete under the SDK's fixed 60-second connection timeout. The credential model is correct: mic-transformer tools load credentials from `config/*.yml` files via relative paths after `os.chdir(PROJECT_ROOT)`, not from environment variables, so the primary deployment prerequisite is verifying those YAML config files exist on the VM with production values.
 
 ## Key Findings
 
 ### Recommended Stack
 
-The stack is intentionally narrow: two core libraries (`slack-bolt`, `claude-agent-sdk`) plus GCP-native secrets management and systemd for process control. The `claude-agent-sdk` replaces raw `subprocess.Popen(["claude", "-p", ...])` — the SDK bundles the Claude CLI internally and avoids a documented, unresolved TTY-hang bug (GitHub issues #9026, #13598) that affects daemon processes. Socket Mode eliminates the need for any public URL, TLS termination, or load balancer on the VM. Python 3.12 is the right runtime (3.13 is newer but less battle-tested; SDK requires >=3.10).
+SuperBot's existing stack requires no changes for v1.2. The only new dependency is `mcp[cli]~=1.26.0` installed in mic_transformer's venv (NOT super_bot's venv). This is the official Anthropic MCP Python SDK, which bundles FastMCP 1.0 at `mcp.server.fastmcp`. The mic-transformer server already imports from this path (`from mcp.server.fastmcp import FastMCP`). Do NOT install the standalone `fastmcp` PyPI package — it is a separate project maintained by Prefect/jlowin that would be unused and could cause import shadowing.
+
+See [STACK.md](STACK.md) for full version compatibility matrix and alternatives considered.
 
 **Core technologies:**
-- `claude-agent-sdk==0.1.49`: Agent engine — bundles Claude CLI, async-native, `resume=session_id` for persistent threads
-- `slack-bolt==1.27.0` + `AsyncSocketModeHandler`: Event handling — no public URL, lazy listener built-in, official SDK
-- `aiohttp` (latest 3.x): Required by the async Socket Mode adapter
-- `google-cloud-secret-manager==2.26.0`: Secrets on GCP — zero credential management via VM metadata server
-- `systemd` (OS-provided): Process management — `Restart=always`, journald logging, no extra install
-- `structlog`: Structured JSON logging for Cloud Logging correlation
+- `claude-agent-sdk==0.1.49`: Agent engine with `mcp_servers` support — already installed, no change needed
+- `mcp[cli]~=1.26.0` (in mic_transformer venv only): MCP server runtime — the only new package; one `pip install` command
+- `McpStdioServerConfig` type (SDK): defines `command`, `args`, and optional `env` fields — no `cwd` field exists or is needed
+- `FastMCP` (bundled inside `mcp` package): already used by server.py; no server code changes required
+- Systemd `EnvironmentFile=/home/bot/.env`: credential delivery to bot process — must use strict `KEY=VALUE` syntax, no shell extensions
 
 ### Expected Features
 
-The MVP is clearly defined and relatively small. The dependency graph shows that almost everything flows from getting a working `@mention → Claude Code session → Slack reply` loop, so that loop must be the sole focus of Phase 1.
+SuperBot v1.2 must expose all 35+ mic-transformer MCP tools through a single stdio subprocess wired into each Claude Agent SDK session. Tools divide into a clear risk hierarchy: read-only queries with no blast radius, API-mediated writes validated by the production Flask API, Prefect-triggered remote jobs, and local subprocess execution.
 
-**Must have (table stakes):**
-- Named-user allowlist — any workspace member can trigger code execution without it
-- @mention → Claude Code session — the core mechanic; nothing else matters without this
-- Thread context passed to agent — bot is context-blind without it; every commercial implementation includes this
-- Progress updates in thread (start + done minimum) — prevents duplicate retries from users
-- Completion summary posted back — closes the loop; standard across all comparable products
-- Error reporting to Slack — silent failures destroy trust faster than loud failures
-- Git commit + push — table stakes for a coding agent
-- PR creation — the most requested "concrete action" command
+See [FEATURES.md](FEATURES.md) for the complete 35+ tool inventory with per-tool credentials and complexity ratings.
 
-**Should have (differentiators):**
-- Persistent CLAUDE.md project memory — eliminates repeated context from users; Devin Wiki equivalent
-- Script execution for Prefect flows and operational tasks — core value for Nicole's workflow
-- Task serialization / basic queue — prevents concurrent session corruption
-- Automatic test running post-change — reduces review burden; trust-building
+**Must have (table stakes for MCP parity):**
+- All 11 Module 1 status/audit tools — Nicole's primary workflow starts with "what's the status?"; requires GCS, S3, GDrive, DB, and SSH credentials
+- All Module 5 read-only storage tools (5 tools) — "did the PDF arrive? is the AIOUT there?"
+- Module 2 extraction triggers (`vsp_extract`, `eyemed_extract`, `requeue_missing_pages`) — daily operational workflow
+- Module 3 reduction triggers (`reduce_aiout`, `reduce_all_vsp`) — daily workflow immediately after extraction
+- Module 10 deploy version check — validates end-to-end MCP connectivity with zero risk
+- `check_prefect_flow_status`, `get_prefect_logs` — diagnosing why pipeline stages are not processing
 
-**Defer (v2+):**
-- Isolated task workspaces (git worktrees per task) — high complexity; add when concurrency is actually a problem
-- Task queue with /status slash commands — add when team needs backlog visibility
-- Daily digest — passive awareness feature; low urgency
-- Deployment from Slack — high blast radius; requires extensive trust first
+**Should have (differentiators beyond coding agents):**
+- Module 4 posting prep (3 tools) — prepare GDrive and GCS files for manual posting team
+- Module 9 benefits fetch (3 tools) — trigger and poll long-running Prefect jobs from Slack; up to 10-minute polling
+- Module 11 azure mirror audit and trigger — 24-location CrystalPM sync monitoring from Slack
+- Module 12 IVT ingestion audit — cross-system health check (Prefect + prod-ivt DB)
+- Module 13 provider revenue analytics — business intelligence query from Slack
+- Module 4 autopost tools (`vsp_autopost`, `eyemed_autopost`) — `dry_run=True` default; highest operational value but highest risk; test dry_run exhaustively before live use
+
+**Defer to v2+:**
+- `remit_crawler` (Module 6) — requires Chrome/Chromium headless browser on GCP VM and insurance portal credentials; unclear if viable; interim workaround: SSH to production server for manual crawler invocation
 
 **Anti-features to reject:**
-- Approval gates for every destructive action — defeats the autonomy value; explicitly out of scope per PROJECT.md
-- DM-based interaction — kills team awareness, a core design goal
-- Real-time token-by-token streaming — Slack rate limits will get the bot banned
+- Approval gates on mutating MCP tools — PROJECT.md explicitly scopes this out; full autonomy by design; team visibility in channel is the audit trail
+- Custom wrappers around MCP tools — tools have clean interfaces; wiring the server as stdio subprocess makes all 35+ tools available automatically
+- Tool-level access control — only 2-3 trusted users; existing Slack allowlist from v1.0 is sufficient
 
 ### Architecture Approach
 
-The architecture is a four-layer stack: Slack Bridge (event routing, ack, result posting) → Claude Agent SDK wrapper (session management, streaming) → Claude Code CLI (tool execution in the repo) → mic_transformer repo clone (the target workspace). The bridge and SDK layers are separated deliberately so the SDK can be upgraded without touching Slack logic. The session map (`thread_ts → session_id`) is a required explicit component — the SDK's built-in `continue_conversation=True` is insufficient when multiple threads are active simultaneously and will route the wrong context to the wrong thread.
+The integration architecture is a pure subprocess model requiring minimal code changes. SuperBot's `_build_mcp_servers()` passes mic_transformer's venv Python binary plus the `server.py` path to `ClaudeAgentOptions.mcp_servers`. The Claude CLI spawns the MCP server as a stdio subprocess per `query()` call; the subprocess lives only for that session's duration and is killed by the CLI when the session ends. No persistent MCP server process management is needed. The MCP server calls `os.chdir(PROJECT_ROOT)` internally at startup, making all relative-path `config/*.yml` credential loads work regardless of spawn directory. Each session gets a fresh subprocess instance with no shared state between sessions.
+
+See [ARCHITECTURE.md](ARCHITECTURE.md) for the full data flow diagram, anti-patterns, and recommended `_build_mcp_servers()` implementation.
 
 **Major components:**
-1. Slack Bridge (`bot/app.py`, `bot/handlers.py`) — Socket Mode WebSocket, lazy listener, event routing, access control
-2. Agent wrapper (`bot/agent.py`) — `claude-agent-sdk` `query()` calls, streaming, session lifecycle
-3. Session map (`bot/session_map.py`) — `(channel, thread_ts)` → session ID, persisted to disk JSON (simple) or SQLite (robust)
-4. Access control (`bot/access_control.py`) — allowlist by Slack user ID, checked before any Claude invocation
-5. Formatter (`bot/formatter.py`) — converts agent AssistantMessage/ResultMessage to readable Slack blocks
-6. systemd unit (`systemd/superbot.service`) — `Restart=always`, GCP Secret Manager injection at startup
+1. `bot/agent.py` `_build_mcp_servers()` — only component requiring code changes; add optional `env` dict entry for `MIC_TRANSFORMER_API_URL` (currently already wired, minor enhancement)
+2. `config.py` — add `MIC_TRANSFORMER_API_URL` env var mapping; single line addition
+3. mic_transformer `config/*.yml` files on VM — the primary deployment prerequisite; must contain production DB, GCS, Google Drive, and CrystalPM credentials
+4. mic_transformer `.venv` on VM — must have `mcp[cli]~=1.26.0` installed
+5. All other bot components (`app.py`, `handlers.py`, `queue_manager.py`, `worktree.py`, `progress.py`) — no changes required
 
 ### Critical Pitfalls
 
-1. **Slack 3-second timeout causing duplicate agent runs** — use lazy listener pattern from day one; `ack()` immediately, run agent in background task; never retrofit this
-2. **Duplicate event processing** — track `event_id` persistently (not in-memory); a process restart would clear in-memory deduplication and replay events as new tasks
-3. **Running Claude Code without credential isolation** — create a dedicated `bot` OS user with no SSH keys, no cloud credentials; store all secrets in GCP Secret Manager; deny Claude access to `~/.ssh/` via `settings.json` denylist; CVE-2025-59536 demonstrates this attack vector is actively exploited
-4. **Bot infinite loop (responding to own messages)** — check `event.bot_id` before processing every event; subscribe only to `app_mention`, not generic `message` events
-5. **Concurrent sessions corrupting the shared repo** — serialize Claude invocations with an `asyncio.Lock` or queue before connecting the Slack trigger; two simultaneous sessions in the same working directory will corrupt each other
+See [PITFALLS.md](PITFALLS.md) for the full 12-pitfall inventory with detection signals, recovery costs, and phase assignments.
+
+1. **env dict replaces rather than extends subprocess environment** — passing any `env` field to `McpStdioServerConfig` may replace the entire inherited process environment (Python `subprocess.Popen` behavior), causing all credential lookups to fail silently while the server reports "connected." Prevention: if adding env vars, always merge with `{**os.environ, "EXTRA_VAR": "value"}`; verify by testing one tool from each credential category immediately after wiring.
+
+2. **systemd EnvironmentFile syntax silently drops variables** — `export KEY=val`, `$VAR` interpolation, and backtick substitution are all invalid in systemd's `EnvironmentFile` parser and are silently dropped (not flagged as errors). Works locally under `python-dotenv` but breaks under systemd. Prevention: audit `/home/bot/.env` for non-`KEY=VALUE` lines; validate with `sudo -u bot env | grep EXPECTED_VAR` on the VM after deployment.
+
+3. **MCP server startup timeout kills the session** — the Claude Agent SDK has a fixed 60-second connection timeout for MCP servers. mic_transformer's heavy dependency tree (boto3, google-cloud-storage, SQLAlchemy, Prefect client) may exceed this on a resource-constrained GCP VM, especially cold (no `.pyc` cache). Prevention: benchmark `time /path/to/venv/bin/python server.py` on the actual VM; lazy-import heavy modules inside tool functions rather than at the module level if startup exceeds 30 seconds.
+
+4. **Wrong fastmcp package installed** — the server imports `from mcp.server.fastmcp import FastMCP` (FastMCP 1.0 bundled inside the official `mcp` PyPI package). The standalone `fastmcp` package on PyPI (jlowin/Prefect project, version 3.x) is a different project entirely. Installing standalone `fastmcp` would be unused and risks import shadowing. Prevention: install `mcp[cli]~=1.26.0` only; verify with `python -c "from mcp.server.fastmcp import FastMCP; print('OK')"`.
+
+5. **stdout pollution corrupts the JSON-RPC protocol stream** — MCP stdio uses stdout exclusively for JSON-RPC messages. Any `print()` call in the server or its dependencies corrupts the stream and kills the connection. Prevention: audit with `grep -r "print(" server.py tools/`; configure all Python logging to write to stderr only.
 
 ## Implications for Roadmap
 
-Based on research, the component dependency graph dictates a clear phase structure. The architecture research explicitly defines the correct build order, the pitfalls research specifies which pitfalls belong in which phase, and the features research defines a clear MVP boundary.
+The integration should proceed in four phases ordered by credential complexity and operational blast radius. Total code changes are under 10 lines across two files. The phases differ primarily in which VM prerequisites must be verified before each phase's tools can be tested.
 
-### Phase 1: VM Provisioning and Slack Bridge Foundation
+### Phase 1: VM Validation and MCP Server Wiring
 
-**Rationale:** Security and correctness concerns identified in pitfalls research must be addressed before any code runs on the VM. The Slack bridge lazy listener pattern is not retrofittable — it must be correct from the first deployed version. Architecture research confirms VM + agent SDK must be testable in isolation before connecting Slack.
-**Delivers:** A GCP VM with a `bot` OS user, secrets in GCP Secret Manager, a running systemd service, a Slack app that responds to @mentions with an ack, access control enforcement, event deduplication, and bot message loop prevention.
-**Addresses (features):** Named-user allowlist, @mention listener, error reporting to Slack
-**Avoids (pitfalls):** Slack 3-second timeout, duplicate event processing, bot infinite loop, credential isolation/running as root, Slack signature verification
+**Rationale:** Environment issues under systemd are the most common MCP integration failure mode and must be caught before any feature testing. A single broken env variable silently disables ~80% of tools. This phase has zero production risk and ends with one confirmed working tool call.
 
-### Phase 2: Claude Agent SDK Integration (Standalone, No Slack)
+**Delivers:** End-to-end verified MCP connectivity; `deploy_version` tool returns the production API version from a Slack message. All credential infrastructure confirmed working.
 
-**Rationale:** Architecture research explicitly recommends testing the agent invocation in isolation before wiring it to Slack. Debugging a broken agent loop through Slack is significantly harder. This phase also addresses the two agent-layer pitfalls (context exhaustion, concurrent session corruption) before they can cause damage.
-**Delivers:** A standalone Python script that can invoke `claude-agent-sdk`, stream results, manage sessions (resume by `session_id`), serialize concurrent requests, and handle context exhaustion gracefully.
-**Uses (stack):** `claude-agent-sdk==0.1.49`, `--max-turns` cap, `asyncio.Lock` for serialization
-**Implements (architecture):** `bot/agent.py`, `bot/session_map.py`
-**Avoids (pitfalls):** Context window exhaustion, process hang in headless mode, concurrent session corruption
+**Addresses (features):** `deploy_version` (zero-risk connectivity proof); at least one read-only status tool as GCS/DB connectivity validation.
 
-### Phase 3: Bridge + Agent Integration (End-to-End MVP)
+**Avoids (pitfalls):** Pitfall 2 (systemd EnvironmentFile syntax), Pitfall 5 (wrong fastmcp package), Pitfall 6 (startup timeout), Pitfall 9 (stdout pollution) — all must be caught here.
 
-**Rationale:** With Phase 1 (Slack bridge) and Phase 2 (agent SDK) independently verified, wiring them together is a low-risk integration step. This phase delivers the full MVP and validates the core product hypothesis.
-**Delivers:** @mention in Slack triggers a real Claude Code session on the VM, progress is posted to the thread, completion summary is posted, errors are reported. Git operations and PR creation work end-to-end.
-**Addresses (features):** Full MVP feature set — @mention → session, thread context, progress updates, completion summary, error reporting, git commit + push, PR creation
-**Implements (architecture):** `bot/handlers.py` wiring agent calls, `bot/formatter.py`, session continuity flow
+**Tasks (in order):**
+- Install `mcp[cli]~=1.26.0` in `/home/bot/mic_transformer/.venv`; verify with import test
+- Confirm `config/*.yml` files exist with production credentials for DB, GCS, GDrive, CrystalPM
+- Audit `/home/bot/.env` for systemd-incompatible syntax; fix any `export` or interpolation lines
+- Add `MIC_TRANSFORMER_API_URL` to `config.py` (single line)
+- Update `_build_mcp_servers()` to include optional `env` dict (minimal change)
+- Benchmark MCP server cold-start time on VM; lazy-import boto3/GCS if needed
+- End-to-end test: send "check deploy version" to Slack channel; confirm tool returns real data
 
-### Phase 4: Operational Hardening and Differentiators
+### Phase 2: Read-Only Status and Storage Tools
 
-**Rationale:** Once the core loop is validated with real usage, add the differentiating features that elevate the product beyond a basic bridge: persistent project memory, script execution for Prefect flows, and basic task serialization improvements.
-**Delivers:** CLAUDE.md project memory configured, Prefect flow execution working via bot commands, structured logging in Cloud Logging, task queue for visibility.
-**Addresses (features):** Persistent CLAUDE.md memory, script execution (Prefect flows), task serialization, automatic test running post-change
+**Rationale:** The 20+ read-only tools covering Nicole's primary daily queries have no blast radius and validate that all four credential categories (GCS, S3, Google Drive, PostgreSQL) work correctly. This builds confidence before any write operations are attempted.
+
+**Delivers:** Nicole can ask "what's the VSP status for today?" or "did the EyeMed PDF arrive for this location?" from Slack and receive real pipeline state data.
+
+**Addresses (features):** All 11 Module 1 status/audit tools, Module 5 storage tools (5 read-only), `check_pipeline_status`, `pipeline_stage_view`, `gdrive_audit`, `provider_revenue`, `ocea_health_check`.
+
+**Avoids (pitfall 1):** Test one tool from each credential category (GCS: `list_gcs_aiout`; S3: `list_s3_remits`; GDrive: `gdrive_audit`; DB: `provider_revenue`; SSH: `check_prefect_flow_status`) to verify env inheritance is working across all pathways.
+
+### Phase 3: API-Triggered and Prefect Tools
+
+**Rationale:** Extraction, reduction, benefits fetch, and Prefect flow status tools mutate state but do so through validated production infrastructure. The Flask API validates inputs before dispatching to Celery workers; Prefect provides its own retry and audit trail. These are safer than local subprocess execution.
+
+**Delivers:** Full daily pipeline workflow operable from Slack: check status, trigger VSP/EyeMed extraction, trigger reduction, check and diagnose Prefect flow status. Benefits fetch, Azure mirror, and IVT audit tools also covered.
+
+**Addresses (features):** Module 2 (extraction), Module 3 (reduction), Module 8 (PDF ingestion), Module 9 (benefits fetch — polls up to 10 min), Module 11 (azure mirror audit and trigger), Module 12 (IVT ingestion audit).
+
+**Avoids (pitfall 7):** Benefits fetch polls for up to 10 minutes. Verify SuperBot's `run_agent_with_timeout` accommodates this duration before declaring this phase complete.
+
+### Phase 4: Subprocess-Based Mutating Tools
+
+**Rationale:** Posting prep and autopost tools run local Python subprocesses that interact with Revolution EMR and modify GCS/Google Drive state. The `dry_run=True` defaults provide a safety net, but these require the most deliberate testing. Autopost is the highest-value and highest-risk capability in the entire tool suite.
+
+**Delivers:** Nicole can trigger posting prep (GDrive upload, task sheet generation) and eventually run autoposts from Slack. Full operational automation pipeline achievable without opening a laptop.
+
+**Addresses (features):** Module 4 posting prep (3 tools), `vsp_autopost`, `eyemed_autopost`, `clear_pipeline`.
+
+**Avoids (pitfall 3 and 10):** Audit subprocess calls in posting tools for `os.chdir()` usage; verify tools use unique temp paths per invocation to avoid session collision. Require explicit "live run" instruction before any `dry_run=False` autopost test.
 
 ### Phase Ordering Rationale
 
-- Security and correctness (Phase 1) comes first because the lazy listener and event deduplication patterns cannot be retrofitted cleanly — they affect the entire event processing model
-- Agent isolation (Phase 2) before integration (Phase 3) is dictated by debuggability — the architecture research explicitly warns against this sequencing mistake
-- Differentiators (Phase 4) come after MVP validation because the feature research defines them as "add after validation," not at launch
-- Deployment from Slack is deferred indefinitely — it is a v2+ feature that requires extensive trust-building first
+- Phase 1 before everything: systemd environment propagation must be verified before feature testing begins; a broken env silently breaks 80% of tools and is harder to diagnose once feature testing has started
+- Read-only (Phase 2) before write (Phases 3-4): validates all four credential pathways with zero blast radius; failing writes are harder to diagnose than failing reads
+- API-mediated writes (Phase 3) before subprocess writes (Phase 4): production API provides input validation and error reporting that local subprocesses do not
+- `remit_crawler` deferred beyond Phase 4: headless Chrome on GCP VM is an unknown; do not block v1.2 on this; interim path is SSH to production server
 
 ### Research Flags
 
-Phases likely needing deeper research during planning:
-- **Phase 1:** GCP VM setup specifics (service account IAM bindings for Secret Manager, systemd unit file syntax for secret injection at startup) — operational details that vary by GCP project configuration
-- **Phase 2:** `claude-agent-sdk` streaming API details — the SDK version (0.1.49) is recent; streaming behavior and `ResultMessage` structure should be verified against the live SDK before implementation
+Phases needing deeper research during planning:
+- **Phase 3 (Benefits fetch timeout):** The 10-minute Prefect polling in benefits fetch tools needs explicit verification against SuperBot's session timeout configuration. The `run_agent_with_timeout` default may need adjustment.
+- **Phase 4 (Revolution EMR subprocess in dry_run):** The behavior of `run_revolution_poster.py` in dry_run mode should be manually tested on the VM before wiring to Slack to understand its output and failure modes.
 
-Phases with standard patterns (skip research-phase):
-- **Phase 3:** The bridge + agent wiring follows directly from the established lazy listener pattern; no novel patterns involved
-- **Phase 4:** CLAUDE.md configuration is well-documented; Prefect flow execution via Bash tool is straightforward given agent access to the VM
+Phases with standard patterns (can skip deeper research):
+- **Phase 1 (VM wiring):** All patterns are well-documented in the research files; `mcp[cli]` install is a single command; systemd env validation is standard.
+- **Phase 2 (Read-only tools):** All 20+ tools have been fully analyzed from source; credential paths are documented in FEATURES.md and ARCHITECTURE.md.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | Core choices verified against official PyPI pages, official Anthropic SDK docs, official Slack Bolt docs; TTY bug verified against open GitHub issues |
-| Features | MEDIUM | MVP features HIGH (official Claude Code in Slack docs + GitHub Copilot docs confirm pattern); differentiators MEDIUM (community implementations and competitor analysis) |
-| Architecture | HIGH | Primary sources: official Slack Bolt lazy listener docs, official Claude Agent SDK sessions docs, OpenCode Slack integration analysis |
-| Pitfalls | HIGH | Critical pitfalls verified across official security docs, official GitHub issues, and CVE disclosures; recovery strategies are standard incident response |
+| Stack | HIGH | `McpStdioServerConfig` fields verified directly from installed `claude_agent_sdk/types.py`; version compatibility verified from installed packages; import path for FastMCP confirmed from mic-transformer server.py source |
+| Features | HIGH | All 35+ tools analyzed from direct source code inspection of mic-transformer MCP server modules; no assumptions; credential dependencies mapped per-tool |
+| Architecture | HIGH | Execution chain verified from SDK `subprocess_cli.py` source; `os.chdir()` subprocess isolation is OS-level guarantee; credential loading via YAML config files verified from tool source code |
+| Pitfalls | HIGH | Critical pitfalls backed by official SDK GitHub issues (#573), official FastMCP GitHub issues (#399, #1311), MCP Python SDK issues (#671), and systemd documentation; not community speculation |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **GCP-specific IAM configuration:** Research describes the Secret Manager pattern at the concept level; the exact service account bindings, `roles/secretmanager.secretAccessor` assignment, and systemd `ExecStartPre` secret injection command need to be validated against the actual GCP project during Phase 1 implementation
-- **`claude-agent-sdk` `ResultMessage` structure:** The streaming API yields `AssistantMessage`, `ResultMessage`, and `TextBlock` objects; the exact fields needed to extract `session_id` from `ResultMessage` should be verified against the live 0.1.49 package before `bot/agent.py` is written
-- **GitLab-specific PR creation:** Architecture research references `gh`/`glab` CLI for GitLab MR creation; the exact `glab` command syntax and authentication flow for the VM's dedicated bot user needs verification during Phase 3
-- **mic_transformer repo access on VM:** The VM must have the `mic_transformer` repo cloned with the correct Python venv and `.env` already configured; this prerequisite is assumed by the architecture but not covered in the research
+- **Chrome/Chromium on GCP VM for remit_crawler:** Unknown whether headless browser is installed or reliably usable on the VM. Check during Phase 1 VM audit; if not present, keep deferred and document SSH workaround.
+- **Prefect API credentials (`shen:tofu` basic auth):** Hardcoded in MCP tools. Verify this account remains active and is reachable from the GCP VM's network before Phase 3.
+- **Revolution EMR credentials on VM:** `vsp_autopost` and `eyemed_autopost` require Revolution EMR credentials in mic_transformer config. Verify these are present in the VM's mic_transformer clone before beginning Phase 4 testing.
+- **VM compute sizing:** PITFALLS.md flags e2-small/medium as potentially insufficient for MCP startup under memory pressure. If the Phase 1 cold-start benchmark exceeds 30 seconds, upgrade proactively to e2-medium before lazy-import optimization.
+- **`prod-ivt` DB access from VM:** `ivt_ingestion_audit` (Module 12) accesses the production `prod-ivt` database. Confirm the GCP VM has network access to `34.136.128.245` and that the `ivt_app_user` credentials are in the mic_transformer clone. Given the global CLAUDE.md warning about this database, document that this tool is read-only before enabling it.
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- Claude Agent SDK Overview (official Anthropic, March 2026): https://platform.claude.com/docs/en/agent-sdk/overview
-- Claude Agent SDK Sessions (official Anthropic, March 2026): https://platform.claude.com/docs/en/agent-sdk/sessions
-- Claude Code Headless/Programmatic Mode Docs: https://code.claude.com/docs/en/headless
-- Claude Code Security Docs: https://code.claude.com/docs/en/security
-- Slack Bolt for Python — Lazy Listeners (official): https://docs.slack.dev/tools/bolt-python/reference/lazy_listener/index.html
-- Slack: Comparing HTTP and Socket Mode (official): https://docs.slack.dev/apis/events-api/comparing-http-socket-mode/
-- Verifying Requests from Slack (official): https://api.slack.com/authentication/verifying-requests-from-slack
-- Claude Code in Slack (official Anthropic docs): https://code.claude.com/docs/en/slack
-- GitHub Copilot coding agent in Slack (official GitHub docs): https://docs.github.com/en/copilot/how-tos/use-copilot-agents/coding-agent/integrate-coding-agent-with-slack
-- GitHub Issue #7497: Process Hangs Indefinitely in Headless Mode: https://github.com/anthropics/claude-code/issues/7497
-- GitHub Issue #4722: Context Window Exhaustion: https://github.com/anthropics/claude-code/issues/4722
-- TTY hang bug (unresolved): https://github.com/anthropics/claude-code/issues/9026
+- Installed `claude_agent_sdk` package source (`types.py`, `subprocess_cli.py`) — `McpStdioServerConfig` definition and CLI spawning behavior
+- mic-transformer MCP server source (`.claude/mcp/mic-transformer/server.py`, all 13 tool modules, `common.py`) — complete feature inventory and credential patterns
+- [Claude Agent SDK MCP documentation](https://platform.claude.com/docs/en/agent-sdk/mcp) — 60-second connection timeout, env field behavior
+- [Claude Agent SDK Python GitHub Issue #573](https://github.com/anthropics/claude-agent-sdk-python/issues/573) — confirms subprocess environment inheritance behavior
+- [MCP Python SDK GitHub](https://github.com/modelcontextprotocol/python-sdk) — FastMCP 1.0 bundled in `mcp` package history
+- [FastMCP GitHub Issue #399](https://github.com/jlowin/fastmcp/issues/399) — stdio initialize succeeds, subsequent requests crash (known issue)
+- [FastMCP GitHub Issue #1311](https://github.com/jlowin/fastmcp/issues/1311) — subprocess cleanup issues in stdio mode
+- [MCP Python SDK Issue #671](https://github.com/modelcontextprotocol/python-sdk/issues/671) — stdio tool execution hangs in external scripts
 
 ### Secondary (MEDIUM confidence)
-- OpenCode Slack Integration architecture (DeepWiki analysis): https://deepwiki.com/anomalyco/opencode/6.3-slack-integration
-- Kilo for Slack feature page: https://kilo.ai/features/slack
-- Mintlify Slack coding agent design: https://www.mintlify.com/blog/we-built-our-coding-agent-for-slack
-- Anthropic long-running agent harnesses: https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents
-- Check Point Research: CVE-2025-59536 / CVE-2026-21852: https://research.checkpoint.com/2026/rce-and-api-token-exfiltration-through-claude-code-project-files-cve-2025-59536/
-- Git Worktrees for Parallel AI Agents: https://www.nrmitchi.com/2025/10/using-git-worktrees-for-multi-feature-development-with-ai-agents/
+- [Baeldung: systemd environment variables](https://www.baeldung.com/linux/systemd-services-environment-variables) — EnvironmentFile syntax restrictions; corroborated by systemd man page
+- [Claude Code in Slack official docs](https://code.claude.com/docs/en/slack) — competitor feature comparison baseline
+- [GitHub Copilot coding agent in Slack](https://docs.github.com/en/copilot/how-tos/use-copilot-agents/coding-agent/integrate-coding-agent-with-slack) — competitor feature comparison baseline
+- [Anthropic long-running agent harnesses](https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents) — patterns for production agent deployments
 
-### Tertiary (LOW confidence)
-- Sleepless Agent (Claude Code + Slack task queue): https://github.com/context-machine-lab/sleepless-agent — community implementation, directionally useful for v2 task queue design
-- SFEIR Institute: Claude Code Headless Mode Errors: https://institute.sfeir.com/en/claude-code/claude-code-headless-mode-and-ci-cd/errors/ — statistics unverified but patterns corroborated by official docs
+### Tertiary (informational only)
+- [FastMCP PyPI page](https://pypi.org/project/fastmcp/) — confirms standalone fastmcp is a separate project from `mcp.server.fastmcp`
+- [Kilo for Slack feature page](https://kilo.ai/features/slack) — competitor feature comparison
 
 ---
-*Research completed: 2026-03-18*
+*Research completed: 2026-03-23*
 *Ready for roadmap: yes*

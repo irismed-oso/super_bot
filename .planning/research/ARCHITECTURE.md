@@ -1,339 +1,337 @@
-# Architecture Research
+# Architecture Research: mic-transformer MCP Integration
 
-**Domain:** Slack-integrated autonomous agent / ChatOps automation
-**Researched:** 2026-03-18
-**Confidence:** HIGH (primary sources: official Slack Bolt docs, Claude Agent SDK official docs, OpenCode Slack integration analysis)
+**Domain:** MCP server integration into existing Claude Agent SDK architecture
+**Researched:** 2026-03-23
+**Confidence:** HIGH (primary sources: Claude Agent SDK source code in installed package, mic-transformer server.py source, Claude Code MCP docs)
+**Mode:** Integration architecture for v1.2 MCP Parity milestone
 
-## Standard Architecture
-
-### System Overview
-
-```
-┌──────────────────────────────────────────────────────────────────┐
-│                         SLACK                                    │
-│  ┌──────────────────────────────────────────────────────────┐    │
-│  │  Team Channel  @superbot <task description>              │    │
-│  └───────────────────────────┬──────────────────────────────┘    │
-└──────────────────────────────│───────────────────────────────────┘
-                               │ WebSocket (Socket Mode, outbound)
-                               ▼
-┌──────────────────────────────────────────────────────────────────┐
-│                         GCP VM                                   │
-│                                                                  │
-│  ┌─────────────────────────────────────────────────────────┐    │
-│  │  Slack Bridge (Python, slack-bolt AsyncApp)              │    │
-│  │  - Listens for app_mention events                        │    │
-│  │  - ack() within 3 seconds (lazy listener pattern)        │    │
-│  │  - Maps thread_ts → session_id                           │    │
-│  │  - Posts progress updates and final result back          │    │
-│  └─────────────────────┬───────────────────────────────────┘    │
-│                         │ asyncio subprocess                     │
-│                         ▼                                        │
-│  ┌─────────────────────────────────────────────────────────┐    │
-│  │  Claude Agent SDK (claude-agent-sdk Python)              │    │
-│  │  - query() or ClaudeSDKClient for stateful sessions      │    │
-│  │  - Session stored to ~/.claude/projects/<cwd>/*.jsonl    │    │
-│  │  - Streams ResultMessage, AssistantMessage back          │    │
-│  └─────────────────────┬───────────────────────────────────┘    │
-│                         │ subprocess + JSONL stdin/stdout        │
-│                         ▼                                        │
-│  ┌─────────────────────────────────────────────────────────┐    │
-│  │  Claude Code CLI (claude binary)                         │    │
-│  │  - Executes tools: Bash, Read, Write, Edit, Grep, Glob   │    │
-│  │  - Works in /home/.../mic_transformer clone              │    │
-│  │  - git operations, script execution, deploys             │    │
-│  └─────────────────────┬───────────────────────────────────┘    │
-│                         │                                        │
-│  ┌──────────────────────▼──────────────────────────────────┐    │
-│  │  mic_transformer repo clone                              │    │
-│  │  Python venv, .env, git remote → GitLab                 │    │
-│  └─────────────────────────────────────────────────────────┘    │
-│                                                                  │
-│  ┌─────────────────────────────────────────────────────────┐    │
-│  │  Session Store (filesystem)                              │    │
-│  │  ~/.claude/projects/<encoded-cwd>/<session-id>.jsonl     │    │
-│  │  thread_ts → session_id map (simple JSON file)           │    │
-│  └─────────────────────────────────────────────────────────┘    │
-└──────────────────────────────────────────────────────────────────┘
-                               │
-                    ┌──────────▼──────────┐
-                    │   Anthropic API      │
-                    │   (HTTPS outbound)   │
-                    └─────────────────────┘
-```
-
-### Component Responsibilities
-
-| Component | Responsibility | Typical Implementation |
-|-----------|----------------|------------------------|
-| Slack Bridge | Receive events from Slack, dispatch tasks, post results back | `slack-bolt` AsyncApp with Socket Mode, Python asyncio |
-| Event Router | Route `app_mention` events to the right handler, enforce access control | Bolt listener with allowed-user check |
-| Session Map | Map Slack `thread_ts` to Claude Agent SDK session IDs for continuity | JSON file on disk (simple) or SQLite (robust) |
-| Task Runner | Run Claude agent as an asyncio background task, stream output back | `asyncio.create_task()` wrapping `claude_agent_sdk.query()` |
-| Claude Agent SDK | Launch the Claude CLI, manage the agent loop, stream results | `claude-agent-sdk` Python package |
-| Claude Code CLI | Execute tools: bash, git, file ops against the repo | `claude` binary installed on VM |
-| mic_transformer clone | The codebase the agent operates on | Git repo with venv and .env configured |
-| Session Store | Persist conversation history between Slack messages | `~/.claude/projects/` JSONL files (automatic, SDK-managed) |
-
-## Recommended Project Structure
+## Integration Overview
 
 ```
-super_bot/
-├── bot/
-│   ├── __init__.py
-│   ├── app.py              # Slack Bolt AsyncApp entry point, Socket Mode
-│   ├── handlers.py         # app_mention listener, lazy listener setup
-│   ├── agent.py            # Claude Agent SDK wrapper, query() / ClaudeSDKClient
-│   ├── session_map.py      # thread_ts → session_id persistence
-│   ├── access_control.py   # allowed user list enforcement
-│   └── formatter.py        # Convert agent output to Slack message blocks
-├── config.py               # Env var loading (SLACK_BOT_TOKEN, ANTHROPIC_API_KEY, etc.)
-├── requirements.txt
-├── .env                    # Secrets (not committed)
-├── systemd/
-│   └── superbot.service    # Systemd unit for auto-restart on VM
-└── scripts/
-    └── setup_vm.sh         # VM provisioning script
+┌─────────────────────────────────────────────────────────────────────┐
+│                           GCP VM                                     │
+│                                                                      │
+│  ┌────────────────────────────────────────────────────────────┐      │
+│  │  SuperBot (bot/agent.py)                                    │      │
+│  │  ClaudeAgentOptions(mcp_servers={...})                      │      │
+│  └──────────┬─────────────────────────────────────────────────┘      │
+│             │ spawns Claude CLI subprocess                           │
+│             ▼                                                        │
+│  ┌────────────────────────────────────────────────────────────┐      │
+│  │  Claude Code CLI                                            │      │
+│  │  Receives --mcp-config JSON with server definitions         │      │
+│  │                                                              │      │
+│  │  Spawns MCP server subprocesses:                            │      │
+│  │  ┌─────────────────────────────────────────────────┐        │      │
+│  │  │  mic-transformer MCP (stdio)                     │        │      │
+│  │  │  cmd: /home/bot/mic_transformer/.venv/bin/python │        │      │
+│  │  │  arg: .claude/mcp/mic-transformer/server.py      │        │      │
+│  │  │  env: {inherited + explicit env vars}            │        │      │
+│  │  │                                                   │        │      │
+│  │  │  server.py does:                                  │        │      │
+│  │  │  1. sys.path.insert(PROJECT_ROOT)                │        │      │
+│  │  │  2. sys.path.insert(PROJECT_ROOT/lib)            │        │      │
+│  │  │  3. os.chdir(PROJECT_ROOT)  ← CRITICAL          │        │      │
+│  │  │  4. FastMCP("mic-transformer").run()             │        │      │
+│  │  └─────────────────────────────────────────────────┘        │      │
+│  │                                                              │      │
+│  │  ┌─────────────────────────┐ ┌────────────────────────┐    │      │
+│  │  │ linear MCP (npx stdio) │ │ sentry MCP (npx stdio) │    │      │
+│  │  └─────────────────────────┘ └────────────────────────┘    │      │
+│  └────────────────────────────────────────────────────────────┘      │
+│                                                                      │
+│  ┌────────────────────────────────────────────────────────────┐      │
+│  │  /home/bot/mic_transformer/                                │      │
+│  │  ├── .venv/bin/python          (MCP subprocess interpreter)│      │
+│  │  ├── .claude/mcp/mic-transformer/server.py                 │      │
+│  │  ├── config/*.yml              (DB creds, GCS creds, etc.) │      │
+│  │  ├── lib/                      (shared libraries)          │      │
+│  │  └── .env                      (env vars, NOT auto-loaded) │      │
+│  └────────────────────────────────────────────────────────────┘      │
+└──────────────────────────────────────────────────────────────────────┘
 ```
 
-### Structure Rationale
+## Component Analysis
 
-- **bot/app.py:** Single entry point keeps the process model clear — one long-running Socket Mode WebSocket connection.
-- **bot/agent.py:** Isolates all Claude Agent SDK calls so the SDK can be swapped or upgraded without touching Slack logic.
-- **bot/session_map.py:** Explicit persistence of thread→session mapping is required because the SDK's `continue_conversation=True` only resumes the most recent session in a directory, which breaks when two threads are active simultaneously.
-- **systemd/:** The bot must be always-on; systemd with `Restart=always` is the standard pattern for GCP VM persistent services.
+### Existing Components (No Modification Needed)
 
-## Architectural Patterns
+| Component | Why No Changes |
+|-----------|---------------|
+| `bot/app.py` | Slack event handling unchanged |
+| `bot/handlers.py` | Task dispatch unchanged |
+| `bot/queue_manager.py` | Queue serialization unchanged |
+| `bot/worktree.py` | Git worktree management unchanged |
+| `bot/progress.py` | Progress reporting unchanged |
 
-### Pattern 1: Lazy Listener (Ack-then-Process)
+### Components Requiring Modification
 
-**What:** Slack requires all events to be acknowledged within 3 seconds. Claude agent tasks take seconds to minutes. The lazy listener pattern splits the response into (a) immediate ack and (b) background processing.
+| Component | Change | Reason |
+|-----------|--------|--------|
+| `bot/agent.py` `_build_mcp_servers()` | Add `env` dict to mic-transformer server config | MCP subprocess needs credentials passed via env vars |
+| `config.py` | Add mic-transformer credential env var mappings | New env vars for DB, GCS, API credentials |
 
-**When to use:** Always — any Claude agent invocation will exceed 3 seconds.
+### New Components
 
-**Trade-offs:** Simple and Bolt-native. Thread-based by default (ThreadPoolExecutor). Async variant available with `AsyncApp`.
+None required. The existing `_build_mcp_servers()` pattern already supports the mic-transformer server -- it just needs the `env` field populated.
 
-**Example:**
+## Key Technical Questions Answered
+
+### 1. Does Claude Agent SDK's `mcp_servers` support a `cwd` field?
+
+**Answer: NO, and it is NOT needed.**
+
+The `McpStdioServerConfig` TypedDict (verified in installed SDK at `claude_agent_sdk/types.py` lines 498-504) supports exactly three fields:
+
 ```python
-# bot/handlers.py
-@app.event("app_mention", lazy=[run_agent_task])
-async def handle_mention_ack(ack, say):
-    await ack()
-    await say("On it... :thinking_face:")
-
-async def run_agent_task(body, say, client):
-    user_id = body["event"]["user"]
-    thread_ts = body["event"].get("thread_ts") or body["event"]["ts"]
-    channel = body["event"]["channel"]
-    text = body["event"]["text"]
-
-    session_id = session_map.get(channel, thread_ts)
-
-    async for message in agent.run(text, session_id=session_id, cwd="/path/to/mic_transformer"):
-        # stream intermediate updates or collect final result
-        ...
-
-    await client.chat_postMessage(channel=channel, thread_ts=thread_ts, text=result)
+class McpStdioServerConfig(TypedDict):
+    type: NotRequired[Literal["stdio"]]
+    command: str
+    args: NotRequired[list[str]]
+    env: NotRequired[dict[str, str]]
 ```
 
-### Pattern 2: Thread-to-Session Mapping
+No `cwd` field exists. However, this is irrelevant because `server.py` already handles working directory internally via `os.chdir(PROJECT_ROOT)` on line 28. The `PROJECT_ROOT` is computed from `__file__` using `os.path.dirname()` chain, so it works regardless of where the subprocess is spawned from.
 
-**What:** Each Slack thread represents one logical conversation. Map `(channel, thread_ts)` → Claude session ID so follow-up messages in the same thread resume the same agent context.
+**Confidence: HIGH** -- verified directly in installed SDK source code.
 
-**When to use:** Always — without this, every message starts a blank session.
+### 2. How does `os.chdir()` in server.py interact with SuperBot's process?
 
-**Trade-offs:** Simple dict persisted to disk is sufficient for a team of 5. SQLite adds crash safety.
+**Answer: No conflict. The MCP server runs as a separate subprocess.**
 
-**Example:**
+The execution chain is:
+1. SuperBot (bot/agent.py) calls `query()` with `ClaudeAgentOptions`
+2. The SDK spawns the **Claude CLI** as a subprocess (verified in `subprocess_cli.py`)
+3. The Claude CLI spawns each MCP server as **its own subprocess**
+4. `server.py`'s `os.chdir()` only affects the MCP server's subprocess -- not the Claude CLI, not SuperBot
+
+Therefore `os.chdir(PROJECT_ROOT)` in server.py is safe and desirable. It ensures relative paths in config YAML files (`config/db_irismedapp.yml`, `config/gcs_utils_config.yml`, etc.) resolve correctly.
+
+**Confidence: HIGH** -- `os.chdir()` in a subprocess cannot affect parent processes (OS-level isolation).
+
+### 3. How to handle venv activation in the subprocess command?
+
+**Answer: Use the venv's Python binary directly. No activation needed.**
+
+The current code already does this correctly:
+
 ```python
-# bot/session_map.py
-import json, os
-
-MAP_FILE = os.path.expanduser("~/.superbot/session_map.json")
-
-def get(channel: str, thread_ts: str) -> str | None:
-    data = _load()
-    return data.get(f"{channel}:{thread_ts}")
-
-def set(channel: str, thread_ts: str, session_id: str):
-    data = _load()
-    data[f"{channel}:{thread_ts}"] = session_id
-    _save(data)
-
-def _load() -> dict:
-    if not os.path.exists(MAP_FILE):
-        return {}
-    with open(MAP_FILE) as f:
-        return json.load(f)
-
-def _save(data: dict):
-    os.makedirs(os.path.dirname(MAP_FILE), exist_ok=True)
-    with open(MAP_FILE, "w") as f:
-        json.dump(data, f)
+mcp_python = os.path.join(MIC_TRANSFORMER_CWD, ".venv", "bin", "python")
+servers["mic-transformer"] = {
+    "command": mcp_python,
+    "args": [mcp_server_script],
+}
 ```
 
-### Pattern 3: Agent SDK Streaming with Incremental Slack Updates
+Using `/home/bot/mic_transformer/.venv/bin/python` directly:
+- Picks up all packages installed in that venv (mcp, fastmcp, sqlalchemy, google-cloud-storage, boto3, etc.)
+- No need to `source activate` -- the Python binary itself embeds the venv path
+- `sys.path` is set correctly by the Python interpreter automatically
 
-**What:** Claude agent tasks can take minutes. Stream intermediate AssistantMessage blocks back to Slack using message updates (not new posts) so the user sees progress.
+**Confidence: HIGH** -- standard Python venv behavior, already implemented.
 
-**When to use:** For tasks expected to run more than ~10 seconds.
+### 4. How to pass mic_transformer credentials to the MCP subprocess?
 
-**Trade-offs:** Adds complexity to the formatter. Slack rate-limits `chat.update` calls (1/second per channel is safe). Worth it for UX.
+**Answer: Use the `env` field in the MCP server config dict.**
 
-**Example:**
+The Claude Agent SDK passes `env` through to the CLI's `--mcp-config` JSON. The CLI then sets these as environment variables for the MCP subprocess.
+
+However, examining the mic-transformer MCP tools reveals they **do not use environment variables for most credentials**. Instead:
+
+| Credential Type | How Tools Load It | Source |
+|----------------|-------------------|--------|
+| Database (IrisMedAppDB) | `yaml.safe_load('config/db_irismedapp.yml')` | YAML config file |
+| GCS storage | `yaml.safe_load('config/gcs_utils_config.yml')` | YAML config file with embedded service account JSON |
+| Google Drive | `yaml.safe_load('config/clinic_gdrive_config.yml')` | YAML config file |
+| API URL | `os.getenv('MIC_TRANSFORMER_API_URL', 'http://136.111.85.127:8080')` | Env var with hardcoded default |
+| Prefect API | Likely from config or env | Needs investigation on VM |
+
+**Critical insight:** The tools rely on YAML config files under `config/` (loaded via relative paths after `os.chdir()`), NOT on environment variables. This means the `env` field in the MCP config is only needed for the one env var used (`MIC_TRANSFORMER_API_URL`) and potentially `PYTHONPATH` (though server.py handles this via `sys.path.insert`).
+
+**The real prerequisite is that `config/*.yml` files exist in the mic_transformer clone on the VM with production credentials.**
+
+**Confidence: HIGH** -- verified by reading actual tool source code.
+
+### 5. What about the `PYTHONPATH` concern?
+
+**Answer: Not needed. server.py handles it.**
+
+`server.py` lines 23-25:
 ```python
-# bot/agent.py
-from claude_agent_sdk import query, ClaudeAgentOptions, AssistantMessage, ResultMessage, TextBlock
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+sys.path.insert(0, PROJECT_ROOT)
+sys.path.insert(0, os.path.join(PROJECT_ROOT, 'lib'))
+```
 
-async def run(prompt: str, session_id: str | None, cwd: str):
-    options = ClaudeAgentOptions(
-        allowed_tools=["Bash", "Read", "Write", "Edit", "Glob", "Grep"],
-        resume=session_id,
-        cwd=cwd,
+This adds both `PROJECT_ROOT` and `PROJECT_ROOT/lib` to `sys.path` at import time, before any `from lib.models.IrisMedAppDB import ...` calls. No external PYTHONPATH env var needed.
+
+**Confidence: HIGH** -- verified in server.py source.
+
+## Data Flow: MCP Tool Invocation
+
+```
+User in Slack: "What's the VSP status for today?"
+         │
+         ▼
+SuperBot handler → run_agent_with_timeout(prompt, session_id)
+         │
+         ▼
+ClaudeAgentOptions(mcp_servers={"mic-transformer": {...}, "linear": {...}})
+         │
+         ▼
+Claude CLI subprocess receives --mcp-config JSON
+         │
+         ▼
+CLI spawns MCP servers on session start
+         │  mic-transformer: /home/bot/mic_transformer/.venv/bin/python server.py
+         │  linear: npx -y @anthropic/linear-mcp@latest
+         │  sentry: npx -y @sentry/mcp-server@latest
+         │
+         ▼
+Claude model sees all MCP tools in its tool list
+         │
+         ▼
+Model decides to call mcp__mic-transformer__vsp_status(date="03.23.26")
+         │
+         ▼
+CLI sends JSON-RPC request to mic-transformer subprocess via stdin
+         │
+         ▼
+server.py routes to tools/status.py → vsp_status()
+         │  - Opens config/db_irismedapp.yml (relative path, works because os.chdir)
+         │  - Queries IrisMedAppDB PostgreSQL
+         │  - Opens config/gcs_utils_config.yml
+         │  - Checks GCS bucket for AIOUT files
+         │
+         ▼
+Returns JSON result via stdout to CLI
+         │
+         ▼
+CLI feeds result to Claude model → model generates response
+         │
+         ▼
+SuperBot receives AssistantMessage text → posts to Slack thread
+```
+
+## Recommended `_build_mcp_servers()` Implementation
+
+```python
+def _build_mcp_servers() -> dict:
+    """Build MCP server config dict from available credentials."""
+    servers = {}
+
+    # mic-transformer pipeline tools
+    mcp_server_script = os.path.join(
+        MIC_TRANSFORMER_CWD, ".claude", "mcp", "mic-transformer", "server.py"
     )
-    async for message in query(prompt=prompt, options=options):
-        yield message  # caller decides what to send to Slack
+    mcp_python = os.path.join(MIC_TRANSFORMER_CWD, ".venv", "bin", "python")
+    if os.path.isfile(mcp_server_script) and os.path.isfile(mcp_python):
+        # server.py handles sys.path and os.chdir internally.
+        # Most credentials come from config/*.yml files in the mic_transformer
+        # repo, NOT from env vars. Only MIC_TRANSFORMER_API_URL uses os.getenv.
+        mic_env = {}
+        if config.MIC_TRANSFORMER_API_URL:
+            mic_env["MIC_TRANSFORMER_API_URL"] = config.MIC_TRANSFORMER_API_URL
+
+        server_config = {
+            "command": mcp_python,
+            "args": [mcp_server_script],
+        }
+        if mic_env:
+            server_config["env"] = mic_env
+
+        servers["mic-transformer"] = server_config
+    else:
+        log.warning(
+            "mcp.mic_transformer_missing",
+            script=mcp_server_script,
+            python=mcp_python,
+        )
+
+    # ... linear, sentry unchanged ...
+    return servers
 ```
 
-## Data Flow
+## Integration Points Summary
 
-### Request Flow (happy path)
+| Integration Point | Type | Details |
+|-------------------|------|---------|
+| `_build_mcp_servers()` in agent.py | Modify | Add `env` dict with `MIC_TRANSFORMER_API_URL` |
+| `config.py` | Modify | Add `MIC_TRANSFORMER_API_URL` env var |
+| mic_transformer `.venv` | VM prerequisite | Must have `mcp`, `fastmcp` installed |
+| mic_transformer `config/*.yml` | VM prerequisite | Must contain production credentials |
+| mic_transformer clone | VM prerequisite | Already exists at `/home/bot/mic_transformer` |
 
-```
-User posts @superbot <task> in Slack thread
-    ↓
-Slack sends app_mention event via Socket Mode WebSocket
-    ↓
-Bolt receives event → lazy listener fires
-    ↓
-handle_mention_ack(): ack() + "On it..." reply (< 3 seconds)
-    ↓ (background asyncio task)
-run_agent_task(): look up session_id from thread_ts
-    ↓
-claude_agent_sdk.query(prompt, resume=session_id, cwd=repo_path)
-    ↓
-SDK spawns `claude` CLI subprocess, sends prompt via stdin JSONL
-    ↓
-Claude CLI calls Anthropic API, executes tools (Bash, Read, Edit, git...)
-    ↓
-Agent streams AssistantMessage, ResultMessage back via stdout JSONL
-    ↓
-SDK yields typed message objects to our async for loop
-    ↓
-Bot formatter converts to Slack message, posts/updates in thread
-    ↓
-On ResultMessage: save new session_id to session_map
-```
+## Anti-Patterns to Avoid
 
-### Session Continuity Flow
+### Anti-Pattern 1: Trying to pass all .env vars through MCP `env` field
+**What:** Parsing mic_transformer's `.env` file and passing every var through `env` dict.
+**Why bad:** The tools don't use env vars for credentials -- they read YAML config files. Passing the .env would be cargo-culting and might expose unnecessary secrets to the Claude CLI's command-line (visible in `ps` output since `--mcp-config` is a CLI argument).
+**Instead:** Ensure `config/*.yml` files exist on the VM. Only pass `MIC_TRANSFORMER_API_URL` if the default isn't correct.
 
-```
-First message in thread:
-  session_map.get(channel, thread_ts) → None
-  query(prompt, resume=None)  → new session
-  on ResultMessage → session_map.set(channel, thread_ts, session_id)
+### Anti-Pattern 2: Setting `PYTHONPATH` in the MCP env dict
+**What:** Adding `"PYTHONPATH": "/home/bot/mic_transformer:/home/bot/mic_transformer/lib"` to the env.
+**Why bad:** server.py already handles this via `sys.path.insert()`. Adding PYTHONPATH could cause import ordering issues if the values don't match exactly.
+**Instead:** Trust server.py's existing path management.
 
-Follow-up message in same thread:
-  session_map.get(channel, thread_ts) → "abc-123"
-  query(prompt, resume="abc-123")  → resumes with full context
-  agent already knows files it read, decisions made, etc.
-```
+### Anti-Pattern 3: Wrapping the command in a shell script for venv activation
+**What:** `"command": "bash", "args": ["-c", "source .venv/bin/activate && python server.py"]`
+**Why bad:** Unnecessary complexity. Using the venv's Python binary directly is the correct approach and is already implemented.
+**Instead:** Keep current approach: `"command": "/home/bot/mic_transformer/.venv/bin/python"`
 
-### Key Data Flows
+### Anti-Pattern 4: Adding a `cwd` field to the MCP config hoping the SDK supports it
+**What:** Adding `"cwd": "/home/bot/mic_transformer"` to the server config dict.
+**Why bad:** `McpStdioServerConfig` does not define a `cwd` field. While the dict might pass through to the CLI JSON, there's no guarantee the CLI handles it. And server.py already does `os.chdir(PROJECT_ROOT)` which achieves the same thing reliably.
+**Instead:** Rely on server.py's internal `os.chdir()`.
 
-1. **Inbound (Slack → VM):** Socket Mode WebSocket, outbound from VM, no public URL required. Slack sends app_mention payload as JSON.
-2. **Agent invocation (Bridge → Claude CLI):** Python subprocess via `anyio.open_process()`, JSONL over stdin/stdout. Bidirectional streaming.
-3. **Outbound (VM → Slack):** `slack_sdk.WebClient.chat_postMessage()` / `chat_update()` over HTTPS. Uses `SLACK_BOT_TOKEN`.
-4. **Session persistence (in-process → disk):** Claude Agent SDK writes `~/.claude/projects/<encoded-cwd>/<session-id>.jsonl` automatically. The bridge only needs to persist the `thread_ts → session_id` mapping.
+## Scalability Considerations
 
-## Scaling Considerations
+| Concern | Current (v1.2) | Future |
+|---------|----------------|--------|
+| MCP server lifecycle | Started per Claude CLI session, killed when session ends | Acceptable -- sessions are short-lived (max 10min timeout) |
+| Database connections | Created per tool call via `IrisMedAppDBConnection` | Could pool if tools are called frequently, but unlikely bottleneck |
+| Multiple concurrent sessions | Each Claude CLI gets its own MCP subprocess | Fine -- no shared state between MCP instances |
+| MCP server startup time | Python interpreter + imports + os.chdir | ~2-5 seconds, acceptable for first tool call |
 
-| Scale | Architecture Adjustments |
-|-------|--------------------------|
-| 1-5 users, low volume | Single VM, single process, Socket Mode, asyncio — sufficient. No queue needed. |
-| 5-20 users, concurrent requests | Add asyncio semaphore to cap concurrent Claude agent processes (each is CPU/memory-intensive). |
-| 20+ users / high concurrency | Switch to Events API HTTP mode behind a load balancer + task queue (Celery/Redis) for agent jobs. Out of scope for v1. |
+## VM Prerequisites Checklist
 
-### Scaling Priorities
+Before the integration works, the VM must have:
 
-1. **First bottleneck:** Concurrent Claude agent processes — each runs the full Claude CLI subprocess which is memory-heavy. A semaphore limiting to 2-3 concurrent tasks is the right first mitigation.
-2. **Second bottleneck:** Slack rate limits on `chat_postMessage` / `chat_update`. Use a simple token-bucket throttle or batch updates.
+1. **mic_transformer clone** at `/home/bot/mic_transformer` (already exists per PROJECT.md)
+2. **mic_transformer .venv** with `mcp` and `fastmcp` packages:
+   ```bash
+   /home/bot/mic_transformer/.venv/bin/pip install mcp fastmcp
+   ```
+3. **config/*.yml files** with production credentials:
+   - `config/db_irismedapp.yml` -- PostgreSQL connection for IrisMedAppDB
+   - `config/gcs_utils_config.yml` -- GCS service account credentials
+   - `config/clinic_gdrive_config.yml` -- Google Drive folder config
+   - `config/clinic_gdrive_eyemed_config.yml` -- EyeMed-specific Drive config
+   - `config/db_crystalpm_mirror.yml` -- CrystalPM mirror DB (for azure_mirror tools)
+4. **Network access** from VM to:
+   - PostgreSQL database (IrisMedAppDB)
+   - Google Cloud Storage
+   - Google Drive API
+   - S3 (for remit PDFs)
+   - Revolution EMR API
+   - Prefect API
+   - Azure SQL (for mirror)
+5. **SSH key** for Prefect flow status checks (status tools SSH to production server)
 
-## Anti-Patterns
+## Suggested Build Order
 
-### Anti-Pattern 1: Synchronous Response (No Lazy Listener)
+1. **Verify VM prerequisites** -- check .venv has mcp/fastmcp, config/*.yml files exist
+2. **Add `MIC_TRANSFORMER_API_URL` to config.py** -- single line addition
+3. **Update `_build_mcp_servers()` in agent.py** -- add `env` dict (minimal change)
+4. **Test locally** -- run SuperBot, send a simple MCP tool request (e.g., `vsp_status`)
+5. **Validate all 13 tool modules** -- systematic test of each tool category
 
-**What people do:** Call the Claude agent inside the main event handler synchronously.
-**Why it's wrong:** Slack requires ack within 3 seconds. Claude tasks take 30+ seconds. Slack retries the event, triggering duplicate agent runs.
-**Do this instead:** Always use the lazy listener pattern — ack immediately, run agent in background.
-
-### Anti-Pattern 2: One Session Per User (Not Per Thread)
-
-**What people do:** Map user ID → single Claude session, so all their messages share one context.
-**Why it's wrong:** If Nicole asks two unrelated questions in different threads, the agent mixes contexts and produces confused answers.
-**Do this instead:** Map `(channel, thread_ts)` → session. Each thread is a separate conversation. New threads start fresh; replies continue.
-
-### Anti-Pattern 3: Using `continue_conversation=True` With Multiple Active Threads
-
-**What people do:** Use the SDK's built-in `continue_conversation=True` (resume most recent session in the directory) instead of explicit session ID tracking.
-**Why it's wrong:** If two threads are active simultaneously, whichever finishes last becomes "most recent," and the next resume in any thread picks up the wrong session.
-**Do this instead:** Always capture `session_id` from `ResultMessage` and persist it in the session map. Use `resume=session_id` explicitly.
-
-### Anti-Pattern 4: Polling for Agent Output (HTTP Polling)
-
-**What people do:** Start agent in background, poll a status endpoint from Slack.
-**Why it's wrong:** Adds latency, complexity, and an HTTP server the VM doesn't need.
-**Do this instead:** Use asyncio streaming from the SDK. Post to Slack directly from the streaming loop as messages arrive.
-
-### Anti-Pattern 5: HTTP Events API Without Public URL on a VM
-
-**What people do:** Use Events API HTTP mode because Slack docs say it's "more production-ready."
-**Why it's wrong:** The GCP VM is not publicly accessible. Exposing it requires firewall rules, TLS certs, and a static IP — unnecessary complexity for an internal bot.
-**Do this instead:** Socket Mode. The VM initiates an outbound WebSocket to Slack's servers. No inbound rules needed. Slack's own docs explicitly endorse Socket Mode for "on-premise integrations with no ability to receive external HTTP requests."
-
-## Integration Points
-
-### External Services
-
-| Service | Integration Pattern | Notes |
-|---------|---------------------|-------|
-| Slack | Socket Mode WebSocket (slack-bolt AsyncApp) | Bot Token + App Token required; app_mention event subscription |
-| Anthropic API | HTTPS via Claude Agent SDK subprocess | `ANTHROPIC_API_KEY` env var on VM; SDK handles auth |
-| GitLab | SSH git operations from Claude's Bash tool | SSH key on VM authorized against GitLab; Claude can push/PR |
-| mic_transformer services | Claude's Bash tool executes scripts directly | Same network as VM; Prefect, Flask, psql all accessible |
-
-### Internal Boundaries
-
-| Boundary | Communication | Notes |
-|----------|---------------|-------|
-| Slack Bridge ↔ Agent SDK | Python async function call, `async for` streaming | No queue needed at this scale; direct call |
-| Agent SDK ↔ Claude CLI | Subprocess stdin/stdout JSONL | SDK manages this; not directly visible to bridge code |
-| Bridge ↔ Session Map | In-process function calls, JSON file on disk | Trivially simple; survives process restart |
-| Claude CLI ↔ repo | Filesystem reads/writes, subprocess Bash | Claude runs in `cwd=/path/to/mic_transformer` |
-
-## Build Order Implications
-
-The component dependencies dictate this build sequence:
-
-1. **VM setup + Claude CLI** — nothing else can be tested without this; it is the foundation.
-2. **Agent SDK integration** — verify Claude can be invoked programmatically, sessions work, streaming works. Test in isolation (no Slack yet).
-3. **Slack Bridge (Socket Mode, basic)** — connect to Slack, verify app_mention events arrive, post simple text back. No agent yet.
-4. **Bridge + Agent wired together** — connect steps 2 and 3. The lazy listener fires the agent, result posts to thread.
-5. **Session continuity** — add session map, verify follow-up messages resume correctly.
-6. **Access control + polish** — allowed user filtering, error handling, output formatting.
-
-Skipping step 2 (agent in isolation) before step 3 (Slack) is the most common mistake: debugging a broken agent loop through Slack is painful. Test them separately first.
+Steps 2-3 are trivial code changes (< 10 lines total). Step 1 (VM setup) and Step 5 (validation) are the real work.
 
 ## Sources
 
-- [Claude Agent SDK Overview (official, March 2026)](https://platform.claude.com/docs/en/agent-sdk/overview) — HIGH confidence
-- [Claude Agent SDK Sessions (official, March 2026)](https://platform.claude.com/docs/en/agent-sdk/sessions) — HIGH confidence
-- [Slack Bolt for Python — Lazy Listeners (official)](https://docs.slack.dev/tools/bolt-python/reference/lazy_listener/index.html) — HIGH confidence
-- [Slack: Comparing HTTP & Socket Mode (official)](https://docs.slack.dev/apis/events-api/comparing-http-socket-mode/) — HIGH confidence
-- [OpenCode Slack Integration architecture (DeepWiki analysis)](https://deepwiki.com/anomalyco/opencode/6.3-slack-integration) — MEDIUM confidence
-- [Claude Code System Architecture (DeepWiki)](https://deepwiki.com/anthropics/claude-code/1.1-system-architecture) — MEDIUM confidence
-- [Slack bolt-python GitHub](https://github.com/slackapi/bolt-python) — HIGH confidence
-
----
-*Architecture research for: Slack-integrated Claude Code autonomous agent (super_bot)*
-*Researched: 2026-03-18*
+- Claude Agent SDK `types.py` -- `McpStdioServerConfig` definition (installed package, verified 2026-03-23)
+- Claude Agent SDK `subprocess_cli.py` -- `--mcp-config` JSON serialization (installed package, verified 2026-03-23)
+- mic-transformer `server.py` -- `os.chdir()`, `sys.path.insert()`, FastMCP setup (local source)
+- mic-transformer `tools/*.py` -- credential loading patterns (local source)
+- mic-transformer `lib/models/IrisMedAppDB.py` -- YAML config loading (local source)
+- [Claude Code MCP documentation](https://code.claude.com/docs/en/mcp)
