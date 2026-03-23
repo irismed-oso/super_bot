@@ -44,6 +44,23 @@ def _build_mcp_servers() -> dict:
     """Build MCP server config dict from available credentials."""
     servers = {}
 
+    # mic-transformer pipeline tools (eyemed_status, vsp_status, etc.)
+    mcp_server_script = os.path.join(
+        MIC_TRANSFORMER_CWD, ".claude", "mcp", "mic-transformer", "server.py"
+    )
+    mcp_python = os.path.join(MIC_TRANSFORMER_CWD, ".venv", "bin", "python")
+    if os.path.isfile(mcp_server_script) and os.path.isfile(mcp_python):
+        servers["mic-transformer"] = {
+            "command": mcp_python,
+            "args": [mcp_server_script],
+        }
+    else:
+        log.warning(
+            "mcp.mic_transformer_missing",
+            script=mcp_server_script,
+            python=mcp_python,
+        )
+
     if config.LINEAR_API_KEY:
         servers["linear"] = {
             "command": "npx",
