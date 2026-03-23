@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Agent SDK Standalone** - Claude Agent SDK invocable in isolation with session management, serialization, and timeout handling — verified before connecting to Slack
 - [ ] **Phase 3: End-to-End Integration** - @mention triggers real Claude Code session, progress posted to thread, git operations and PR creation working end-to-end
 - [ ] **Phase 4: Operational Hardening** - Persistent CLAUDE.md project memory, shell/script execution, Prefect flow triggering, deployment capability, and daily digest
-- [ ] **Phase 5: VM Validation and MCP Wiring** - mic-transformer MCP server wired into SuperBot as stdio subprocess with all VM prerequisites validated and one confirmed working tool call
+- [x] **Phase 5: VM Validation and MCP Wiring** - mic-transformer MCP server wired into SuperBot as stdio subprocess with all VM prerequisites validated and one confirmed working tool call (completed 2026-03-23)
 - [ ] **Phase 6: Read-Only Status and Storage Tools** - All read-only MCP tools verified working through Slack — status checks, storage browsing, pipeline audits, and credential pathway validation
 - [ ] **Phase 7: Mutation Tools** - All write/trigger MCP tools verified working through Slack — extraction, reduction, posting, ingestion, sync, and benefits operations
 
@@ -161,6 +161,6 @@ Phases execute in order: 1 → 2 → 3 → 4 → v1.1 → 5 → 6 → 7
 | 3. End-to-End Integration | v1.0 | 4/5 | In progress | - |
 | 4. Operational Hardening | v1.0 | 0/TBD | Not started | - |
 | v1.1 Capability Parity | v1.1 | 1/TBD | In progress | - |
-| 5. VM Validation and MCP Wiring | v1.2 | 2/2 | Complete | 2026-03-23 |
+| 5. VM Validation and MCP Wiring | v1.2 | Complete    | 2026-03-23 | 2026-03-23 |
 | 6. Read-Only Status and Storage Tools | v1.2 | 0/TBD | Not started | - |
 | 7. Mutation Tools | v1.2 | 0/TBD | Not started | - |
