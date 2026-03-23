@@ -154,11 +154,21 @@ async def run_agent(
             "agent.process_error",
             session_id=session_id,
             exit_code=exc.exit_code,
+            cwd=effective_cwd,
             stderr_preview=stderr_output[:200],
         )
+        # Build a useful error message with context
+        if stderr_output:
+            error_detail = stderr_output
+        else:
+            parts = [f"Claude Code exited with code {exc.exit_code}."]
+            if session_id:
+                parts.append(f"Session resume failed (id: {session_id[:12]}...).")
+            parts.append(f"CWD: {effective_cwd}")
+            error_detail = " ".join(parts)
         return {
             "session_id": session_id,
-            "result": stderr_output or str(exc),
+            "result": error_detail,
             "subtype": "error_internal",
             "num_turns": num_turns,
             "partial_texts": partial_texts,

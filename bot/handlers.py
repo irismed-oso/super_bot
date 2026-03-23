@@ -62,6 +62,11 @@ def register(app: AsyncApp) -> None:
                 return
 
         session_id = session_map.get(channel, thread_ts)
+        # On resume, reuse the CWD from the original session to avoid mismatch
+        if session_id and worktree_path_val is None:
+            stored_cwd = session_map.get_cwd(channel, thread_ts)
+            if stored_cwd:
+                worktree_path_val = stored_cwd
         prompt = _build_prompt(clean_text, worktree_path_val, channel, thread_ts)
         on_message_cb = progress.make_on_message(client, channel, thread_ts)
 
@@ -71,9 +76,9 @@ def register(app: AsyncApp) -> None:
         task_started_at = __import__("time").time()
 
         async def result_cb(result: dict):
-            # Persist session for thread continuity
+            # Persist session + CWD for thread continuity
             if result.get("session_id"):
-                session_map.set(channel, thread_ts, result["session_id"])
+                session_map.set(channel, thread_ts, result["session_id"], cwd=worktree_path_val)
             # On failure, stash uncommitted worktree changes
             error_subtypes = {"error_timeout", "error_cancelled", "error_internal"}
             if result.get("subtype") in error_subtypes:

@@ -50,13 +50,25 @@ def _save(data: dict) -> None:
 def get(channel: str, thread_ts: str) -> str | None:
     """Return session_id for a thread, or None if not found."""
     data = _load()
-    return data.get(_key(channel, thread_ts))
+    entry = data.get(_key(channel, thread_ts))
+    if isinstance(entry, dict):
+        return entry.get("session_id")
+    return entry  # backward compat: old entries are plain strings
 
 
-def set(channel: str, thread_ts: str, session_id: str) -> None:
-    """Store a session_id for a thread. Atomic: load, update, save."""
+def get_cwd(channel: str, thread_ts: str) -> str | None:
+    """Return the CWD stored for a thread's session, or None."""
     data = _load()
-    data[_key(channel, thread_ts)] = session_id
+    entry = data.get(_key(channel, thread_ts))
+    if isinstance(entry, dict):
+        return entry.get("cwd")
+    return None
+
+
+def set(channel: str, thread_ts: str, session_id: str, cwd: str | None = None) -> None:
+    """Store a session_id (and optional CWD) for a thread. Atomic: load, update, save."""
+    data = _load()
+    data[_key(channel, thread_ts)] = {"session_id": session_id, "cwd": cwd}
     _save(data)
 
 
