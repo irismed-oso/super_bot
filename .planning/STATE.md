@@ -10,16 +10,16 @@ See: .planning/PROJECT.md (updated 2026-03-23)
 ## Current Position
 
 Phase: 5 of 7 (VM Validation and MCP Wiring)
-Plan: 0 of TBD in current phase
-Status: Ready to plan
-Last activity: 2026-03-23 — v1.2 roadmap created (Phases 5-7)
+Plan: 1 of 2 in current phase
+Status: In progress
+Last activity: 2026-03-23 — Completed 05-01 (feature flag + deploy script)
 
-Progress: [##########..........] 50% (v1.0 phases 1-2 complete, phase 3 near done)
+Progress: [############........] 60% (v1.0 phases 1-2 complete, phase 3 near done, phase 5 plan 1 done)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 12
+- Total plans completed: 13
 - Average duration: —
 - Total execution time: —
 
@@ -31,6 +31,7 @@ Progress: [##########..........] 50% (v1.0 phases 1-2 complete, phase 3 near don
 | 2 | 3/3 | — | — |
 | 3 | 4/5 | — | — |
 | 4 | 0/TBD | — | — |
+| 5 | 1/2 | 2min | 2min |
 
 ## Accumulated Context
 
@@ -40,6 +41,8 @@ Progress: [##########..........] 50% (v1.0 phases 1-2 complete, phase 3 near don
 - v1.2: Direct MCP wiring (not Flask bridge) — simpler, standard pattern, Claude Agent SDK handles stdio MCP natively
 - v1.2: Install `mcp[cli]~=1.26.0` only (NOT standalone `fastmcp`) — server imports from `mcp.server.fastmcp`, standalone package is a different project
 - v1.2: Read-only tools before mutation tools — validates all credential pathways with zero blast radius before write operations
+- v1.2: MIC_TRANSFORMER_MCP_DISABLED defaults to False (enabled by default when path exists), checked before path detection for clean short-circuit
+- v1.2: No env field on mic-transformer MCP server config — subprocess inherits parent env, credentials come from config/*.yml
 
 ### Pending Todos
 
@@ -55,5 +58,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-23
-Stopped at: v1.2 roadmap created, ready to plan Phase 5
+Stopped at: Completed 05-01-PLAN.md
 Resume file: None

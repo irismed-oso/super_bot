@@ -67,8 +67,8 @@ Requirements for MCP Parity milestone. Each maps to roadmap phases.
 
 ### MCP Wiring
 
-- [ ] **MCPW-01**: mic-transformer MCP server added to _build_mcp_servers() in agent.py as stdio subprocess
-- [ ] **MCPW-02**: MIC_TRANSFORMER_MCP_ENABLED config flag controls whether mic-transformer MCP server is wired
+- [x] **MCPW-01**: mic-transformer MCP server added to _build_mcp_servers() in agent.py as stdio subprocess
+- [x] **MCPW-02**: MIC_TRANSFORMER_MCP_ENABLED config flag controls whether mic-transformer MCP server is wired
 - [ ] **MCPW-03**: mcp[cli]~=1.26.0 installed in mic_transformer .venv on VM
 
 ### VM Environment
@@ -167,8 +167,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MCP-02 | v1.1 | Complete |
 | MULT-01 | v1.1 | Complete |
 | SKIL-01 | v1.1 | Complete |
-| MCPW-01 | Phase 5 | Pending |
-| MCPW-02 | Phase 5 | Pending |
+| MCPW-01 | Phase 5 | Complete |
+| MCPW-02 | Phase 5 | Complete |
 | MCPW-03 | Phase 5 | Pending |
 | VMEV-01 | Phase 5 | Pending |
 | VMEV-02 | Phase 5 | Pending |
