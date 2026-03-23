@@ -16,6 +16,9 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Agent SDK Standalone** - Claude Agent SDK invocable in isolation with session management, serialization, and timeout handling — verified before connecting to Slack
 - [ ] **Phase 3: End-to-End Integration** - @mention triggers real Claude Code session, progress posted to thread, git operations and PR creation working end-to-end
 - [ ] **Phase 4: Operational Hardening** - Persistent CLAUDE.md project memory, shell/script execution, Prefect flow triggering, deployment capability, and daily digest
+- [ ] **Phase 5: VM Validation and MCP Wiring** - mic-transformer MCP server wired into SuperBot as stdio subprocess with all VM prerequisites validated and one confirmed working tool call
+- [ ] **Phase 6: Read-Only Status and Storage Tools** - All read-only MCP tools verified working through Slack — status checks, storage browsing, pipeline audits, and credential pathway validation
+- [ ] **Phase 7: Mutation Tools** - All write/trigger MCP tools verified working through Slack — extraction, reduction, posting, ingestion, sync, and benefits operations
 
 ## Phase Details
 
@@ -84,19 +87,6 @@ Plans:
   4. Nicole can ask the bot to deploy to a named environment and the deployment executes from the VM with results posted to Slack
   5. A daily summary of bot activity (tasks run, outcomes, files changed) appears in the channel each morning without manual prompting
 
-## Progress
-
-**Execution Order:**
-Phases execute in order: 1 → 2 → 3 → 4
-
-| Phase | Plans Complete | Status | Completed |
-|-------|----------------|--------|-----------|
-| 1. VM and Slack Bridge | 4/4 | Complete    | 2026-03-19 |
-| 2. Agent SDK Standalone | 3/3 | Complete    | 2026-03-20 |
-| 3. End-to-End Integration | 4/5 | In progress | - |
-| 4. Operational Hardening | 0/TBD | Not started | - |
-| v1.1 Capability Parity | 1/TBD | In progress | - |
-
 ### v1.1: Capability Parity
 **Goal**: SuperBot reaches capability parity with local Claude Code for operational queries and workflows — Linear MCP, Sentry MCP, multi-repo access, and custom skills
 **Depends on**: Phase 3
@@ -113,3 +103,60 @@ Phases execute in order: 1 → 2 → 3 → 4
 - [x] terraform/startup.sh — Placeholder env vars for v1.1
 - [x] DEPLOY.md — v1.1 setup section with repo clone, env var, and skill deployment steps
 - [ ] VM deployment — Clone repos, populate env vars, deploy skills, restart service
+
+---
+
+## v1.2: MCP Parity
+
+**Milestone Goal:** SuperBot has direct access to all mic-transformer MCP tools locally on the VM, giving Nicole the same operational capabilities through Slack that local Claude Code has.
+
+### Phase 5: VM Validation and MCP Wiring
+**Goal**: The mic-transformer MCP server is wired into SuperBot as a stdio subprocess with all VM prerequisites validated — one confirmed round-trip tool call proves end-to-end connectivity
+**Depends on**: v1.1
+**Requirements**: MCPW-01, MCPW-02, MCPW-03, VMEV-01, VMEV-02, VMEV-03
+**Success Criteria** (what must be TRUE):
+  1. Sending "check deploy version" to Slack triggers the MCP `deploy_version` tool and returns the real production API version number in the thread
+  2. The MCP server process starts within 60 seconds on the VM (verified by cold-start benchmark) and does not cause session timeout
+  3. The mic-transformer MCP server can be disabled via the MIC_TRANSFORMER_MCP_ENABLED config flag without affecting other MCP servers (Linear, Sentry)
+  4. The systemd environment file passes validation (no export prefix, no shell interpolation) and all credential config files are present on the VM
+**Plans**: TBD
+
+### Phase 6: Read-Only Status and Storage Tools
+**Goal**: Nicole can query all pipeline status, storage contents, and audit data through Slack — every read-only MCP tool returns real data, validating all four credential pathways (GCS, S3, Google Drive, PostgreSQL)
+**Depends on**: Phase 5
+**Requirements**: RDTL-01, RDTL-02, RDTL-03, RDTL-04, RDTL-05, RDTL-06, RDTL-07, RDTL-08
+**Success Criteria** (what must be TRUE):
+  1. User can ask "what's the VSP status for today?" and receive real processing status data pulled from GCS and the database
+  2. User can ask "list the EyeMed remits in S3" or "show AIOUT files in GCS" and receive actual file listings
+  3. User can ask "run a pipeline audit" and receive a cross-system health report covering pipeline stages, Prefect flows, and Azure mirror freshness
+  4. User can ask about Google Drive folder contents, crawler locations, and IVT ingestion health and receive real data from each respective system
+  5. At least one tool from each credential category (GCS, S3, Google Drive, PostgreSQL) returns valid data, confirming all credential pathways work under systemd
+**Plans**: TBD
+
+### Phase 7: Mutation Tools
+**Goal**: Nicole can trigger the full daily pipeline workflow from Slack — extraction, reduction, posting prep, ingestion, sync, and benefits operations all execute through MCP tools
+**Depends on**: Phase 6
+**Requirements**: MTTL-01, MTTL-02, MTTL-03, MTTL-04, MTTL-05, MTTL-06, MTTL-07, MTTL-08
+**Success Criteria** (what must be TRUE):
+  1. User can trigger VSP or EyeMed Gemini extraction from Slack and receive confirmation that the extraction job was dispatched
+  2. User can trigger AIOUT reduction from Slack and receive the reduction result or job status
+  3. User can trigger autopost with dry_run default from Slack and receive the dry-run report showing what would be posted
+  4. User can trigger posting prep, manual PDF ingestion, Azure mirror sync, and benefits fetch from Slack and receive confirmation or results for each
+  5. User can requeue missing extraction pages from Slack and receive confirmation of which pages were requeued
+**Plans**: TBD
+
+## Progress
+
+**Execution Order:**
+Phases execute in order: 1 → 2 → 3 → 4 → v1.1 → 5 → 6 → 7
+
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 1. VM and Slack Bridge | v1.0 | 4/4 | Complete | 2026-03-19 |
+| 2. Agent SDK Standalone | v1.0 | 3/3 | Complete | 2026-03-20 |
+| 3. End-to-End Integration | v1.0 | 4/5 | In progress | - |
+| 4. Operational Hardening | v1.0 | 0/TBD | Not started | - |
+| v1.1 Capability Parity | v1.1 | 1/TBD | In progress | - |
+| 5. VM Validation and MCP Wiring | v1.2 | 0/TBD | Not started | - |
+| 6. Read-Only Status and Storage Tools | v1.2 | 0/TBD | Not started | - |
+| 7. Mutation Tools | v1.2 | 0/TBD | Not started | - |
