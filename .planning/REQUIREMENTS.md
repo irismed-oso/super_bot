@@ -167,36 +167,36 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MCP-02 | v1.1 | Complete |
 | MULT-01 | v1.1 | Complete |
 | SKIL-01 | v1.1 | Complete |
-| MCPW-01 | Phase TBD | Pending |
-| MCPW-02 | Phase TBD | Pending |
-| MCPW-03 | Phase TBD | Pending |
-| VMEV-01 | Phase TBD | Pending |
-| VMEV-02 | Phase TBD | Pending |
-| VMEV-03 | Phase TBD | Pending |
-| RDTL-01 | Phase TBD | Pending |
-| RDTL-02 | Phase TBD | Pending |
-| RDTL-03 | Phase TBD | Pending |
-| RDTL-04 | Phase TBD | Pending |
-| RDTL-05 | Phase TBD | Pending |
-| RDTL-06 | Phase TBD | Pending |
-| RDTL-07 | Phase TBD | Pending |
-| RDTL-08 | Phase TBD | Pending |
-| MTTL-01 | Phase TBD | Pending |
-| MTTL-02 | Phase TBD | Pending |
-| MTTL-03 | Phase TBD | Pending |
-| MTTL-04 | Phase TBD | Pending |
-| MTTL-05 | Phase TBD | Pending |
-| MTTL-06 | Phase TBD | Pending |
-| MTTL-07 | Phase TBD | Pending |
-| MTTL-08 | Phase TBD | Pending |
+| MCPW-01 | Phase 5 | Pending |
+| MCPW-02 | Phase 5 | Pending |
+| MCPW-03 | Phase 5 | Pending |
+| VMEV-01 | Phase 5 | Pending |
+| VMEV-02 | Phase 5 | Pending |
+| VMEV-03 | Phase 5 | Pending |
+| RDTL-01 | Phase 6 | Pending |
+| RDTL-02 | Phase 6 | Pending |
+| RDTL-03 | Phase 6 | Pending |
+| RDTL-04 | Phase 6 | Pending |
+| RDTL-05 | Phase 6 | Pending |
+| RDTL-06 | Phase 6 | Pending |
+| RDTL-07 | Phase 6 | Pending |
+| RDTL-08 | Phase 6 | Pending |
+| MTTL-01 | Phase 7 | Pending |
+| MTTL-02 | Phase 7 | Pending |
+| MTTL-03 | Phase 7 | Pending |
+| MTTL-04 | Phase 7 | Pending |
+| MTTL-05 | Phase 7 | Pending |
+| MTTL-06 | Phase 7 | Pending |
+| MTTL-07 | Phase 7 | Pending |
+| MTTL-08 | Phase 7 | Pending |
 
 **Coverage:**
 - v1.0 requirements: 32 total (all complete)
 - v1.1 requirements: 4 total (all complete)
-- v1.2 requirements: 19 total
-- Mapped to phases: 0 (pending roadmap)
-- Unmapped: 19
+- v1.2 requirements: 22 total
+- Mapped to phases: 22/22
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-18*
-*Last updated: 2026-03-23 after milestone v1.2 requirements defined*
+*Last updated: 2026-03-23 after v1.2 roadmap created (Phases 5-7)*
