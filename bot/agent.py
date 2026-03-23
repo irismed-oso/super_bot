@@ -167,6 +167,18 @@ async def run_agent(
                 num_turns = message.num_turns
     except ProcessError as exc:
         stderr_output = "\n".join(stderr_lines[-20:])
+        # If session resume failed, retry with a fresh session
+        if session_id:
+            log.warning(
+                "agent.resume_failed_retrying",
+                session_id=session_id,
+                exit_code=exc.exit_code,
+                cwd=effective_cwd,
+            )
+            return await run_agent(
+                prompt, None, cwd=cwd,
+                on_text=on_text, on_message=on_message, max_turns=max_turns,
+            )
         log.error(
             "agent.process_error",
             session_id=session_id,
@@ -174,15 +186,7 @@ async def run_agent(
             cwd=effective_cwd,
             stderr_preview=stderr_output[:200],
         )
-        # Build a useful error message with context
-        if stderr_output:
-            error_detail = stderr_output
-        else:
-            parts = [f"Claude Code exited with code {exc.exit_code}."]
-            if session_id:
-                parts.append(f"Session resume failed (id: {session_id[:12]}...).")
-            parts.append(f"CWD: {effective_cwd}")
-            error_detail = " ".join(parts)
+        error_detail = stderr_output or f"Claude Code exited with code {exc.exit_code}. CWD: {effective_cwd}"
         return {
             "session_id": session_id,
             "result": error_detail,
