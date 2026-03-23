@@ -117,9 +117,13 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. Sending "check deploy version" to Slack triggers the MCP `deploy_version` tool and returns the real production API version number in the thread
   2. The MCP server process starts within 60 seconds on the VM (verified by cold-start benchmark) and does not cause session timeout
-  3. The mic-transformer MCP server can be disabled via the MIC_TRANSFORMER_MCP_ENABLED config flag without affecting other MCP servers (Linear, Sentry)
+  3. The mic-transformer MCP server can be disabled via the MIC_TRANSFORMER_MCP_DISABLED config flag without affecting other MCP servers (Linear, Sentry)
   4. The systemd environment file passes validation (no export prefix, no shell interpolation) and all credential config files are present on the VM
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 05-01-PLAN.md — Feature flag (MIC_TRANSFORMER_MCP_DISABLED) + deploy script (deploy_v1.2_phase5.sh)
+- [ ] 05-02-PLAN.md — DEPLOY.md v1.2 section + VM deployment and end-to-end Slack verification checkpoint
 
 ### Phase 6: Read-Only Status and Storage Tools
 **Goal**: Nicole can query all pipeline status, storage contents, and audit data through Slack — every read-only MCP tool returns real data, validating all four credential pathways (GCS, S3, Google Drive, PostgreSQL)
@@ -157,6 +161,6 @@ Phases execute in order: 1 → 2 → 3 → 4 → v1.1 → 5 → 6 → 7
 | 3. End-to-End Integration | v1.0 | 4/5 | In progress | - |
 | 4. Operational Hardening | v1.0 | 0/TBD | Not started | - |
 | v1.1 Capability Parity | v1.1 | 1/TBD | In progress | - |
-| 5. VM Validation and MCP Wiring | v1.2 | 0/TBD | Not started | - |
+| 5. VM Validation and MCP Wiring | v1.2 | 0/2 | Not started | - |
 | 6. Read-Only Status and Storage Tools | v1.2 | 0/TBD | Not started | - |
 | 7. Mutation Tools | v1.2 | 0/TBD | Not started | - |
