@@ -69,10 +69,17 @@ def register(app: AsyncApp) -> None:
                 )
                 return
         prompt = _build_prompt(clean_text, worktree_path_val, channel, thread_ts)
-        on_message_cb = progress.make_on_message(client, channel, thread_ts)
+        progress_msg = None
+        _inner_cb = None
 
         async def notify_cb():
-            await progress.post_started(client, channel, thread_ts, clean_text)
+            nonlocal progress_msg, _inner_cb
+            progress_msg = await progress.post_started(client, channel, thread_ts, clean_text)
+            _inner_cb = progress.make_on_message(client, channel, thread_ts, progress_msg)
+
+        async def on_message_cb(message):
+            if _inner_cb:
+                await _inner_cb(message)
 
         task_started_at = __import__("time").time()
 

@@ -4,8 +4,8 @@ Slack thread progress updates for running agent tasks.
 Provides milestone detection from the Claude SDK AssistantMessage stream
 and posting helpers for started, completion, and error messages.
 
-Milestones are deduplicated -- the same milestone is never posted twice
-in a row. Only 4-6 updates per task (per CONTEXT.md locked decision).
+Progress milestones are shown by editing a single message in-place
+rather than posting new messages, to reduce thread clutter.
 """
 
 import re
@@ -27,25 +27,26 @@ PR_URL_RE = re.compile(
 
 async def post_started(
     client, channel: str, thread_ts: str, task_text: str
-) -> None:
-    """Post a brief 'started' message to the Slack thread."""
+) -> dict | None:
+    """Post a brief 'started' message and return its ts for later editing."""
     truncated = task_text[:80] + "..." if len(task_text) > 80 else task_text
     msg = f"Working on it: {truncated}"
     try:
-        await client.chat_postMessage(
+        resp = await client.chat_postMessage(
             channel=channel, thread_ts=thread_ts, text=msg
         )
+        return {"ts": resp["ts"], "channel": channel}
     except Exception:
         log.warning("progress.post_started_failed", channel=channel)
+        return None
 
 
-def make_on_message(client, channel: str, thread_ts: str):
+def make_on_message(client, channel: str, thread_ts: str, progress_msg: dict | None = None):
     """
     Return an async callback for passing as on_message= to run_agent_with_timeout().
 
-    The callback inspects each AssistantMessage for tool use blocks and posts
-    milestone updates to the Slack thread. Identical consecutive milestones
-    are suppressed.
+    The callback inspects each AssistantMessage for tool use blocks and edits
+    the progress message in-place. Identical consecutive milestones are suppressed.
     """
     last_milestone = None
 
@@ -77,9 +78,16 @@ def make_on_message(client, channel: str, thread_ts: str):
         if milestone is not None and milestone != last_milestone:
             last_milestone = milestone
             try:
-                await client.chat_postMessage(
-                    channel=channel, thread_ts=thread_ts, text=milestone
-                )
+                if progress_msg:
+                    await client.chat_update(
+                        channel=progress_msg["channel"],
+                        ts=progress_msg["ts"],
+                        text=milestone,
+                    )
+                else:
+                    await client.chat_postMessage(
+                        channel=channel, thread_ts=thread_ts, text=milestone
+                    )
             except Exception:
                 log.warning(
                     "progress.milestone_post_failed",
