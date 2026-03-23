@@ -46,10 +46,17 @@ def register(app: AsyncApp) -> None:
         user_id = event.get("user", "")
         clean_text = re.sub(r"<@[A-Z0-9]+>", "", text).strip()
 
+        session_id = session_map.get(channel, thread_ts)
         is_code_task_flag = worktree.is_code_task(clean_text)
         worktree_path_val = None
 
-        if is_code_task_flag:
+        if session_id:
+            # Resuming an existing session -- must use the same CWD
+            stored_cwd = session_map.get_cwd(channel, thread_ts)
+            if stored_cwd:
+                worktree_path_val = stored_cwd
+        elif is_code_task_flag:
+            # New session with code task -- create a worktree
             try:
                 worktree_path_val = await worktree.create(thread_ts, clean_text)
             except Exception as exc:
@@ -60,13 +67,6 @@ def register(app: AsyncApp) -> None:
                     text=formatter.format_error("Failed to create worktree", str(exc)),
                 )
                 return
-
-        session_id = session_map.get(channel, thread_ts)
-        # On resume, reuse the CWD from the original session to avoid mismatch
-        if session_id and worktree_path_val is None:
-            stored_cwd = session_map.get_cwd(channel, thread_ts)
-            if stored_cwd:
-                worktree_path_val = stored_cwd
         prompt = _build_prompt(clean_text, worktree_path_val, channel, thread_ts)
         on_message_cb = progress.make_on_message(client, channel, thread_ts)
 
