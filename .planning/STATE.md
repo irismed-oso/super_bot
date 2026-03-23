@@ -9,17 +9,17 @@ See: .planning/PROJECT.md (updated 2026-03-23)
 
 ## Current Position
 
-Phase: 5 of 7 (VM Validation and MCP Wiring)
-Plan: 1 of 2 in current phase
-Status: In progress
-Last activity: 2026-03-23 — Completed 05-01 (feature flag + deploy script)
+Phase: 5 of 7 (VM Validation and MCP Wiring) -- COMPLETE
+Plan: 2 of 2 in current phase
+Status: Phase complete
+Last activity: 2026-03-23 — Completed 05-02 (VM deployment + MCP connectivity validation)
 
-Progress: [############........] 60% (v1.0 phases 1-2 complete, phase 3 near done, phase 5 plan 1 done)
+Progress: [#############.......] 65% (v1.0 phases 1-2 complete, phase 3 near done, phase 5 complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 13
+- Total plans completed: 14
 - Average duration: —
 - Total execution time: —
 
@@ -31,7 +31,7 @@ Progress: [############........] 60% (v1.0 phases 1-2 complete, phase 3 near don
 | 2 | 3/3 | — | — |
 | 3 | 4/5 | — | — |
 | 4 | 0/TBD | — | — |
-| 5 | 1/2 | 2min | 2min |
+| 5 | 2/2 | 7min | 3.5min |
 
 ## Accumulated Context
 
@@ -43,6 +43,8 @@ Progress: [############........] 60% (v1.0 phases 1-2 complete, phase 3 near don
 - v1.2: Read-only tools before mutation tools — validates all credential pathways with zero blast radius before write operations
 - v1.2: MIC_TRANSFORMER_MCP_DISABLED defaults to False (enabled by default when path exists), checked before path detection for clean short-circuit
 - v1.2: No env field on mic-transformer MCP server config — subprocess inherits parent env, credentials come from config/*.yml
+- v1.2: No pre-warming needed — cold-start benchmark 1.273s on VM, well under 60s SDK timeout
+- v1.2: 23 config yml files (not 7) needed on VM for full mic-transformer MCP operation
 
 ### Pending Todos
 
@@ -50,13 +52,13 @@ None yet.
 
 ### Blockers/Concerns
 
-- MCP server cold-start time on VM must be under 60 seconds (SDK timeout) — benchmark needed in Phase 5
-- systemd EnvironmentFile syntax must be audited (no `export`, no interpolation) — Phase 5 prerequisite
+- ~~MCP server cold-start time on VM must be under 60 seconds (SDK timeout)~~ RESOLVED: 1.273s
+- ~~systemd EnvironmentFile syntax must be audited~~ RESOLVED: clean, no issues
 - Benefits fetch (MTTL-07) polls Prefect for up to 10 minutes — verify SuperBot session timeout accommodates this in Phase 7
 - Revolution EMR credentials must be present in mic_transformer config on VM — Phase 7 prerequisite
 
 ## Session Continuity
 
 Last session: 2026-03-23
-Stopped at: Completed 05-01-PLAN.md
+Stopped at: Completed 05-02-PLAN.md (Phase 5 complete)
 Resume file: None

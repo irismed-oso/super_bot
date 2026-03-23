@@ -69,13 +69,13 @@ Requirements for MCP Parity milestone. Each maps to roadmap phases.
 
 - [x] **MCPW-01**: mic-transformer MCP server added to _build_mcp_servers() in agent.py as stdio subprocess
 - [x] **MCPW-02**: MIC_TRANSFORMER_MCP_ENABLED config flag controls whether mic-transformer MCP server is wired
-- [ ] **MCPW-03**: mcp[cli]~=1.26.0 installed in mic_transformer .venv on VM
+- [x] **MCPW-03**: mcp[cli]~=1.26.0 installed in mic_transformer .venv on VM
 
 ### VM Environment
 
-- [ ] **VMEV-01**: mic_transformer config/*.yml credential files present and valid on VM
-- [ ] **VMEV-02**: systemd EnvironmentFile syntax validated (no export, no interpolation)
-- [ ] **VMEV-03**: MCP server cold-start completes within 60-second SDK timeout on VM hardware
+- [x] **VMEV-01**: mic_transformer config/*.yml credential files present and valid on VM
+- [x] **VMEV-02**: systemd EnvironmentFile syntax validated (no export, no interpolation)
+- [x] **VMEV-03**: MCP server cold-start completes within 60-second SDK timeout on VM hardware
 
 ### Read-Only Tools
 

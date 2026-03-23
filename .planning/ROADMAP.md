@@ -122,8 +122,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 05-01-PLAN.md — Feature flag (MIC_TRANSFORMER_MCP_DISABLED) + deploy script (deploy_v1.2_phase5.sh)
-- [ ] 05-02-PLAN.md — DEPLOY.md v1.2 section + VM deployment and end-to-end Slack verification checkpoint
+- [x] 05-01-PLAN.md — Feature flag (MIC_TRANSFORMER_MCP_DISABLED) + deploy script (deploy_v1.2_phase5.sh)
+- [x] 05-02-PLAN.md — DEPLOY.md v1.2 section + VM deployment and end-to-end Slack verification checkpoint
 
 ### Phase 6: Read-Only Status and Storage Tools
 **Goal**: Nicole can query all pipeline status, storage contents, and audit data through Slack — every read-only MCP tool returns real data, validating all four credential pathways (GCS, S3, Google Drive, PostgreSQL)
@@ -161,6 +161,6 @@ Phases execute in order: 1 → 2 → 3 → 4 → v1.1 → 5 → 6 → 7
 | 3. End-to-End Integration | v1.0 | 4/5 | In progress | - |
 | 4. Operational Hardening | v1.0 | 0/TBD | Not started | - |
 | v1.1 Capability Parity | v1.1 | 1/TBD | In progress | - |
-| 5. VM Validation and MCP Wiring | v1.2 | 0/2 | Not started | - |
+| 5. VM Validation and MCP Wiring | v1.2 | 2/2 | Complete | 2026-03-23 |
 | 6. Read-Only Status and Storage Tools | v1.2 | 0/TBD | Not started | - |
 | 7. Mutation Tools | v1.2 | 0/TBD | Not started | - |
