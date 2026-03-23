@@ -12,20 +12,32 @@ Nicole can ask the bot to do anything on mic_transformer through Slack and it ju
 
 ### Validated
 
-(None yet — ship to validate)
+<!-- Shipped and confirmed valuable. -->
+
+- GCP VM provisioned with systemd service, auto-restart, journald logging (v1.0 Phase 1)
+- Slack bot with Socket Mode, lazy listener, event dedup, access control (v1.0 Phase 1)
+- Claude Agent SDK with session management, timeout, queue serialization (v1.0 Phase 2)
+- End-to-end: @mention triggers Claude session, progress/results posted to thread (v1.0 Phase 3)
+- Git worktree isolation, branch/commit/PR operations (v1.0 Phase 3)
+- Linear MCP and Sentry MCP integration (v1.1)
+- Multi-repo read access (v1.1)
 
 ### Active
 
-- [ ] GCP VM provisioned and configured with mic_transformer clone
-- [ ] Claude Code CLI installed and authenticated on the VM
-- [ ] Slack bot app created and connected to a team channel
-- [ ] Slack-to-Claude bridge: incoming @mentions trigger Claude Code sessions
-- [ ] Claude Code output streamed/posted back to Slack as replies
-- [ ] Persistent context across conversations (Claude Code memory, project state)
-- [ ] Full repo access: git operations, branch creation, PR workflows
-- [ ] Script execution: run Prefect flows, Python scripts, operational tasks
-- [ ] Deploy capability: push to environments from the VM
-- [ ] Small team access control (Nicole, Han, named users)
+- [ ] mic-transformer MCP server wired into SuperBot Claude Agent SDK sessions
+- [ ] All 25+ operational tools available through Slack (status, extraction, reduction, posting, crawling, etc.)
+- [ ] VM environment has all mic-transformer MCP dependencies installed
+- [ ] Required credentials/env vars configured on VM for MCP tools
+
+## Current Milestone: v1.2 MCP Parity
+
+**Goal:** SuperBot has direct access to all mic-transformer MCP tools locally on the VM, giving Nicole the same operational capabilities through Slack that local Claude Code has.
+
+**Target features:**
+- mic-transformer MCP server wired into SuperBot's Claude Agent SDK sessions as stdio subprocess
+- All 13 tool modules (25+ tools) available: status, extraction, reduction, posting, storage, crawler, gdrive, ingestion, benefits, deploy, azure_mirror, ivt_ingestion, analytics
+- VM mic_transformer .venv has `mcp` and `fastmcp` packages installed
+- Required cloud credentials (GCS, S3, Azure, Prefect, Revolution) accessible to MCP subprocess
 
 ### Out of Scope
 
@@ -64,4 +76,4 @@ Nicole can ask the bot to do anything on mic_transformer through Slack and it ju
 | Flexible VM sizing | Start small, scale if needed — avoid over-provisioning | — Pending |
 
 ---
-*Last updated: 2026-03-18 after initialization*
+*Last updated: 2026-03-23 after milestone v1.2 started*
