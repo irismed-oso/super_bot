@@ -49,7 +49,10 @@ def _build_mcp_servers() -> dict:
         MIC_TRANSFORMER_CWD, ".claude", "mcp", "mic-transformer", "server.py"
     )
     mcp_python = os.path.join(MIC_TRANSFORMER_CWD, ".venv", "bin", "python")
-    if os.path.isfile(mcp_server_script) and os.path.isfile(mcp_python):
+
+    if config.MIC_TRANSFORMER_MCP_DISABLED:
+        log.info("mcp.mic_transformer_disabled_by_env")
+    elif os.path.isfile(mcp_server_script) and os.path.isfile(mcp_python):
         servers["mic-transformer"] = {
             "command": mcp_python,
             "args": [mcp_server_script],

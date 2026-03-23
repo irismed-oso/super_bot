@@ -16,6 +16,12 @@ BOT_USER_ID: str = os.environ.get("BOT_USER_ID", "")
 LINEAR_API_KEY: str = os.environ.get("LINEAR_API_KEY", "")
 SENTRY_AUTH_TOKEN: str = os.environ.get("SENTRY_AUTH_TOKEN", "")
 
+# v1.2: mic-transformer MCP server disable override
+# Enabled by default when path exists on disk; set to "1"/"true"/"yes" to disable for troubleshooting
+MIC_TRANSFORMER_MCP_DISABLED: bool = os.environ.get(
+    "MIC_TRANSFORMER_MCP_DISABLED", ""
+).lower() in ("1", "true", "yes")
+
 # v1.1: Additional repo directories (comma-separated absolute paths on VM)
 # Example: /home/bot/oso-fe-gsnap,/home/bot/irismed-service,/home/bot/oso-desktop
 ADDITIONAL_REPOS: list[str] = [
