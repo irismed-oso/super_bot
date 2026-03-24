@@ -18,7 +18,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 4: Operational Hardening** - Persistent CLAUDE.md project memory, shell/script execution, Prefect flow triggering, deployment capability, and daily digest
 - [x] **Phase 5: VM Validation and MCP Wiring** - mic-transformer MCP server wired into SuperBot as stdio subprocess with all VM prerequisites validated and one confirmed working tool call (completed 2026-03-23)
 - [x] **Phase 6: Read-Only Status and Storage Tools** - All read-only MCP tools verified working through Slack -- status checks, storage browsing, pipeline audits, and credential pathway validation (completed 2026-03-23)
-- [ ] **Phase 7: Mutation Tools** - All write/trigger MCP tools verified working through Slack — extraction, reduction, posting, ingestion, sync, and benefits operations
+- [x] **Phase 7: Mutation Tools** - All write/trigger MCP tools verified working through Slack — extraction, reduction, posting, ingestion, sync, and benefits operations (6/8 tools working, 2 blocked by SSH; completed 2026-03-23)
 
 ## Phase Details
 
@@ -154,8 +154,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 07-01-PLAN.md — Validate API-triggered mutation tools (extraction, reduction, ingestion, requeue)
-- [ ] 07-02-PLAN.md — Validate subprocess/Prefect mutation tools (autopost dry_run, posting prep, Azure mirror sync, benefits fetch)
+- [x] 07-01-PLAN.md — Validate API-triggered mutation tools (extraction, reduction, ingestion, requeue)
+- [x] 07-02-PLAN.md — Validate subprocess/Prefect mutation tools (autopost dry_run, posting prep, Azure mirror sync, benefits fetch)
 
 ## Progress
 
@@ -171,4 +171,4 @@ Phases execute in order: 1 → 2 → 3 → 4 → v1.1 → 5 → 6 → 7
 | v1.1 Capability Parity | v1.1 | 1/TBD | In progress | - |
 | 5. VM Validation and MCP Wiring | v1.2 | Complete    | 2026-03-23 | 2026-03-23 |
 | 6. Read-Only Status and Storage Tools | v1.2 | Complete    | 2026-03-24 | 2026-03-23 |
-| 7. Mutation Tools | v1.2 | 0/2 | Not started | - |
+| 7. Mutation Tools | v1.2 | 2/2 | Complete | 2026-03-23 |

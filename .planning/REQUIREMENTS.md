@@ -90,14 +90,14 @@ Requirements for MCP Parity milestone. Each maps to roadmap phases.
 
 ### Mutation Tools
 
-- [ ] **MTTL-01**: User can trigger VSP/EyeMed Gemini extraction via Slack
-- [ ] **MTTL-02**: User can trigger AIOUT reduction via Slack
-- [ ] **MTTL-03**: User can trigger autopost (with dry_run default) via Slack
-- [ ] **MTTL-04**: User can trigger posting prep and GDrive upload via Slack
-- [ ] **MTTL-05**: User can ingest manual PDFs into the pipeline via Slack
-- [ ] **MTTL-06**: User can trigger Azure mirror sync via Slack
-- [ ] **MTTL-07**: User can fetch vision benefits via Slack
-- [ ] **MTTL-08**: User can requeue missing extraction pages via Slack
+- [x] **MTTL-01**: User can trigger VSP/EyeMed Gemini extraction via Slack
+- [x] **MTTL-02**: User can trigger AIOUT reduction via Slack
+- [x] **MTTL-03**: User can trigger autopost (with dry_run default) via Slack
+- [x] **MTTL-04**: User can trigger posting prep and GDrive upload via Slack
+- [x] **MTTL-05**: User can ingest manual PDFs into the pipeline via Slack
+- [ ] **MTTL-06**: User can trigger Azure mirror sync via Slack (blocked: SSH publickey denied)
+- [ ] **MTTL-07**: User can fetch vision benefits via Slack (blocked: SSH-dependent + timeout risk)
+- [x] **MTTL-08**: User can requeue missing extraction pages via Slack
 
 ## Future Requirements
 
@@ -169,10 +169,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SKIL-01 | v1.1 | Complete |
 | MCPW-01 | Phase 5 | Complete |
 | MCPW-02 | Phase 5 | Complete |
-| MCPW-03 | Phase 5 | Pending |
-| VMEV-01 | Phase 5 | Pending |
-| VMEV-02 | Phase 5 | Pending |
-| VMEV-03 | Phase 5 | Pending |
+| MCPW-03 | Phase 5 | Complete |
+| VMEV-01 | Phase 5 | Complete |
+| VMEV-02 | Phase 5 | Complete |
+| VMEV-03 | Phase 5 | Complete |
 | RDTL-01 | Phase 6 | Complete |
 | RDTL-02 | Phase 6 | Complete |
 | RDTL-03 | Phase 6 | Complete |
@@ -181,14 +181,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 | RDTL-06 | Phase 6 | Complete |
 | RDTL-07 | Phase 6 | Complete |
 | RDTL-08 | Phase 6 | Complete |
-| MTTL-01 | Phase 7 | Pending |
-| MTTL-02 | Phase 7 | Pending |
-| MTTL-03 | Phase 7 | Pending |
-| MTTL-04 | Phase 7 | Pending |
-| MTTL-05 | Phase 7 | Pending |
-| MTTL-06 | Phase 7 | Pending |
-| MTTL-07 | Phase 7 | Pending |
-| MTTL-08 | Phase 7 | Pending |
+| MTTL-01 | Phase 7 | Complete |
+| MTTL-02 | Phase 7 | Complete |
+| MTTL-03 | Phase 7 | Complete |
+| MTTL-04 | Phase 7 | Complete |
+| MTTL-05 | Phase 7 | Complete |
+| MTTL-06 | Phase 7 | Blocked (SSH) |
+| MTTL-07 | Phase 7 | Blocked (SSH) |
+| MTTL-08 | Phase 7 | Complete |
 
 **Coverage:**
 - v1.0 requirements: 32 total (all complete)
