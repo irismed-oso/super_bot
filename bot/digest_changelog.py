@@ -72,6 +72,7 @@ async def _cross_check_git_log(
             for entry in entries:
                 if entry["hash"] not in logged_hashes:
                     entry["repo"] = repo_name
+                    entry["recovered"] = True
                     missed.append(entry)
                     logged_hashes.add(entry["hash"])
         except Exception as exc:
@@ -87,13 +88,32 @@ async def _cross_check_git_log(
     return missed
 
 
+async def _resolve_bot_author(repo_path: str) -> str:
+    """Get the bot's git author name from the repo config."""
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            "git", "config", "user.name",
+            cwd=repo_path,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        stdout, _ = await proc.communicate()
+        if proc.returncode == 0 and stdout.strip():
+            return stdout.decode().strip()
+    except Exception:
+        pass
+    return os.getlogin()
+
+
 async def _git_log_for_date(
     repo_path: str, since: str, until: str,
 ) -> list[dict]:
-    """Run git log for a date range and parse the output."""
+    """Run git log for a date range, filtered to bot's commits only."""
+    author_name = await _resolve_bot_author(repo_path)
     try:
         proc = await asyncio.create_subprocess_exec(
             "git", "log", "--all",
+            f"--author={author_name}",
             f"--since={since}", f"--until={until}",
             "--format=%H|%s", "--name-only",
             cwd=repo_path,
@@ -173,39 +193,55 @@ def _group_by_repo(
 
 def _format_changelog(by_repo: dict[str, dict]) -> str:
     """Format grouped changelog entries into a Slack-ready block."""
-    lines = ["*Changelog*", ""]
+    single_repo = len(by_repo) == 1
+
+    # Build heading — include counts inline for single-repo case
+    if single_repo:
+        repo_name, data = next(iter(by_repo.items()))
+        total_commits = len(data["commits"])
+        total_prs = len(data["prs"])
+        parts = []
+        if total_commits:
+            parts.append(f"{total_commits} commit{'s' if total_commits != 1 else ''}")
+        if total_prs:
+            parts.append(f"{total_prs} PR{'s' if total_prs != 1 else ''}")
+        lines = [f"*Changelog* ({', '.join(parts)})", ""]
+    else:
+        lines = ["*Changelog*", ""]
 
     for repo_name, data in by_repo.items():
         commits = data["commits"]
         prs = data["prs"]
 
-        # Build header with counts
-        parts = []
-        if commits:
-            parts.append(f"{len(commits)} commit{'s' if len(commits) != 1 else ''}")
-        if prs:
-            parts.append(f"{len(prs)} PR{'s' if len(prs) != 1 else ''}")
-        header = f"*{repo_name}* ({', '.join(parts)})"
-        lines.append(header)
+        # Show repo header only when multiple repos
+        if not single_repo:
+            parts = []
+            if commits:
+                parts.append(f"{len(commits)} commit{'s' if len(commits) != 1 else ''}")
+            if prs:
+                parts.append(f"{len(prs)} PR{'s' if len(prs) != 1 else ''}")
+            header = f"*{repo_name}* ({', '.join(parts)})"
+            lines.append(header)
 
         # List commits (capped at MAX_COMMITS_PER_REPO)
         for commit in commits[:MAX_COMMITS_PER_REPO]:
             short_hash = commit["hash"][:7]
             message = commit.get("message", "")[:80]
-            lines.append(f"- `{short_hash}` {message}")
+            suffix = " _(recovered)_" if commit.get("recovered") else ""
+            lines.append(f"- `{short_hash}` {message}{suffix}")
 
         if len(commits) > MAX_COMMITS_PER_REPO:
             overflow = len(commits) - MAX_COMMITS_PER_REPO
             lines.append(f"_...and {overflow} more_")
 
-        # List PRs
+        # List PRs with Slack mrkdwn hyperlinks
         for pr in prs:
             title = pr.get("title", "untitled")[:80]
             url = pr.get("url", "")
             if url:
-                lines.append(f"- PR: {title} -- {url}")
+                lines.append(f"- <{url}|{title}>")
             else:
-                lines.append(f"- PR: {title}")
+                lines.append(f"- {title}")
 
         lines.append("")
 
