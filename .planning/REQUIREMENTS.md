@@ -140,6 +140,28 @@ Requirements for Digest Changelog milestone.
 - **CONC-01**: Full task queue with priority ordering
 - **CONC-02**: Multiple simultaneous tasks across different worktrees
 
+## v1.5 Requirements
+
+### Fast Path (FAST)
+
+- [ ] **FAST-01**: Bot pattern-matches "crawl eyemed [location] [date]" and triggers single-location crawl via Prefect API without agent pipeline
+- [ ] **FAST-02**: Bot pattern-matches status queries with location filters ("status on DME eyemed 03.16 to today") and runs script directly
+- [ ] **FAST-03**: Bot pattern-matches batch crawl ("crawl all sites for [date]") and triggers all Prefect manual deployments in parallel
+- [ ] **FAST-04**: All fast-path responses edit the "Working on it." message in-place with the result
+
+### Background Tasks (BGTK)
+
+- [ ] **BGTK-01**: Bot can trigger Prefect flow runs via API and return immediately with confirmation
+- [ ] **BGTK-02**: Bot polls background task status and posts progress updates to Slack thread every 2-3 minutes
+- [ ] **BGTK-03**: Background tasks do not block the agent queue — other tasks can run while a crawl is in progress
+- [ ] **BGTK-04**: Bot posts final summary when all background tasks complete (locations found files, no disbursement, errors)
+
+### Error UX (ERUX)
+
+- [ ] **ERUX-01**: Timeout messages include what was attempted and suggested next action
+- [ ] **ERUX-02**: Error messages distinguish timeout vs failure vs still-running-in-background
+- [ ] **ERUX-03**: Bot responds to "are you broken?" / "are you still going?" with actual task status instead of spawning a new agent session
+
 ## Out of Scope
 
 | Feature | Reason |
