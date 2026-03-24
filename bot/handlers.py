@@ -37,7 +37,7 @@ def _build_prompt(
 def register(app: AsyncApp) -> None:
     """Register all event and command handlers on the given app."""
 
-    async def _run_agent_real(body, client, event):
+    async def _run_agent_real(body, client, event, ack_ts=None):
         """Wire Slack event to the real agent stack with worktree isolation and progress."""
         import structlog
         log = structlog.get_logger()
@@ -52,10 +52,28 @@ def register(app: AsyncApp) -> None:
         fast_result = await try_fast_command(clean_text)
         if fast_result is not None:
             msg = formatter.markdown_to_mrkdwn(fast_result)
-            for chunk in formatter.split_long_message(msg):
-                await client.chat_postMessage(
-                    channel=channel, thread_ts=thread_ts, text=chunk,
-                )
+            chunks = formatter.split_long_message(msg)
+            # Edit the "Working on it." ack message in-place with the first chunk
+            if ack_ts and chunks:
+                try:
+                    await client.chat_update(
+                        channel=channel, ts=ack_ts, text=chunks[0],
+                    )
+                except Exception:
+                    log.warning("fast_path.edit_ack_failed", channel=channel)
+                    await client.chat_postMessage(
+                        channel=channel, thread_ts=thread_ts, text=chunks[0],
+                    )
+                # Post remaining chunks as new messages (rare -- only for very long output)
+                for chunk in chunks[1:]:
+                    await client.chat_postMessage(
+                        channel=channel, thread_ts=thread_ts, text=chunk,
+                    )
+            else:
+                for chunk in chunks:
+                    await client.chat_postMessage(
+                        channel=channel, thread_ts=thread_ts, text=chunk,
+                    )
             return
 
         session_id = session_map.get(channel, thread_ts)
@@ -175,14 +193,15 @@ def register(app: AsyncApp) -> None:
             timestamp=event["ts"]
         )
         thread_ts = event.get("thread_ts") or event["ts"]
-        await client.chat_postMessage(
+        ack_resp = await client.chat_postMessage(
             channel=event["channel"],
             thread_ts=thread_ts,
             text="Working on it."
         )
+        ack_ts = ack_resp["ts"]
 
         # Fire agent work in background
-        asyncio.create_task(_run_agent_real(body, client, event))
+        asyncio.create_task(_run_agent_real(body, client, event, ack_ts=ack_ts))
 
     @app.event("message")
     async def handle_thread_reply(body, client, event):
