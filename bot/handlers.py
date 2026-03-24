@@ -125,6 +125,7 @@ def register(app: AsyncApp) -> None:
             if result.get("subtype") in error_subtypes:
                 await worktree.stash(thread_ts)
             duration_s = int(__import__("time").time() - task_started_at)
+            result["task_text"] = clean_text
             await progress.post_result(client, channel, thread_ts, result, is_code_task_flag, duration_s=duration_s)
             # Log activity for daily digest
             activity_log.append({
@@ -154,6 +155,7 @@ def register(app: AsyncApp) -> None:
             channel=channel,
             thread_ts=thread_ts,
             user_id=user_id,
+            clean_text=clean_text,
             cwd=worktree_path_val,
             notify_callback=notify_cb,
             result_callback=result_cb,

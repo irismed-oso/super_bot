@@ -37,6 +37,7 @@ class QueuedTask:
     channel: str
     thread_ts: str
     user_id: str
+    clean_text: str = ""         # original user message for error formatting
     cwd: str | None = None      # worktree path for code-change tasks
     on_message: object = None    # async callable(AssistantMessage) for milestone detection
     notify_callback: Callable = None   # async -- called when task starts

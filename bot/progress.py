@@ -118,6 +118,7 @@ async def post_result(
             subtype,
             result.get("result", "") or "",
             result.get("partial_texts", []),
+            task_text=result.get("task_text", ""),
         )
     else:
         msg = _format_completion(result.get("result", "") or "", is_code_task)
@@ -147,17 +148,51 @@ async def post_result(
 
 
 def _format_error(
-    subtype: str, result_text: str, partial_texts: list
+    subtype: str, result_text: str, partial_texts: list,
+    task_text: str = "",
 ) -> str:
-    """Format an error message based on subtype."""
+    """Format an error message based on subtype with visual distinction.
+
+    Each error type gets a unique emoji prefix so Nicole can tell at a glance
+    whether a task timed out, failed, or was cancelled.
+    """
+    task_label = task_text or "(unknown task)"
+
     if subtype == "error_timeout":
         partial = partial_texts[-1] if partial_texts else "(nothing)"
-        return f"Task timed out. Here's what was completed:\n{partial}"
+        # Try to infer a location from the task text for a concrete next-action
+        suggestion = _timeout_suggestion(task_text)
+        return (
+            f":hourglass: *Task timed out*\n"
+            f"Was running: {task_label}\n\n"
+            f"Here is what was completed before timeout:\n{partial}\n\n"
+            f"{suggestion}"
+        )
     elif subtype == "error_cancelled":
-        return "Task was cancelled."
+        return (
+            f":no_entry_sign: *Task cancelled*\n"
+            f"Was running: {task_label}"
+        )
     else:
         detail = result_text[:500] if result_text else "unknown error"
-        return f"Task failed: {detail}"
+        return (
+            f":x: *Task failed*\n"
+            f"Was running: {task_label}\n\n"
+            f"Error: {detail}"
+        )
+
+
+def _timeout_suggestion(task_text: str) -> str:
+    """Build a next-action suggestion for timeout messages."""
+    if not task_text:
+        return "Check `/sb-status` for current state."
+    # Import here to avoid circular import at module level
+    from bot.fast_commands import LOCATION_ALIASES
+    text_lower = task_text.lower()
+    for alias, canonical in LOCATION_ALIASES.items():
+        if alias in text_lower:
+            return f"Try checking the result: `status on {canonical} eyemed today`"
+    return "Check `/sb-status` for current state."
 
 
 def _format_completion(result_text: str, is_code_task: bool) -> str:
