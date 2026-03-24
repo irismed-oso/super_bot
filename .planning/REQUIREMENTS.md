@@ -120,9 +120,9 @@ Requirements for Digest Changelog milestone.
 
 ### Digest Changelog
 
-- [ ] **DGCL-01**: Daily digest includes a changelog section listing commits and PRs from the day
-- [ ] **DGCL-02**: Changelog entries are grouped by repository
-- [ ] **DGCL-03**: Digest scans git log at build time to catch activity missed by session logging
+- [x] **DGCL-01**: Daily digest includes a changelog section listing commits and PRs from the day
+- [x] **DGCL-02**: Changelog entries are grouped by repository
+- [x] **DGCL-03**: Digest scans git log at build time to catch activity missed by session logging
 
 ## Future Requirements
 
@@ -241,9 +241,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | GITLOG-01 | Phase 9 | Complete |
 | GITLOG-02 | Phase 9 | Complete |
 | GITLOG-03 | Phase 9 | Complete |
-| DGCL-01 | Phase 10 | Pending |
-| DGCL-02 | Phase 10 | Pending |
-| DGCL-03 | Phase 10 | Pending |
+| DGCL-01 | Phase 10 | Complete |
+| DGCL-02 | Phase 10 | Complete |
+| DGCL-03 | Phase 10 | Complete |
 | FAST-01 | Phase 11 | Complete |
 | FAST-02 | Phase 11 | Complete |
 | FAST-04 | Phase 11 | Complete |
