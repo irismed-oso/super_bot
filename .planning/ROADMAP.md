@@ -25,7 +25,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 11: Fast-Path Crawl and Status** - Nicole can trigger single-location EyeMed crawls and filtered status queries via pattern-matched commands that bypass the agent pipeline and respond in-place (completed 2026-03-24)
 - [x] **Phase 12: Background Tasks and Batch Crawl** - Nicole can trigger a full batch crawl across all sites and get progress updates without blocking the agent queue or hitting timeouts (completed 2026-03-24)
 - [x] **Phase 13: Error UX** - Timeout and error messages give Nicole enough context to know what happened and what to do next, including live status queries (completed 2026-03-24)
-- [ ] **Phase 14: Progress Heartbeat** - Bot edits a single progress message every 5 minutes during long agent sessions showing last activity, turn count, and elapsed time
+- [x] **Phase 14: Progress Heartbeat** - Bot edits a single progress message every 5 minutes during long agent sessions showing last activity, turn count, and elapsed time (completed 2026-03-24)
 
 ## Phase Details
 
@@ -307,4 +307,4 @@ Phases execute in order: 1 -> 2 -> 3 -> 4 -> v1.1 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 11. Fast-Path Crawl and Status | v1.5 | 1/1 | Complete | 2026-03-24 |
 | 12. Background Tasks and Batch Crawl | v1.5 | 1/1 | Complete | 2026-03-24 |
 | 13. Error UX | v1.5 | 1/1 | Complete | 2026-03-24 |
-| 14. Progress Heartbeat | v1.6 | 0/1 | In progress | - |
+| 14. Progress Heartbeat | 1/1 | Complete   | 2026-03-24 | - |

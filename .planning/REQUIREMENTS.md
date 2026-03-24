@@ -166,10 +166,10 @@ Requirements for Digest Changelog milestone.
 
 ### Heartbeat (HRTB)
 
-- [ ] **HRTB-01**: Bot edits progress message every 5 minutes with elapsed time, last activity, and turn count during agent execution
-- [ ] **HRTB-02**: Heartbeat fires even when agent is silently thinking (no tool use needed to trigger)
-- [ ] **HRTB-03**: Heartbeat stops cleanly when agent completes, times out, or is cancelled
-- [ ] **HRTB-04**: Progress message format: "Still working... [Last Activity] | Turn X/25 | Ym Zs elapsed"
+- [x] **HRTB-01**: Bot edits progress message every 5 minutes with elapsed time, last activity, and turn count during agent execution
+- [x] **HRTB-02**: Heartbeat fires even when agent is silently thinking (no tool use needed to trigger)
+- [x] **HRTB-03**: Heartbeat stops cleanly when agent completes, times out, or is cancelled
+- [x] **HRTB-04**: Progress message format: "Still working... [Last Activity] | Turn X/25 | Ym Zs elapsed"
 
 ## Out of Scope
 
@@ -264,10 +264,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ERUX-01 | Phase 13 | Complete |
 | ERUX-02 | Phase 13 | Complete |
 | ERUX-03 | Phase 13 | Complete |
-| HRTB-01 | Phase 14 | Pending |
-| HRTB-02 | Phase 14 | Pending |
-| HRTB-03 | Phase 14 | Pending |
-| HRTB-04 | Phase 14 | Pending |
+| HRTB-01 | Phase 14 | Complete |
+| HRTB-02 | Phase 14 | Complete |
+| HRTB-03 | Phase 14 | Complete |
+| HRTB-04 | Phase 14 | Complete |
 
 **Coverage:**
 - v1.0 requirements: 32 total (all complete)

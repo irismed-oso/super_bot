@@ -10,14 +10,14 @@ See: .planning/PROJECT.md (updated 2026-03-24)
 ## Current Position
 
 Phase: 14 of 14 (Progress Heartbeat)
-Plan: 0 of TBD in current phase
-Status: Ready to plan
-Last activity: 2026-03-24 -- Roadmap created for v1.6
+Plan: 1 of 1 in current phase
+Status: Phase complete
+Last activity: 2026-03-24 -- Completed 14-01 progress heartbeat
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 24
+- Total plans completed: 25
 - Average duration: --
 - Total execution time: --
 
@@ -44,6 +44,8 @@ Last activity: 2026-03-24 -- Roadmap created for v1.6
 - v1.5: Bot status handler placed last in FAST_COMMANDS to avoid false-matching eyemed commands
 - v1.5: Lazy import of LOCATION_ALIASES in _timeout_suggestion to avoid circular import
 - [Phase 10]: Separate digest_changelog.py module for testability; cross-check is best-effort with graceful degradation
+- v1.6: finish() edits progress message to show completion time; stop() silently cancels for error paths
+- v1.6: Heartbeat timer 60s first tick then 180s intervals; milestone updates use full heartbeat format string
 
 ### Pending Todos
 
@@ -62,5 +64,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-24
-Stopped at: Roadmap created for v1.6 milestone -- ready to plan Phase 14
+Stopped at: Completed 14-01-PLAN.md -- Phase 14 progress heartbeat complete
 Resume file: None
