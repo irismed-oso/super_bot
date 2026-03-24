@@ -79,14 +79,14 @@ Requirements for MCP Parity milestone. Each maps to roadmap phases.
 
 ### Read-Only Tools
 
-- [ ] **RDTL-01**: User can check VSP/EyeMed processing status via Slack
-- [ ] **RDTL-02**: User can browse S3 remits and GCS AIOUT files via Slack
-- [ ] **RDTL-03**: User can check full pipeline status and run pipeline audit via Slack
-- [ ] **RDTL-04**: User can check Azure mirror data freshness and run status via Slack
-- [ ] **RDTL-05**: User can audit IVT data ingestion health via Slack
-- [ ] **RDTL-06**: User can check Prefect flow status and get logs via Slack
-- [ ] **RDTL-07**: User can audit Google Drive folders via Slack
-- [ ] **RDTL-08**: User can list crawler locations via Slack
+- [x] **RDTL-01**: User can check VSP/EyeMed processing status via Slack
+- [x] **RDTL-02**: User can browse S3 remits and GCS AIOUT files via Slack
+- [x] **RDTL-03**: User can check full pipeline status and run pipeline audit via Slack
+- [x] **RDTL-04**: User can check Azure mirror data freshness and run status via Slack
+- [x] **RDTL-05**: User can audit IVT data ingestion health via Slack
+- [x] **RDTL-06**: User can check Prefect flow status and get logs via Slack
+- [x] **RDTL-07**: User can audit Google Drive folders via Slack
+- [x] **RDTL-08**: User can list crawler locations via Slack
 
 ### Mutation Tools
 
@@ -173,14 +173,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 | VMEV-01 | Phase 5 | Pending |
 | VMEV-02 | Phase 5 | Pending |
 | VMEV-03 | Phase 5 | Pending |
-| RDTL-01 | Phase 6 | Pending |
-| RDTL-02 | Phase 6 | Pending |
-| RDTL-03 | Phase 6 | Pending |
-| RDTL-04 | Phase 6 | Pending |
-| RDTL-05 | Phase 6 | Pending |
-| RDTL-06 | Phase 6 | Pending |
-| RDTL-07 | Phase 6 | Pending |
-| RDTL-08 | Phase 6 | Pending |
+| RDTL-01 | Phase 6 | Complete |
+| RDTL-02 | Phase 6 | Complete |
+| RDTL-03 | Phase 6 | Complete |
+| RDTL-04 | Phase 6 | Complete |
+| RDTL-05 | Phase 6 | Complete |
+| RDTL-06 | Phase 6 | Complete |
+| RDTL-07 | Phase 6 | Complete |
+| RDTL-08 | Phase 6 | Complete |
 | MTTL-01 | Phase 7 | Pending |
 | MTTL-02 | Phase 7 | Pending |
 | MTTL-03 | Phase 7 | Pending |

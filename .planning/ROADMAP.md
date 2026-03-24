@@ -17,7 +17,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 3: End-to-End Integration** - @mention triggers real Claude Code session, progress posted to thread, git operations and PR creation working end-to-end
 - [ ] **Phase 4: Operational Hardening** - Persistent CLAUDE.md project memory, shell/script execution, Prefect flow triggering, deployment capability, and daily digest
 - [x] **Phase 5: VM Validation and MCP Wiring** - mic-transformer MCP server wired into SuperBot as stdio subprocess with all VM prerequisites validated and one confirmed working tool call (completed 2026-03-23)
-- [ ] **Phase 6: Read-Only Status and Storage Tools** - All read-only MCP tools verified working through Slack — status checks, storage browsing, pipeline audits, and credential pathway validation
+- [x] **Phase 6: Read-Only Status and Storage Tools** - All read-only MCP tools verified working through Slack -- status checks, storage browsing, pipeline audits, and credential pathway validation (completed 2026-03-23)
 - [ ] **Phase 7: Mutation Tools** - All write/trigger MCP tools verified working through Slack — extraction, reduction, posting, ingestion, sync, and benefits operations
 
 ## Phase Details
@@ -138,8 +138,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 06-01-PLAN.md — Core credential pathway validation (GCS, S3, PostgreSQL): vsp_status, eyemed_status, list_gcs_aiout, check_pipeline_status, list_s3_remits, pipeline_audit, pipeline_stage_view
-- [ ] 06-02-PLAN.md — Extended credential pathway validation (SSH, GDrive, secondary DBs): azure_mirror_audit, ivt_ingestion_audit, check_prefect_flow_status, gdrive_audit, list_crawler_locations
+- [x] 06-01-PLAN.md — Core credential pathway validation (GCS, S3, PostgreSQL): vsp_status, eyemed_status, list_gcs_aiout, list_s3_remits, pipeline_audit
+- [x] 06-02-PLAN.md — Extended credential pathway validation (SSH, GDrive, secondary DBs): azure_mirror_audit, ivt_ingestion_audit, check_prefect_flow_status, gdrive_audit, list_crawler_locations
 
 ### Phase 7: Mutation Tools
 **Goal**: Nicole can trigger the full daily pipeline workflow from Slack — extraction, reduction, posting prep, ingestion, sync, and benefits operations all execute through MCP tools
@@ -166,5 +166,5 @@ Phases execute in order: 1 → 2 → 3 → 4 → v1.1 → 5 → 6 → 7
 | 4. Operational Hardening | v1.0 | 0/TBD | Not started | - |
 | v1.1 Capability Parity | v1.1 | 1/TBD | In progress | - |
 | 5. VM Validation and MCP Wiring | v1.2 | Complete    | 2026-03-23 | 2026-03-23 |
-| 6. Read-Only Status and Storage Tools | v1.2 | 0/2 | Not started | - |
+| 6. Read-Only Status and Storage Tools | v1.2 | 2/2 | Complete | 2026-03-23 |
 | 7. Mutation Tools | v1.2 | 0/TBD | Not started | - |

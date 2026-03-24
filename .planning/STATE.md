@@ -5,21 +5,21 @@
 See: .planning/PROJECT.md (updated 2026-03-23)
 
 **Core value:** Nicole can ask the bot to do anything on mic_transformer through Slack and it just does it — writes code, runs scripts, debugs issues, deploys — with full autonomy and persistent awareness.
-**Current focus:** Milestone v1.2: MCP Parity (Phase 5: VM Validation and MCP Wiring)
+**Current focus:** Milestone v1.2: MCP Parity (Phase 7: Mutation Tools)
 
 ## Current Position
 
-Phase: 5 of 7 (VM Validation and MCP Wiring) -- COMPLETE
+Phase: 6 of 7 (Read-Only Status and Storage Tools) -- COMPLETE
 Plan: 2 of 2 in current phase
 Status: Phase complete
-Last activity: 2026-03-23 — Completed 05-02 (VM deployment + MCP connectivity validation)
+Last activity: 2026-03-23 — Completed 06-02 (Extended credential pathway validation)
 
-Progress: [#############.......] 65% (v1.0 phases 1-2 complete, phase 3 near done, phase 5 complete)
+Progress: [###############.....] 75% (v1.0 phases 1-2 complete, phase 3 near done, phases 5-6 complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 14
+- Total plans completed: 16
 - Average duration: —
 - Total execution time: —
 
@@ -32,6 +32,7 @@ Progress: [#############.......] 65% (v1.0 phases 1-2 complete, phase 3 near don
 | 3 | 4/5 | — | — |
 | 4 | 0/TBD | — | — |
 | 5 | 2/2 | 7min | 3.5min |
+| 6 | 2/2 | — | — |
 
 ## Accumulated Context
 
@@ -45,6 +46,8 @@ Progress: [#############.......] 65% (v1.0 phases 1-2 complete, phase 3 near don
 - v1.2: No env field on mic-transformer MCP server config — subprocess inherits parent env, credentials come from config/*.yml
 - v1.2: No pre-warming needed — cold-start benchmark 1.273s on VM, well under 60s SDK timeout
 - v1.2: 23 config yml files (not 7) needed on VM for full mic-transformer MCP operation
+- v1.2: All read-only credential pathways confirmed working (GCS, S3, PostgreSQL x3, Google Drive); SSH publickey denied for ansible user is non-blocking
+- v1.2: No code changes needed for Phase 6 -- all tools work with existing VM configuration from Phase 5
 
 ### Pending Todos
 
@@ -59,6 +62,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-23
-Stopped at: Completed 05-02-PLAN.md (Phase 5 complete)
+Last session: 2026-03-24
+Stopped at: Completed 06-02-PLAN.md (Phase 6 complete)
 Resume file: None
