@@ -245,10 +245,10 @@ Plans:
   2. While crawls are running, the bot posts a progress update to the thread every 2-3 minutes showing which locations finished, which are still running, and any errors — without Nicole having to ask
   3. A separate agent task (e.g., a code question) submitted while a batch crawl is in progress executes normally — the background polling does not occupy the agent queue
   4. When all crawl runs finish, the bot posts a final summary showing per-location outcomes: files found, no disbursement, or error with message
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 12-01: TBD
+- [ ] 12-01-PLAN.md — Batch crawl trigger with parallel Prefect API + background progress monitor
 
 ### Phase 13: Error UX
 **Goal**: When something goes wrong or takes too long, Nicole sees a message that tells her what was attempted, what the current state is, and what to do next — never a bare timeout or generic error
@@ -284,5 +284,5 @@ Phases execute in order: 1 -> 2 -> 3 -> 4 -> v1.1 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 9. Git Activity Logging | v1.4 | 0/1 | Not started | - |
 | 10. Digest Changelog | v1.4 | 0/TBD | Not started | - |
 | 11. Fast-Path Crawl and Status | v1.5 | 1/1 | Complete | 2026-03-24 |
-| 12. Background Tasks and Batch Crawl | v1.5 | 0/TBD | Not started | - |
+| 12. Background Tasks and Batch Crawl | v1.5 | 0/1 | Not started | - |
 | 13. Error UX | v1.5 | 0/TBD | Not started | - |
