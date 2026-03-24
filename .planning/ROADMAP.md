@@ -151,7 +151,11 @@ Plans:
   3. User can trigger autopost with dry_run default from Slack and receive the dry-run report showing what would be posted
   4. User can trigger posting prep, manual PDF ingestion, Azure mirror sync, and benefits fetch from Slack and receive confirmation or results for each
   5. User can requeue missing extraction pages from Slack and receive confirmation of which pages were requeued
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 07-01-PLAN.md — Validate API-triggered mutation tools (extraction, reduction, ingestion, requeue)
+- [ ] 07-02-PLAN.md — Validate subprocess/Prefect mutation tools (autopost dry_run, posting prep, Azure mirror sync, benefits fetch)
 
 ## Progress
 
@@ -167,4 +171,4 @@ Phases execute in order: 1 → 2 → 3 → 4 → v1.1 → 5 → 6 → 7
 | v1.1 Capability Parity | v1.1 | 1/TBD | In progress | - |
 | 5. VM Validation and MCP Wiring | v1.2 | Complete    | 2026-03-23 | 2026-03-23 |
 | 6. Read-Only Status and Storage Tools | v1.2 | Complete    | 2026-03-24 | 2026-03-23 |
-| 7. Mutation Tools | v1.2 | 0/TBD | Not started | - |
+| 7. Mutation Tools | v1.2 | 0/2 | Not started | - |
