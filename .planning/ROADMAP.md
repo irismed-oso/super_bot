@@ -171,4 +171,4 @@ Phases execute in order: 1 → 2 → 3 → 4 → v1.1 → 5 → 6 → 7
 | v1.1 Capability Parity | v1.1 | 1/TBD | In progress | - |
 | 5. VM Validation and MCP Wiring | v1.2 | Complete    | 2026-03-23 | 2026-03-23 |
 | 6. Read-Only Status and Storage Tools | v1.2 | Complete    | 2026-03-24 | 2026-03-23 |
-| 7. Mutation Tools | v1.2 | 2/2 | Complete | 2026-03-23 |
+| 7. Mutation Tools | v1.2 | Complete    | 2026-03-24 | 2026-03-23 |
