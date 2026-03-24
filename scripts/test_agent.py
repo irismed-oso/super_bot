@@ -39,8 +39,8 @@ async def main() -> None:
     parser.add_argument(
         "--timeout",
         type=int,
-        default=600,
-        help="Wall-clock timeout in seconds (default: 600)",
+        default=1800,
+        help="Wall-clock timeout in seconds (default: 1800)",
     )
     parser.add_argument(
         "--channel",

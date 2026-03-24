@@ -36,7 +36,7 @@ MIC_TRANSFORMER_CWD = os.path.realpath(
     os.environ.get("MIC_TRANSFORMER_CWD", "/home/bot/mic_transformer")
 )
 
-TIMEOUT_SECONDS = 600   # 10 minutes -- locked decision (CONTEXT.md Safety Limits)
+TIMEOUT_SECONDS = 1800  # 30 minutes
 MAX_TURNS = 25          # locked decision (CONTEXT.md Safety Limits)
 
 
@@ -240,7 +240,7 @@ async def run_agent_with_timeout(
         cwd: Optional working directory override (e.g. worktree path).
         on_text: Optional async callback invoked with each AssistantMessage text.
         on_message: Optional async callback invoked with the full AssistantMessage.
-        timeout_seconds: Wall-clock timeout in seconds (default 600).
+        timeout_seconds: Wall-clock timeout in seconds (default 1800).
         max_turns: Maximum conversation turns (default 25).
 
     Returns:
