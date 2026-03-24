@@ -282,7 +282,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 14-01-PLAN.md — Heartbeat timer module + handler/queue lifecycle wiring
+- [x] 14-01-PLAN.md — Heartbeat timer module + handler/queue lifecycle wiring
 
 ---
 
@@ -307,4 +307,4 @@ Phases execute in order: 1 -> 2 -> 3 -> 4 -> v1.1 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 11. Fast-Path Crawl and Status | v1.5 | 1/1 | Complete | 2026-03-24 |
 | 12. Background Tasks and Batch Crawl | v1.5 | 1/1 | Complete | 2026-03-24 |
 | 13. Error UX | v1.5 | 1/1 | Complete | 2026-03-24 |
-| 14. Progress Heartbeat | 1/1 | Complete   | 2026-03-24 | - |
+| 14. Progress Heartbeat | v1.6 | 1/1 | Complete | 2026-03-24 |
