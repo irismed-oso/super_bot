@@ -146,15 +146,15 @@ Requirements for Digest Changelog milestone.
 
 - [x] **FAST-01**: Bot pattern-matches "crawl eyemed [location] [date]" and triggers single-location crawl via Prefect API without agent pipeline
 - [x] **FAST-02**: Bot pattern-matches status queries with location filters ("status on DME eyemed 03.16 to today") and runs script directly
-- [ ] **FAST-03**: Bot pattern-matches batch crawl ("crawl all sites for [date]") and triggers all Prefect manual deployments in parallel
+- [x] **FAST-03**: Bot pattern-matches batch crawl ("crawl all sites for [date]") and triggers all Prefect manual deployments in parallel
 - [x] **FAST-04**: All fast-path responses edit the "Working on it." message in-place with the result
 
 ### Background Tasks (BGTK)
 
-- [ ] **BGTK-01**: Bot can trigger Prefect flow runs via API and return immediately with confirmation
-- [ ] **BGTK-02**: Bot polls background task status and posts progress updates to Slack thread every 2-3 minutes
-- [ ] **BGTK-03**: Background tasks do not block the agent queue — other tasks can run while a crawl is in progress
-- [ ] **BGTK-04**: Bot posts final summary when all background tasks complete (locations found files, no disbursement, errors)
+- [x] **BGTK-01**: Bot can trigger Prefect flow runs via API and return immediately with confirmation
+- [x] **BGTK-02**: Bot polls background task status and posts progress updates to Slack thread every 2-3 minutes
+- [x] **BGTK-03**: Background tasks do not block the agent queue — other tasks can run while a crawl is in progress
+- [x] **BGTK-04**: Bot posts final summary when all background tasks complete (locations found files, no disbursement, errors)
 
 ### Error UX (ERUX)
 
@@ -247,11 +247,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FAST-01 | Phase 11 | Complete |
 | FAST-02 | Phase 11 | Complete |
 | FAST-04 | Phase 11 | Complete |
-| FAST-03 | Phase 12 | Pending |
-| BGTK-01 | Phase 12 | Pending |
-| BGTK-02 | Phase 12 | Pending |
-| BGTK-03 | Phase 12 | Pending |
-| BGTK-04 | Phase 12 | Pending |
+| FAST-03 | Phase 12 | Complete |
+| BGTK-01 | Phase 12 | Complete |
+| BGTK-02 | Phase 12 | Complete |
+| BGTK-03 | Phase 12 | Complete |
+| BGTK-04 | Phase 12 | Complete |
 | ERUX-01 | Phase 13 | Pending |
 | ERUX-02 | Phase 13 | Pending |
 | ERUX-03 | Phase 13 | Pending |

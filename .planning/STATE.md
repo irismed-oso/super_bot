@@ -5,21 +5,21 @@
 See: .planning/PROJECT.md (updated 2026-03-24)
 
 **Core value:** Nicole can ask the bot to do anything on mic_transformer through Slack and it just does it -- writes code, runs scripts, debugs issues, deploys -- with full autonomy and persistent awareness.
-**Current focus:** Phase 09 - Git Activity Logging (v1.4)
+**Current focus:** Phase 12 - Background Tasks and Batch Crawl (v1.5)
 
 ## Current Position
 
-Phase: 09 of 13 (Git Activity Logging)
+Phase: 12 of 13 (Background Tasks and Batch Crawl)
 Plan: 1 of 1 in current phase (complete)
-Status: Phase 09 complete
-Last activity: 2026-03-24 -- Completed 09-01-PLAN.md (git activity capture)
+Status: Phase 12 complete
+Last activity: 2026-03-24 -- Completed 12-01-PLAN.md (batch crawl and background monitor)
 
-Progress: [===================.] ~92% (phases 1-9, 11 complete; phase 10, 12-13 pending)
+Progress: [====================] ~96% (phases 1-9, 11-12 complete; phase 10, 13 pending)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 21
+- Total plans completed: 22
 - Average duration: --
 - Total execution time: --
 
@@ -37,6 +37,9 @@ Progress: [===================.] ~92% (phases 1-9, 11 complete; phase 10, 12-13 
 - v1.5: Used asyncio.to_thread wrapping requests.post for Prefect API (keeps dependency footprint small vs aiohttp)
 - v1.5: LOCATION_ALIASES as flat dict with lowercase keys -- single source of truth for all 23 EyeMed locations
 - v1.5: Crawl before status in FAST_COMMANDS registry to prevent regex false matches
+- v1.5: Single shared httpx.AsyncClient for batch Prefect API calls (avoids 46+ separate clients)
+- v1.5: asyncio.create_task monitor in bot event loop, no agent queue involvement
+- v1.5: Poll every 30s, post Slack updates every 2.5 minutes to balance freshness vs noise
 - v1.4: Post-session git log parsing (not real-time stream) for commit/PR capture simplicity
 - v1.4: Deduplication via existing JSONL entries for same thread_ts + commit hash
 
@@ -51,5 +54,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-24
-Stopped at: Completed 09-01-PLAN.md (git activity capture)
+Stopped at: Completed 12-01-PLAN.md (batch crawl and background monitor)
 Resume file: None
