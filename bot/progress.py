@@ -41,17 +41,25 @@ async def post_started(
         return None
 
 
-def make_on_message(client, channel: str, thread_ts: str, progress_msg: dict | None = None):
+def make_on_message(client, channel: str, thread_ts: str, progress_msg: dict | None = None, heartbeat=None):
     """
     Return an async callback for passing as on_message= to run_agent_with_timeout().
 
     The callback inspects each AssistantMessage for tool use blocks and edits
     the progress message in-place. Identical consecutive milestones are suppressed.
+
+    When a heartbeat is provided, turn_count is incremented on every AssistantMessage
+    and last_activity is updated on milestone detection. Milestone updates use the
+    full heartbeat format string for consistency with heartbeat ticks.
     """
     last_milestone = None
 
     async def on_message_cb(message: AssistantMessage):
         nonlocal last_milestone
+
+        # Increment turn count on every AssistantMessage
+        if heartbeat is not None:
+            heartbeat.turn_count += 1
 
         tools = [
             b.name for b in message.content if isinstance(b, ToolUseBlock)
@@ -77,16 +85,24 @@ def make_on_message(client, channel: str, thread_ts: str, progress_msg: dict | N
 
         if milestone is not None and milestone != last_milestone:
             last_milestone = milestone
+
+            # Update heartbeat state and build display text
+            if heartbeat is not None:
+                heartbeat.last_activity = milestone
+                display_text = heartbeat.format_message()
+            else:
+                display_text = milestone
+
             try:
                 if progress_msg:
                     await client.chat_update(
                         channel=progress_msg["channel"],
                         ts=progress_msg["ts"],
-                        text=milestone,
+                        text=display_text,
                     )
                 else:
                     await client.chat_postMessage(
-                        channel=channel, thread_ts=thread_ts, text=milestone
+                        channel=channel, thread_ts=thread_ts, text=display_text
                     )
             except Exception:
                 log.warning(
@@ -98,7 +114,7 @@ def make_on_message(client, channel: str, thread_ts: str, progress_msg: dict | N
     return on_message_cb
 
 
-def _format_elapsed(duration_s: int) -> str:
+def format_elapsed(duration_s: int) -> str:
     """Convert seconds to 'Xm Ys' format. Always shows both minutes and seconds."""
     minutes = duration_s // 60
     seconds = duration_s % 60
@@ -130,7 +146,7 @@ async def post_result(
 
     # Append elapsed time footer
     if duration_s is not None:
-        elapsed = _format_elapsed(duration_s)
+        elapsed = format_elapsed(duration_s)
         if subtype in error_subtypes:
             msg += f"\n\n_Failed after {elapsed}_"
         else:
