@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-03-23)
 
 **Core value:** Nicole can ask the bot to do anything on mic_transformer through Slack and it just does it — writes code, runs scripts, debugs issues, deploys — with full autonomy and persistent awareness.
-**Current focus:** Milestone v1.4: Digest Changelog
+**Current focus:** v1.5 Nicole-Ready Operations
 
 ## Current Position
 
 Phase: Not started (defining requirements)
 Plan: —
 Status: Defining requirements
-Last activity: 2026-03-24 — Milestone v1.4 started
+Last activity: 2026-03-24 — Milestone v1.5 started
 
 ## Performance Metrics
 

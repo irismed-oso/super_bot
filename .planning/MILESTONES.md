@@ -40,4 +40,24 @@
 
 **Known gap:** MTTL-07 (vision_benefits_fetch) skipped due to 10-min polling vs 10-min session timeout conflict
 
+## v1.3 -- Response Timing (Phase 8, shipped 2026-03-24)
+
+**Goal:** Show elapsed time in bot's final Slack reply for task duration visibility.
+
+**Shipped:**
+- Elapsed time footer appended to completion and error messages (e.g. "Completed in 2m 34s")
+- Fast-path command system for bypassing agent pipeline on common queries
+- EyeMed scan status script (eyemed_scan_status.py) for instant status checks
+- Multi-channel support (ALLOWED_CHANNEL accepts comma-separated IDs)
+- Timeout partial text preservation (shared_partials survives cancellation)
+- Crawler exit code fix (0=success, 1=error, 2=no files)
+
+**Stats:** 1 phase, 1 plan
+
+## v1.4 -- Digest Changelog (not started)
+
+**Goal:** Daily digest shows a changelog of git commits and PRs the bot created.
+
+**Status:** Defined but deferred — Nicole-Ready Operations (v1.5) prioritized.
+
 ---

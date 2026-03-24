@@ -28,19 +28,28 @@ Nicole can ask the bot to do anything on mic_transformer through Slack and it ju
 - Read-only ops: VSP/EyeMed status, pipeline audit, Azure mirror, IVT health, GDrive audit -- v1.2
 - Mutation ops: extraction, reduction, autopost (dry_run), posting prep, PDF ingestion, Azure sync -- v1.2
 - Elapsed time displayed in bot's final Slack reply -- v1.3
+- Fast-path command system bypassing agent pipeline for common queries -- v1.3
+- EyeMed scan status script for instant lookback queries -- v1.3
+- Multi-channel support -- v1.3
+- Timeout partial text preservation -- v1.3
+- Crawler exit code fix (distinct codes for success/error/no-files) -- v1.3
 
 ### Active
 
-- [ ] Daily digest includes git changelog (commits and PRs) across all repos
+- [ ] Fast-path crawl triggering via Prefect API (single location + batch)
+- [ ] Fast-path status with location/date filters
+- [ ] Background task support for long-running operations
+- [ ] Better error/timeout messages with suggested next actions
 
-## Current Milestone: v1.4 Digest Changelog
+## Current Milestone: v1.5 Nicole-Ready Operations
 
-**Goal:** The daily digest shows a changelog of git commits and PRs the bot created, so the team sees what actually changed each day.
+**Goal:** Nicole can check status, trigger crawls (single or batch), and get clear feedback — all without hitting timeouts or confusing error messages.
 
 **Target features:**
-- Log git activity (commits, PRs) during bot sessions
-- Scan git history at digest time for verification
-- Changelog section in daily digest covering all repos
+- Fast-path for crawl commands (single + batch) via Prefect API
+- Fast-path status with location filters
+- Background tasks that survive the 10-min timeout with progress updates
+- Clear error messages with suggested next actions
 
 ### Out of Scope
 
@@ -82,4 +91,4 @@ Nicole can ask the bot to do anything on mic_transformer through Slack and it ju
 | Autopost dry_run default | Built-in safety for mutation tools | Good |
 
 ---
-*Last updated: 2026-03-24 after milestone v1.4 started*
+*Last updated: 2026-03-24 after milestone v1.5 started*
