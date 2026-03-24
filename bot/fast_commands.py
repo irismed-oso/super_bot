@@ -97,13 +97,73 @@ _LOCATION_EXTRACT_RE = re.compile(
 # EyeMed crawl
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# Batch EyeMed crawl (must be checked BEFORE single-location crawl)
+# ---------------------------------------------------------------------------
+
+_BATCH_CRAWL_RE = re.compile(
+    r"crawl\s+(?:all\s+(?:sites|locations)?|everything)(?:\s+(?:for\s+)?(.+))?",
+    re.IGNORECASE,
+)
+
+
+async def _handle_batch_crawl(text: str, slack_context: dict | None = None, **kwargs) -> str:
+    """Trigger EyeMed crawl deployments for all 23 locations in parallel."""
+    # Parse date
+    date_match = _DATE_RE.search(text)
+    if not date_match:
+        return "Please specify a date, e.g., 'crawl all sites for 03.20'"
+
+    date_str = _normalize_date(date_match.group(1).replace("/", "."))
+
+    # Build list of unique canonical locations
+    canonical_locations = sorted(set(LOCATION_ALIASES.values()))
+
+    # Build (canonical, deployment_name) pairs
+    location_pairs = [
+        (loc, f"eyemed-crawler-{loc.lower().replace(' ', '-')}-manual")
+        for loc in canonical_locations
+    ]
+
+    parameters_template = {
+        "headless": True,
+        "skip_s3": False,
+        "skip_gcs": False,
+        "skip_gdrive": False,
+        "days_back": 1,
+        "date_from": date_str,
+        "date_to": date_str,
+    }
+
+    successes, failures = await prefect_api.trigger_batch_crawl(
+        location_pairs, parameters_template,
+    )
+
+    # Fire off background monitor if we have successful runs and slack context
+    if slack_context and successes:
+        from bot.background_monitor import start_batch_monitor
+        start_batch_monitor(slack_context, successes, date_str)
+
+    # Build response
+    lines = [f"Triggered batch crawl for {date_str}: {len(successes)} locations queued."]
+    for loc, _run_id, run_name in sorted(successes):
+        lines.append(f"  - {loc}: `{run_name}`")
+
+    if failures:
+        lines.append(f"\nFailed to trigger ({len(failures)}):")
+        for loc, err in sorted(failures):
+            lines.append(f"  - {loc}: {err}")
+
+    return "\n".join(lines)
+
+
 _EYEMED_CRAWL_RE = re.compile(
     r"crawl\s+(?:eyemed\s+)?(\S+)(?:\s+(.+))?",
     re.IGNORECASE,
 )
 
 
-async def _handle_eyemed_crawl(text: str) -> str:
+async def _handle_eyemed_crawl(text: str, **kwargs) -> str:
     """Trigger a Prefect EyeMed crawl deployment for a single location."""
     m = _EYEMED_CRAWL_RE.search(text)
     if not m:
@@ -209,7 +269,7 @@ def _today_mmddyy() -> str:
     return f"{t.month:02d}.{t.day:02d}.{t.year % 100:02d}"
 
 
-async def _handle_eyemed_status(text: str) -> str:
+async def _handle_eyemed_status(text: str, **kwargs) -> str:
     """Run the eyemed_scan_status.py script with args parsed from the message."""
     script = os.path.join(MIC_TRANSFORMER_DIR, "scripts", "eyemed_scan_status.py")
     if not os.path.isfile(script):
@@ -270,26 +330,31 @@ async def _handle_eyemed_status(text: str) -> str:
 
 # Each entry: (compiled_regex, async_handler_function)
 # Handler receives the cleaned message text, returns formatted string.
-# NOTE: Crawl MUST come before status -- "crawl eyemed DME" would otherwise
-# match the status regex's "status.*eyemed" alternation.
+# ORDER MATTERS: Batch crawl before single crawl (so "crawl all" matches first),
+# and crawl before status (so "crawl eyemed DME" doesn't match status regex).
 FAST_COMMANDS = [
+    (_BATCH_CRAWL_RE, _handle_batch_crawl),
     (_EYEMED_CRAWL_RE, _handle_eyemed_crawl),
     (_EYEMED_STATUS_RE, _handle_eyemed_status),
 ]
 
 
-async def try_fast_command(text: str) -> str | None:
+async def try_fast_command(text: str, slack_context: dict | None = None) -> str | None:
     """
     Check if text matches a fast command pattern.
 
     Returns the formatted response string if matched, or None if no match
     (caller should fall through to the full agent pipeline).
+
+    ``slack_context``, when provided, is a dict with ``client``, ``channel``,
+    and ``thread_ts`` keys so handlers can spawn background tasks that post
+    progress updates (e.g. batch crawl monitor).
     """
     for pattern, handler in FAST_COMMANDS:
         if pattern.search(text):
             try:
                 log.info("fast_command.matched", pattern=pattern.pattern, text=text[:80])
-                result = await handler(text)
+                result = await handler(text, slack_context=slack_context)
                 log.info("fast_command.success", pattern=pattern.pattern)
                 return result
             except Exception as exc:

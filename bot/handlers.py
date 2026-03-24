@@ -49,7 +49,11 @@ def register(app: AsyncApp) -> None:
         clean_text = re.sub(r"<@[A-Z0-9]+>", "", text).strip()
 
         # Fast-path: handle common queries directly without the agent pipeline
-        fast_result = await try_fast_command(clean_text)
+        fast_result = await try_fast_command(clean_text, slack_context={
+            "client": client,
+            "channel": channel,
+            "thread_ts": thread_ts,
+        })
         if fast_result is not None:
             msg = formatter.markdown_to_mrkdwn(fast_result)
             chunks = formatter.split_long_message(msg)
