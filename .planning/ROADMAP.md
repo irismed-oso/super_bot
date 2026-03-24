@@ -22,7 +22,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 8: Response Timing** - Bot's final Slack replies show elapsed time so the team sees how long each task took (completed 2026-03-24)
 - [ ] **Phase 9: Git Activity Logging** - Bot captures commit, PR, and file-change data during sessions into a persistent activity log
 - [ ] **Phase 10: Digest Changelog** - Daily digest includes a changelog section with commits and PRs grouped by repository, with git-log verification
-- [ ] **Phase 11: Fast-Path Crawl and Status** - Nicole can trigger single-location EyeMed crawls and filtered status queries via pattern-matched commands that bypass the agent pipeline and respond in-place
+- [x] **Phase 11: Fast-Path Crawl and Status** - Nicole can trigger single-location EyeMed crawls and filtered status queries via pattern-matched commands that bypass the agent pipeline and respond in-place (completed 2026-03-24)
 - [ ] **Phase 12: Background Tasks and Batch Crawl** - Nicole can trigger a full batch crawl across all sites and get progress updates without blocking the agent queue or hitting timeouts
 - [ ] **Phase 13: Error UX** - Timeout and error messages give Nicole enough context to know what happened and what to do next, including live status queries
 
@@ -283,6 +283,6 @@ Phases execute in order: 1 -> 2 -> 3 -> 4 -> v1.1 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 8. Response Timing | v1.3 | 1/1 | Complete | 2026-03-24 |
 | 9. Git Activity Logging | v1.4 | 0/TBD | Not started | - |
 | 10. Digest Changelog | v1.4 | 0/TBD | Not started | - |
-| 11. Fast-Path Crawl and Status | v1.5 | 0/1 | Not started | - |
+| 11. Fast-Path Crawl and Status | 1/1 | Complete   | 2026-03-24 | - |
 | 12. Background Tasks and Batch Crawl | v1.5 | 0/TBD | Not started | - |
 | 13. Error UX | v1.5 | 0/TBD | Not started | - |

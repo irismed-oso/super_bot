@@ -144,10 +144,10 @@ Requirements for Digest Changelog milestone.
 
 ### Fast Path (FAST)
 
-- [ ] **FAST-01**: Bot pattern-matches "crawl eyemed [location] [date]" and triggers single-location crawl via Prefect API without agent pipeline
-- [ ] **FAST-02**: Bot pattern-matches status queries with location filters ("status on DME eyemed 03.16 to today") and runs script directly
+- [x] **FAST-01**: Bot pattern-matches "crawl eyemed [location] [date]" and triggers single-location crawl via Prefect API without agent pipeline
+- [x] **FAST-02**: Bot pattern-matches status queries with location filters ("status on DME eyemed 03.16 to today") and runs script directly
 - [ ] **FAST-03**: Bot pattern-matches batch crawl ("crawl all sites for [date]") and triggers all Prefect manual deployments in parallel
-- [ ] **FAST-04**: All fast-path responses edit the "Working on it." message in-place with the result
+- [x] **FAST-04**: All fast-path responses edit the "Working on it." message in-place with the result
 
 ### Background Tasks (BGTK)
 
@@ -244,9 +244,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DGCL-01 | Phase 10 | Pending |
 | DGCL-02 | Phase 10 | Pending |
 | DGCL-03 | Phase 10 | Pending |
-| FAST-01 | Phase 11 | Pending |
-| FAST-02 | Phase 11 | Pending |
-| FAST-04 | Phase 11 | Pending |
+| FAST-01 | Phase 11 | Complete |
+| FAST-02 | Phase 11 | Complete |
+| FAST-04 | Phase 11 | Complete |
 | FAST-03 | Phase 12 | Pending |
 | BGTK-01 | Phase 12 | Pending |
 | BGTK-02 | Phase 12 | Pending |

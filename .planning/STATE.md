@@ -10,16 +10,16 @@ See: .planning/PROJECT.md (updated 2026-03-24)
 ## Current Position
 
 Phase: 11 of 13 (Fast-Path Crawl and Status)
-Plan: 0 of TBD in current phase
-Status: Ready to plan
-Last activity: 2026-03-24 -- Roadmap created for v1.5
+Plan: 1 of 1 in current phase (complete)
+Status: Phase 11 complete
+Last activity: 2026-03-24 -- Completed 11-01-PLAN.md (fast-path crawl and status)
 
-Progress: [==================..] ~85% (phases 1-8 complete, v1.4 and v1.5 pending)
+Progress: [===================.] ~88% (phases 1-8, 11 complete; v1.4 and phases 12-13 pending)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 19
+- Total plans completed: 20
 - Average duration: --
 - Total execution time: --
 
@@ -34,6 +34,9 @@ Progress: [==================..] ~85% (phases 1-8 complete, v1.4 and v1.5 pendin
 - v1.5: Fast-path phases numbered 11-13 (v1.4 already occupies 9-10)
 - v1.5: Fast-path single crawl (Phase 11) before batch/background (Phase 12) -- single proves the Prefect API pattern before parallelizing it
 - v1.5: Error UX (Phase 13) depends on Phase 11 (needs fast-path status query infrastructure for the "are you broken?" handler)
+- v1.5: Used asyncio.to_thread wrapping requests.post for Prefect API (keeps dependency footprint small vs aiohttp)
+- v1.5: LOCATION_ALIASES as flat dict with lowercase keys -- single source of truth for all 23 EyeMed locations
+- v1.5: Crawl before status in FAST_COMMANDS registry to prevent regex false matches
 
 ### Pending Todos
 
@@ -46,5 +49,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-24
-Stopped at: Created v1.5 roadmap (Phases 11-13)
+Stopped at: Completed 11-01-PLAN.md (fast-path crawl and status)
 Resume file: None
