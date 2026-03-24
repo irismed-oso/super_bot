@@ -5,21 +5,21 @@
 See: .planning/PROJECT.md (updated 2026-03-24)
 
 **Core value:** Nicole can ask the bot to do anything on mic_transformer through Slack and it just does it -- writes code, runs scripts, debugs issues, deploys -- with full autonomy and persistent awareness.
-**Current focus:** Phase 12 - Background Tasks and Batch Crawl (v1.5)
+**Current focus:** Phase 13 - Error UX (v1.5) -- complete
 
 ## Current Position
 
-Phase: 12 of 13 (Background Tasks and Batch Crawl)
+Phase: 13 of 13 (Error UX)
 Plan: 1 of 1 in current phase (complete)
-Status: Phase 12 complete
-Last activity: 2026-03-24 -- Completed 12-01-PLAN.md (batch crawl and background monitor)
+Status: Phase 13 complete
+Last activity: 2026-03-24 -- Completed 13-01-PLAN.md (contextual errors and bot status handler)
 
-Progress: [====================] ~96% (phases 1-9, 11-12 complete; phase 10, 13 pending)
+Progress: [====================] ~100% (phases 1-9, 11-13 complete; phase 10 pending)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 22
+- Total plans completed: 23
 - Average duration: --
 - Total execution time: --
 
@@ -42,6 +42,9 @@ Progress: [====================] ~96% (phases 1-9, 11-12 complete; phase 10, 13 
 - v1.5: Poll every 30s, post Slack updates every 2.5 minutes to balance freshness vs noise
 - v1.4: Post-session git log parsing (not real-time stream) for commit/PR capture simplicity
 - v1.4: Deduplication via existing JSONL entries for same thread_ts + commit hash
+- v1.5: Slack emoji syntax (:hourglass: etc.) not Unicode for error messages -- formatter passes through correctly
+- v1.5: Bot status handler placed last in FAST_COMMANDS to avoid false-matching eyemed commands
+- v1.5: Lazy import of LOCATION_ALIASES in _timeout_suggestion to avoid circular import
 
 ### Pending Todos
 
@@ -54,5 +57,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-24
-Stopped at: Completed 12-01-PLAN.md (batch crawl and background monitor)
+Stopped at: Completed 13-01-PLAN.md (contextual errors and bot status handler)
 Resume file: None

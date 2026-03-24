@@ -158,9 +158,9 @@ Requirements for Digest Changelog milestone.
 
 ### Error UX (ERUX)
 
-- [ ] **ERUX-01**: Timeout messages include what was attempted and suggested next action
-- [ ] **ERUX-02**: Error messages distinguish timeout vs failure vs still-running-in-background
-- [ ] **ERUX-03**: Bot responds to "are you broken?" / "are you still going?" with actual task status instead of spawning a new agent session
+- [x] **ERUX-01**: Timeout messages include what was attempted and suggested next action
+- [x] **ERUX-02**: Error messages distinguish timeout vs failure vs still-running-in-background
+- [x] **ERUX-03**: Bot responds to "are you broken?" / "are you still going?" with actual task status instead of spawning a new agent session
 
 ## Out of Scope
 
@@ -252,9 +252,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | BGTK-02 | Phase 12 | Complete |
 | BGTK-03 | Phase 12 | Complete |
 | BGTK-04 | Phase 12 | Complete |
-| ERUX-01 | Phase 13 | Pending |
-| ERUX-02 | Phase 13 | Pending |
-| ERUX-03 | Phase 13 | Pending |
+| ERUX-01 | Phase 13 | Complete |
+| ERUX-02 | Phase 13 | Complete |
+| ERUX-03 | Phase 13 | Complete |
 
 **Coverage:**
 - v1.0 requirements: 32 total (all complete)
