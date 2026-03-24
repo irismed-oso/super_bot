@@ -33,6 +33,8 @@ Nicole can ask the bot to do anything on mic_transformer through Slack and it ju
 - Multi-channel support -- v1.3
 - Timeout partial text preservation -- v1.3
 - Crawler exit code fix (distinct codes for success/error/no-files) -- v1.3
+- Daily digest changelog with git commits and PRs grouped by repo -- v1.4
+- Git log cross-check at digest time catches missed commits (crash recovery) -- v1.4
 - Fast-path crawl triggering via Prefect API (single location + batch) -- v1.5
 - Fast-path status with location/date filters -- v1.5
 - Background task support for long-running operations -- v1.5
@@ -90,6 +92,8 @@ Nicole can ask the bot to do anything on mic_transformer through Slack and it ju
 | Direct MCP stdio (not Flask bridge) | Simpler, standard pattern, SDK handles it natively | Good |
 | MIC_TRANSFORMER_MCP_DISABLED flag | Enabled by default, disable override for troubleshooting | Good |
 | Autopost dry_run default | Built-in safety for mutation tools | Good |
+| Post-session git log (not real-time stream) | Simpler, more reliable, git log is source of truth | Good |
+| Separate digest_changelog.py module | Testability, keeps daily_digest.py focused | Good |
 
 ---
-*Last updated: 2026-03-24 after milestone v1.6 started*
+*Last updated: 2026-03-24 after v1.4 milestone complete*

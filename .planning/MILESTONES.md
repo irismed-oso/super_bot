@@ -54,10 +54,19 @@
 
 **Stats:** 1 phase, 1 plan
 
-## v1.4 -- Digest Changelog (not started)
+## v1.4 -- Digest Changelog (Phases 9-10, shipped 2026-03-24)
 
-**Goal:** Daily digest shows a changelog of git commits and PRs the bot created.
+**Goal:** Daily digest shows a changelog of git commits and PRs the bot created, so the team sees what actually changed each day.
 
-**Status:** Defined but deferred — Nicole-Ready Operations (v1.5) prioritized.
+**Shipped:**
+- Post-session git activity capture (commits with hash/message/repo/branch/files, PRs with URL/title/repo)
+- Deduplication prevents re-logging on thread follow-ups
+- Daily digest changelog section with commits/PRs grouped by repository
+- Git log cross-check at digest build time catches missed commits (crash recovery)
+- Author-filtered scan, single-repo header optimization, recovered commit markers
+- Slack mrkdwn PR hyperlinks, 15-commit cap with overflow
+
+**Stats:** 2 phases, 2 plans, 497 LOC Python (bot/git_activity.py + bot/digest_changelog.py)
 
 ---
+
