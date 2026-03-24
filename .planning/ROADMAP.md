@@ -231,10 +231,10 @@ Plans:
   2. Nicole types "status on DME eyemed 03.16 to today" and the bot runs the status script directly with the location and date filters, then edits the "Working on it." message in-place with the results
   3. Both fast-path commands complete and update the Slack message before any agent session would even initialize, visibly faster than a standard @mention
   4. Unrecognized commands still fall through to the agent pipeline — fast-path matching does not intercept general requests
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 11-01: TBD
+- [ ] 11-01-PLAN.md — Prefect API client + crawl handler + improved status location parsing
 
 ### Phase 12: Background Tasks and Batch Crawl
 **Goal**: Nicole can say "crawl all sites for 03.20" and the bot triggers every EyeMed crawler deployment in parallel via the Prefect API, then tracks and reports progress without blocking the agent queue or timing out
@@ -283,6 +283,6 @@ Phases execute in order: 1 -> 2 -> 3 -> 4 -> v1.1 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 8. Response Timing | v1.3 | 1/1 | Complete | 2026-03-24 |
 | 9. Git Activity Logging | v1.4 | 0/TBD | Not started | - |
 | 10. Digest Changelog | v1.4 | 0/TBD | Not started | - |
-| 11. Fast-Path Crawl and Status | v1.5 | 0/TBD | Not started | - |
+| 11. Fast-Path Crawl and Status | v1.5 | 0/1 | Not started | - |
 | 12. Background Tasks and Batch Crawl | v1.5 | 0/TBD | Not started | - |
 | 13. Error UX | v1.5 | 0/TBD | Not started | - |
