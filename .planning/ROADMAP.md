@@ -279,10 +279,10 @@ Plans:
   2. The heartbeat fires on schedule even when the agent is in a long thinking phase with no tool calls -- it does not depend on agent tool use events to trigger
   3. When the agent completes, times out, or is cancelled, the heartbeat timer stops cleanly with no further edits to the progress message after the final result is posted
   4. The progress message uses a consistent format: "Still working... [Last Activity] | Turn X/25 | Ym Zs elapsed"
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 14-01-PLAN.md — TBD
+- [ ] 14-01-PLAN.md — Heartbeat timer module + handler/queue lifecycle wiring
 
 ---
 
@@ -296,7 +296,7 @@ Phases execute in order: 1 -> 2 -> 3 -> 4 -> v1.1 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 1. VM and Slack Bridge | v1.0 | 4/4 | Complete | 2026-03-19 |
 | 2. Agent SDK Standalone | v1.0 | 3/3 | Complete | 2026-03-20 |
 | 3. End-to-End Integration | v1.0 | 4/5 | In progress | - |
-| 4. Operational Hardening | v1.0 | 0/TBD | Not started | - |
+| 4. Operational Hardening | v1.0 | 0/1 | In progress | - |
 | v1.1 Capability Parity | v1.1 | 1/TBD | In progress | - |
 | 5. VM Validation and MCP Wiring | v1.2 | 2/2 | Complete | 2026-03-23 |
 | 6. Read-Only Status and Storage Tools | v1.2 | 2/2 | Complete | 2026-03-23 |
@@ -307,4 +307,4 @@ Phases execute in order: 1 -> 2 -> 3 -> 4 -> v1.1 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 11. Fast-Path Crawl and Status | v1.5 | 1/1 | Complete | 2026-03-24 |
 | 12. Background Tasks and Batch Crawl | v1.5 | 1/1 | Complete | 2026-03-24 |
 | 13. Error UX | v1.5 | 1/1 | Complete | 2026-03-24 |
-| 14. Progress Heartbeat | v1.6 | 0/TBD | Not started | - |
+| 14. Progress Heartbeat | v1.6 | 0/1 | In progress | - |
