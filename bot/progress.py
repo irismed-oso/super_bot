@@ -98,8 +98,16 @@ def make_on_message(client, channel: str, thread_ts: str, progress_msg: dict | N
     return on_message_cb
 
 
+def _format_elapsed(duration_s: int) -> str:
+    """Convert seconds to 'Xm Ys' format. Always shows both minutes and seconds."""
+    minutes = duration_s // 60
+    seconds = duration_s % 60
+    return f"{minutes}m {seconds}s"
+
+
 async def post_result(
-    client, channel: str, thread_ts: str, result: dict, is_code_task: bool
+    client, channel: str, thread_ts: str, result: dict, is_code_task: bool,
+    duration_s: int | None = None,
 ) -> None:
     """Post the final result message to the Slack thread."""
     subtype = result.get("subtype", "")
@@ -118,6 +126,14 @@ async def post_result(
     pr_match = PR_URL_RE.search(result.get("result", "") or "")
     if pr_match:
         msg += f"\n\nPR: {pr_match.group(0)}"
+
+    # Append elapsed time footer
+    if duration_s is not None:
+        elapsed = _format_elapsed(duration_s)
+        if subtype in error_subtypes:
+            msg += f"\n\n_Failed after {elapsed}_"
+        else:
+            msg += f"\n\n_Completed in {elapsed}_"
 
     msg = markdown_to_mrkdwn(msg)
     chunks = split_long_message(msg)

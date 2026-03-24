@@ -4,6 +4,7 @@ from slack_bolt.app.async_app import AsyncApp
 from bot.access_control import is_allowed, is_allowed_channel, is_bot_message
 from bot.deduplication import is_seen, mark_seen
 from bot import task_state, formatter, worktree, progress, session_map, activity_log
+from bot.fast_commands import try_fast_command
 from bot.queue_manager import QueuedTask, enqueue, queue_depth
 from config import BOT_USER_ID
 
@@ -46,6 +47,16 @@ def register(app: AsyncApp) -> None:
         text = event.get("text", "")
         user_id = event.get("user", "")
         clean_text = re.sub(r"<@[A-Z0-9]+>", "", text).strip()
+
+        # Fast-path: handle common queries directly without the agent pipeline
+        fast_result = await try_fast_command(clean_text)
+        if fast_result is not None:
+            msg = formatter.markdown_to_mrkdwn(fast_result)
+            for chunk in formatter.split_long_message(msg):
+                await client.chat_postMessage(
+                    channel=channel, thread_ts=thread_ts, text=chunk,
+                )
+            return
 
         session_id = session_map.get(channel, thread_ts)
         is_code_task_flag = worktree.is_code_task(clean_text)
@@ -91,7 +102,8 @@ def register(app: AsyncApp) -> None:
             error_subtypes = {"error_timeout", "error_cancelled", "error_internal"}
             if result.get("subtype") in error_subtypes:
                 await worktree.stash(thread_ts)
-            await progress.post_result(client, channel, thread_ts, result, is_code_task_flag)
+            duration_s = int(__import__("time").time() - task_started_at)
+            await progress.post_result(client, channel, thread_ts, result, is_code_task_flag, duration_s=duration_s)
             # Log activity for daily digest
             activity_log.append({
                 "ts": thread_ts,
@@ -99,7 +111,7 @@ def register(app: AsyncApp) -> None:
                 "text": clean_text[:200],
                 "subtype": result.get("subtype", "unknown"),
                 "num_turns": result.get("num_turns", 0),
-                "duration_s": int(__import__("time").time() - task_started_at),
+                "duration_s": duration_s,
                 "channel": channel,
                 "thread_ts": thread_ts,
             })
