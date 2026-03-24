@@ -3,7 +3,7 @@ import re
 from slack_bolt.app.async_app import AsyncApp
 from bot.access_control import is_allowed, is_allowed_channel, is_bot_message
 from bot.deduplication import is_seen, mark_seen
-from bot import task_state, formatter, worktree, progress, session_map, activity_log
+from bot import task_state, formatter, worktree, progress, session_map, activity_log, git_activity
 from bot.fast_commands import try_fast_command
 from bot.queue_manager import QueuedTask, enqueue, queue_depth
 from config import BOT_USER_ID
@@ -133,6 +133,16 @@ def register(app: AsyncApp) -> None:
                 "channel": channel,
                 "thread_ts": thread_ts,
             })
+            # Capture git commits and PRs for changelog
+            try:
+                await git_activity.capture_git_activity(
+                    result=result,
+                    cwd=worktree_path_val,
+                    channel=channel,
+                    thread_ts=thread_ts,
+                )
+            except Exception as exc:
+                log.warning("git_activity.capture_failed", error=str(exc))
 
         task = QueuedTask(
             prompt=prompt,

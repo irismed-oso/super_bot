@@ -58,6 +58,11 @@ def read_yesterday() -> list[dict]:
     return read_day(date.today() - timedelta(days=1))
 
 
+def read_day_by_type(d: date, entry_type: str) -> list[dict]:
+    """Read activity entries for a given date filtered by type field."""
+    return [e for e in read_day(d) if e.get("type") == entry_type]
+
+
 def cleanup_old(keep_days: int = 30) -> int:
     """Remove log files older than keep_days. Returns count of files removed."""
     if not LOG_DIR.exists():
