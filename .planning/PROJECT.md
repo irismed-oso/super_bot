@@ -27,18 +27,20 @@ Nicole can ask the bot to do anything on mic_transformer through Slack and it ju
 - All credential pathways validated: GCS, S3, PostgreSQL (x3), Google Drive, SSH -- v1.2
 - Read-only ops: VSP/EyeMed status, pipeline audit, Azure mirror, IVT health, GDrive audit -- v1.2
 - Mutation ops: extraction, reduction, autopost (dry_run), posting prep, PDF ingestion, Azure sync -- v1.2
+- Elapsed time displayed in bot's final Slack reply -- v1.3
 
 ### Active
 
-- [ ] Elapsed time displayed in bot's final Slack reply (e.g. "Completed in 2m 34s")
+- [ ] Daily digest includes git changelog (commits and PRs) across all repos
 
-## Current Milestone: v1.3 Response Timing
+## Current Milestone: v1.4 Digest Changelog
 
-**Goal:** Show how long each bot response took in the final Slack reply, so the team has visibility into task duration.
+**Goal:** The daily digest shows a changelog of git commits and PRs the bot created, so the team sees what actually changed each day.
 
 **Target features:**
-- Pass elapsed duration from handler to post_result
-- Append human-readable elapsed time footer to completion and error messages
+- Log git activity (commits, PRs) during bot sessions
+- Scan git history at digest time for verification
+- Changelog section in daily digest covering all repos
 
 ### Out of Scope
 
@@ -80,4 +82,4 @@ Nicole can ask the bot to do anything on mic_transformer through Slack and it ju
 | Autopost dry_run default | Built-in safety for mutation tools | Good |
 
 ---
-*Last updated: 2026-03-23 after milestone v1.3 started*
+*Last updated: 2026-03-24 after milestone v1.4 started*
