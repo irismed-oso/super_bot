@@ -162,6 +162,15 @@ Requirements for Digest Changelog milestone.
 - [x] **ERUX-02**: Error messages distinguish timeout vs failure vs still-running-in-background
 - [x] **ERUX-03**: Bot responds to "are you broken?" / "are you still going?" with actual task status instead of spawning a new agent session
 
+## v1.6 Requirements
+
+### Heartbeat (HRTB)
+
+- [ ] **HRTB-01**: Bot edits progress message every 5 minutes with elapsed time, last activity, and turn count during agent execution
+- [ ] **HRTB-02**: Heartbeat fires even when agent is silently thinking (no tool use needed to trigger)
+- [ ] **HRTB-03**: Heartbeat stops cleanly when agent completes, times out, or is cancelled
+- [ ] **HRTB-04**: Progress message format: "Still working... [Last Activity] | Turn X/25 | Ym Zs elapsed"
+
 ## Out of Scope
 
 | Feature | Reason |
@@ -262,10 +271,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 - v1.2 requirements: 22 total (20 complete, 2 blocked)
 - v1.3 requirements: 2 total (all complete)
 - v1.4 requirements: 6 total (all pending)
-- v1.5 requirements: 11 total (all pending)
-- Mapped to phases: 11/11
+- v1.5 requirements: 11 total (all complete)
+- v1.6 requirements: 4 total (all pending)
+- Mapped to phases: 4/4
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-18*
-*Last updated: 2026-03-24 after v1.5 roadmap created*
+*Last updated: 2026-03-24 after v1.6 requirements defined*
