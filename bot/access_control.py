@@ -1,4 +1,4 @@
-from config import ALLOWED_USERS, ALLOWED_CHANNEL
+from config import ALLOWED_USERS, ALLOWED_CHANNELS
 
 
 def is_allowed(user_id: str) -> bool:
@@ -9,10 +9,10 @@ def is_allowed(user_id: str) -> bool:
 
 
 def is_allowed_channel(channel_id: str) -> bool:
-    """Return True if channel_id matches ALLOWED_CHANNEL, or if ALLOWED_CHANNEL is not set (permissive fallback)."""
-    if not ALLOWED_CHANNEL:
+    """Return True if channel_id is in ALLOWED_CHANNELS, or if no channels configured (permissive fallback)."""
+    if not ALLOWED_CHANNELS:
         return True
-    return channel_id == ALLOWED_CHANNEL
+    return channel_id in ALLOWED_CHANNELS
 
 
 def is_bot_message(event: dict) -> bool:

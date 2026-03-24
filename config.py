@@ -7,7 +7,9 @@ GITLAB_TOKEN: str = os.environ.get("GITLAB_TOKEN", "")
 ALLOWED_USERS: frozenset[str] = frozenset(
     u.strip() for u in os.environ.get("ALLOWED_USERS", "").split(",") if u.strip()
 )
-ALLOWED_CHANNEL: str = os.environ.get("ALLOWED_CHANNEL", "")
+ALLOWED_CHANNELS: frozenset[str] = frozenset(
+    c.strip() for c in os.environ.get("ALLOWED_CHANNEL", "").split(",") if c.strip()
+)
 
 # Bot's own Slack user ID (needed to filter self-mentions in thread replies)
 BOT_USER_ID: str = os.environ.get("BOT_USER_ID", "")

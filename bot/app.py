@@ -18,9 +18,11 @@ async def main() -> None:
     # Start the task queue consumer before accepting Slack events
     asyncio.create_task(queue_manager.run_queue_loop())
     # Start daily digest scheduler (posts activity summary each morning)
-    if config.ALLOWED_CHANNEL:
+    # Send digest to the first allowed channel
+    if config.ALLOWED_CHANNELS:
+        digest_channel = next(iter(config.ALLOWED_CHANNELS))
         asyncio.create_task(
-            daily_digest.run_digest_loop(app.client, config.ALLOWED_CHANNEL)
+            daily_digest.run_digest_loop(app.client, digest_channel)
         )
     handler = AsyncSocketModeHandler(app, config.SLACK_APP_TOKEN)
     await handler.start_async()
