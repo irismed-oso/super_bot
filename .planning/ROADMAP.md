@@ -211,10 +211,10 @@ Plans:
   2. Changelog entries are visually grouped by repository so the team can see which repo each change landed in
   3. If session logging missed any bot commits (e.g., due to a crash), the digest still includes them because it cross-checks git log at build time
   4. When the bot had no git activity for the day, the changelog section is either absent or shows "No changes" rather than displaying stale data
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 10-01: TBD
+- [ ] 10-01-PLAN.md — Changelog builder with git-log cross-check + wire into daily digest
 
 ---
 
@@ -282,7 +282,7 @@ Phases execute in order: 1 -> 2 -> 3 -> 4 -> v1.1 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 7. Mutation Tools | v1.2 | 2/2 | Complete | 2026-03-23 |
 | 8. Response Timing | v1.3 | 1/1 | Complete | 2026-03-24 |
 | 9. Git Activity Logging | v1.4 | Complete    | 2026-03-24 | - |
-| 10. Digest Changelog | v1.4 | 0/TBD | Not started | - |
+| 10. Digest Changelog | v1.4 | 0/1 | Not started | - |
 | 11. Fast-Path Crawl and Status | v1.5 | 1/1 | Complete | 2026-03-24 |
 | 12. Background Tasks and Batch Crawl | 1/1 | Complete    | 2026-03-24 | - |
 | 13. Error UX | 1/1 | Complete    | 2026-03-24 | - |
