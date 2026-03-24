@@ -14,15 +14,19 @@ Nicole can ask the bot to do anything on mic_transformer through Slack and it ju
 
 <!-- Shipped and confirmed valuable. -->
 
-- GCP VM provisioned with systemd service, auto-restart, journald logging (v1.0 Phase 1)
-- Slack bot with Socket Mode, lazy listener, event dedup, access control (v1.0 Phase 1)
-- Claude Agent SDK with session management, timeout, queue serialization (v1.0 Phase 2)
-- End-to-end: @mention triggers Claude session, progress/results posted to thread (v1.0 Phase 3)
-- Git worktree isolation, branch/commit/PR operations (v1.0 Phase 3)
-- Linear MCP and Sentry MCP integration (v1.1)
-- Multi-repo read access (v1.1)
-- mic-transformer MCP server wired as stdio subprocess with 35+ tools (v1.2)
-- All credential pathways confirmed: GCS, S3, PostgreSQL x3, Google Drive (v1.2)
+- GCP VM provisioned with systemd service, auto-restart, journald logging -- v1.0
+- Slack bot with Socket Mode, lazy listener, event dedup, access control -- v1.0
+- Claude Agent SDK with session management, timeout, queue serialization -- v1.0
+- End-to-end: @mention triggers Claude session, progress/results posted to thread -- v1.0
+- Git worktree isolation, branch/commit/PR operations -- v1.0
+- Linear MCP and Sentry MCP integration -- v1.1
+- Multi-repo read access (all 4 IrisMed repos) -- v1.1
+- Custom operational skills via Slack -- v1.1
+- Daily activity digest -- v1.1
+- mic-transformer MCP server (35+ tools) wired as stdio subprocess -- v1.2
+- All credential pathways validated: GCS, S3, PostgreSQL (x3), Google Drive, SSH -- v1.2
+- Read-only ops: VSP/EyeMed status, pipeline audit, Azure mirror, IVT health, GDrive audit -- v1.2
+- Mutation ops: extraction, reduction, autopost (dry_run), posting prep, PDF ingestion, Azure sync -- v1.2
 
 ### Active
 
@@ -66,11 +70,14 @@ Nicole can ask the bot to do anything on mic_transformer through Slack and it ju
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Claude Code CLI over direct API | Native git/shell/code support, memory system, less custom code to build | — Pending |
-| Full autonomy (no approval gates) | Speed matters more than caution for this internal tool; team has visibility via channel | — Pending |
-| Channel mentions over DMs | Team transparency — everyone sees what's being asked and done | — Pending |
-| Persistent context | Bot should build ongoing awareness of repo state and past work, not start fresh each time | — Pending |
-| Flexible VM sizing | Start small, scale if needed — avoid over-provisioning | — Pending |
+| Claude Code CLI over direct API | Native git/shell/code support, memory system, less custom code | Good |
+| Full autonomy (no approval gates) | Speed matters for internal tool; team visibility via channel | Good |
+| Channel mentions over DMs | Team transparency | Good |
+| Socket Mode (no public URL) | Eliminates load balancer, TLS, ingress | Good |
+| Claude Agent SDK (not subprocess) | Avoids TTY-hang bug; async, required for lazy listener | Good |
+| Direct MCP stdio (not Flask bridge) | Simpler, standard pattern, SDK handles it natively | Good |
+| MIC_TRANSFORMER_MCP_DISABLED flag | Enabled by default, disable override for troubleshooting | Good |
+| Autopost dry_run default | Built-in safety for mutation tools | Good |
 
 ---
 *Last updated: 2026-03-23 after milestone v1.3 started*

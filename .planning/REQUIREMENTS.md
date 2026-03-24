@@ -95,8 +95,8 @@ Requirements for MCP Parity milestone. Each maps to roadmap phases.
 - [x] **MTTL-03**: User can trigger autopost (with dry_run default) via Slack
 - [x] **MTTL-04**: User can trigger posting prep and GDrive upload via Slack
 - [x] **MTTL-05**: User can ingest manual PDFs into the pipeline via Slack
-- [ ] **MTTL-06**: User can trigger Azure mirror sync via Slack (blocked: SSH publickey denied)
-- [ ] **MTTL-07**: User can fetch vision benefits via Slack (blocked: SSH-dependent + timeout risk)
+- [x] **MTTL-06**: User can trigger Azure mirror sync via Slack
+- [ ] **MTTL-07**: User can fetch vision benefits via Slack (skipped: 10-min polling vs 10-min session timeout)
 - [x] **MTTL-08**: User can requeue missing extraction pages via Slack
 
 ## Future Requirements
