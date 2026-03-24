@@ -303,7 +303,7 @@ Phases execute in order: 1 -> 2 -> 3 -> 4 -> v1.1 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 7. Mutation Tools | v1.2 | 2/2 | Complete | 2026-03-23 |
 | 8. Response Timing | v1.3 | 1/1 | Complete | 2026-03-24 |
 | 9. Git Activity Logging | v1.4 | 1/1 | Complete | 2026-03-24 |
-| 10. Digest Changelog | v1.4 | 1/1 | Complete | 2026-03-24 |
+| 10. Digest Changelog | v1.4 | Complete    | 2026-03-24 | 2026-03-24 |
 | 11. Fast-Path Crawl and Status | v1.5 | 1/1 | Complete | 2026-03-24 |
 | 12. Background Tasks and Batch Crawl | v1.5 | 1/1 | Complete | 2026-03-24 |
 | 13. Error UX | v1.5 | 1/1 | Complete | 2026-03-24 |
