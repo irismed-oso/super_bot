@@ -197,10 +197,10 @@ Plans:
   2. After the bot creates a PR during a session, the PR URL, title, and repo name are recorded in the activity log
   3. After the bot commits code, the list of files changed in that commit is recorded alongside the commit entry
   4. Activity log entries persist across bot restarts and are queryable by date
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 09-01: TBD
+- [ ] 09-01-PLAN.md — Post-session git activity capture (commits, PRs, file changes) into JSONL activity log
 
 ### Phase 10: Digest Changelog
 **Goal**: The daily digest includes a changelog section that shows what the bot built and shipped, with commits and PRs grouped by repository and verified against git history
@@ -234,7 +234,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 11-01-PLAN.md — Prefect API client + crawl handler + improved status location parsing
+- [x] 11-01-PLAN.md — Prefect API client + crawl handler + improved status location parsing
 
 ### Phase 12: Background Tasks and Batch Crawl
 **Goal**: Nicole can say "crawl all sites for 03.20" and the bot triggers every EyeMed crawler deployment in parallel via the Prefect API, then tracks and reports progress without blocking the agent queue or timing out
@@ -281,8 +281,8 @@ Phases execute in order: 1 -> 2 -> 3 -> 4 -> v1.1 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 6. Read-Only Status and Storage Tools | v1.2 | 2/2 | Complete | 2026-03-23 |
 | 7. Mutation Tools | v1.2 | 2/2 | Complete | 2026-03-23 |
 | 8. Response Timing | v1.3 | 1/1 | Complete | 2026-03-24 |
-| 9. Git Activity Logging | v1.4 | 0/TBD | Not started | - |
+| 9. Git Activity Logging | v1.4 | 0/1 | Not started | - |
 | 10. Digest Changelog | v1.4 | 0/TBD | Not started | - |
-| 11. Fast-Path Crawl and Status | 1/1 | Complete    | 2026-03-24 | - |
+| 11. Fast-Path Crawl and Status | v1.5 | 1/1 | Complete | 2026-03-24 |
 | 12. Background Tasks and Batch Crawl | v1.5 | 0/TBD | Not started | - |
 | 13. Error UX | v1.5 | 0/TBD | Not started | - |
