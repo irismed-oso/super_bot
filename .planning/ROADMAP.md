@@ -285,4 +285,4 @@ Phases execute in order: 1 -> 2 -> 3 -> 4 -> v1.1 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 10. Digest Changelog | v1.4 | 0/TBD | Not started | - |
 | 11. Fast-Path Crawl and Status | v1.5 | 1/1 | Complete | 2026-03-24 |
 | 12. Background Tasks and Batch Crawl | 1/1 | Complete    | 2026-03-24 | - |
-| 13. Error UX | 1/1 | Complete   | 2026-03-24 | - |
+| 13. Error UX | 1/1 | Complete    | 2026-03-24 | - |
