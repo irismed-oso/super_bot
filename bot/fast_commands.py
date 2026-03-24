@@ -15,7 +15,7 @@ from datetime import date
 
 import structlog
 
-from bot import prefect_api
+from bot import prefect_api, queue_manager, background_monitor, task_state
 
 log = structlog.get_logger(__name__)
 
@@ -325,17 +325,59 @@ async def _handle_eyemed_status(text: str, **kwargs) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Bot status query (handles "are you broken?", "are you stuck?", etc.)
+# ---------------------------------------------------------------------------
+
+_BOT_STATUS_RE = re.compile(
+    r"(?:are\s+you\s+(?:broken|stuck|still\s+(?:going|running|working|there))|"
+    r"what\s+(?:are\s+you\s+doing|is\s+(?:your|the)\s+status)|"
+    r"you\s+(?:ok|okay|alive|there)\??|"
+    r"bot\s+status)",
+    re.IGNORECASE,
+)
+
+
+async def _handle_bot_status(text: str, **kwargs) -> str:
+    """Return actual task state without spawning a full agent session."""
+    state = queue_manager.get_state()
+    monitors = background_monitor.get_active_monitors()
+    current = state["current"]
+    depth = state["queue_depth"]
+
+    lines = []
+
+    if current is not None:
+        task_label = (current.clean_text[:100] if current.clean_text else current.prompt[:100])
+        lines.append(f":gear: *Running a task*\n`{task_label}`\nQueue: {depth} waiting")
+
+    for m in monitors:
+        lines.append(
+            f":satellite_antenna: *Background crawl in progress*\n"
+            f"Tracking {m['run_count']} locations for {m['date_str']} "
+            f"({m['elapsed_s']}s elapsed)"
+        )
+
+    if not lines:
+        uptime = task_state.get_uptime()
+        lines.append(f":white_check_mark: *Idle* -- no tasks running, no background jobs.\nUptime: {uptime}")
+
+    return "\n\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
 # Command registry
 # ---------------------------------------------------------------------------
 
 # Each entry: (compiled_regex, async_handler_function)
 # Handler receives the cleaned message text, returns formatted string.
 # ORDER MATTERS: Batch crawl before single crawl (so "crawl all" matches first),
-# and crawl before status (so "crawl eyemed DME" doesn't match status regex).
+# crawl before eyemed status (so "crawl eyemed DME" doesn't match status regex),
+# and bot status last (specific phrases won't collide with eyemed commands).
 FAST_COMMANDS = [
     (_BATCH_CRAWL_RE, _handle_batch_crawl),
     (_EYEMED_CRAWL_RE, _handle_eyemed_crawl),
     (_EYEMED_STATUS_RE, _handle_eyemed_status),
+    (_BOT_STATUS_RE, _handle_bot_status),
 ]
 
 

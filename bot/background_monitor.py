@@ -26,6 +26,9 @@ MAX_POLL_DURATION = 3600  # 1 hour
 # Flow-run states considered terminal (no further polling needed).
 _TERMINAL_STATES = frozenset({"COMPLETED", "FAILED", "CANCELLED", "CRASHED"})
 
+# Active monitor tracking for status queries.
+_active_monitors: list[dict] = []
+
 
 # ---------------------------------------------------------------------------
 # Public entry point
@@ -44,8 +47,14 @@ def start_batch_monitor(
         date_str: the date being crawled (for display purposes)
     """
     task = asyncio.create_task(_monitor_loop(slack_context, runs, date_str))
-    # Prevent the task from being garbage-collected before completion.
-    task.add_done_callback(lambda t: _log_task_done(t))
+    monitor_entry = {
+        "date_str": date_str,
+        "run_count": len(runs),
+        "started_at": time.monotonic(),
+        "task": task,
+    }
+    _active_monitors.append(monitor_entry)
+    task.add_done_callback(lambda t: _log_task_done(t, monitor_entry))
     log.info(
         "background_monitor.started",
         run_count=len(runs),
@@ -53,9 +62,23 @@ def start_batch_monitor(
     )
 
 
-def _log_task_done(task: asyncio.Task) -> None:
+def _log_task_done(task: asyncio.Task, monitor_entry: dict = None) -> None:
+    if monitor_entry and monitor_entry in _active_monitors:
+        _active_monitors.remove(monitor_entry)
     if task.exception():
         log.error("background_monitor.task_crashed", exc_info=task.exception())
+
+
+def get_active_monitors() -> list[dict]:
+    """Return list of active background monitors (date_str, run_count, elapsed_s)."""
+    return [
+        {
+            "date_str": m["date_str"],
+            "run_count": m["run_count"],
+            "elapsed_s": int(time.monotonic() - m["started_at"]),
+        }
+        for m in _active_monitors
+    ]
 
 
 # ---------------------------------------------------------------------------
