@@ -3,8 +3,9 @@ import re
 from slack_bolt.app.async_app import AsyncApp
 from bot.access_control import is_allowed, is_allowed_channel, is_bot_message
 from bot.deduplication import is_seen, mark_seen
-from bot import task_state, formatter, worktree, progress, session_map, activity_log, git_activity
+from bot import task_state, formatter, worktree, progress, session_map, activity_log, git_activity, db
 from bot.fast_commands import try_fast_command
+from bot.heartbeat import Heartbeat
 from bot.queue_manager import QueuedTask, enqueue, queue_depth
 from config import BOT_USER_ID
 
@@ -48,6 +49,10 @@ def register(app: AsyncApp) -> None:
         user_id = event.get("user", "")
         clean_text = re.sub(r"<@[A-Z0-9]+>", "", text).strip()
 
+        # DB: upsert session and log user input
+        db_session_fk = await db.upsert_session(channel, thread_ts, user_id)
+        await db.log_message(db_session_fk, "user_input", clean_text, slack_ts=event["ts"])
+
         # Fast-path: handle common queries directly without the agent pipeline
         fast_result = await try_fast_command(clean_text, slack_context={
             "client": client,
@@ -55,6 +60,8 @@ def register(app: AsyncApp) -> None:
             "thread_ts": thread_ts,
         })
         if fast_result is not None:
+            await db.log_message(db_session_fk, "bot_output", fast_result)
+            await db.log_execution(db_session_fk, prompt=clean_text, subtype="fast_path")
             msg = formatter.markdown_to_mrkdwn(fast_result)
             chunks = formatter.split_long_message(msg)
             # Edit the "Working on it." ack message in-place with the first chunk
@@ -104,11 +111,13 @@ def register(app: AsyncApp) -> None:
         prompt = _build_prompt(clean_text, worktree_path_val, channel, thread_ts)
         progress_msg = None
         _inner_cb = None
+        heartbeat = Heartbeat()
 
         async def notify_cb():
             nonlocal progress_msg, _inner_cb
             progress_msg = await progress.post_started(client, channel, thread_ts, clean_text)
-            _inner_cb = progress.make_on_message(client, channel, thread_ts, progress_msg)
+            heartbeat.start(client, progress_msg)
+            _inner_cb = progress.make_on_message(client, channel, thread_ts, progress_msg, heartbeat=heartbeat)
 
         async def on_message_cb(message):
             if _inner_cb:
@@ -117,9 +126,11 @@ def register(app: AsyncApp) -> None:
         task_started_at = __import__("time").time()
 
         async def result_cb(result: dict):
+            await heartbeat.finish()
             # Persist session + CWD for thread continuity
             if result.get("session_id"):
                 session_map.set(channel, thread_ts, result["session_id"], cwd=worktree_path_val)
+                await db.upsert_session(channel, thread_ts, user_id, session_id=result["session_id"])
             # On failure, stash uncommitted worktree changes
             error_subtypes = {"error_timeout", "error_cancelled", "error_internal"}
             if result.get("subtype") in error_subtypes:
@@ -127,6 +138,21 @@ def register(app: AsyncApp) -> None:
             duration_s = int(__import__("time").time() - task_started_at)
             result["task_text"] = clean_text
             await progress.post_result(client, channel, thread_ts, result, is_code_task_flag, duration_s=duration_s)
+            # DB: log bot output and execution metadata
+            bot_output = result.get("result") or ""
+            if result.get("partial_texts"):
+                bot_output = "\n---\n".join(result["partial_texts"])
+            await db.log_message(db_session_fk, "bot_output", bot_output)
+            error_text = result.get("result") if result.get("subtype", "").startswith("error") else None
+            await db.log_execution(
+                db_session_fk,
+                prompt=clean_text,
+                duration_secs=float(duration_s),
+                num_turns=result.get("num_turns"),
+                subtype=result.get("subtype"),
+                result_text=result.get("result"),
+                error=error_text,
+            )
             # Log activity for daily digest
             activity_log.append({
                 "ts": thread_ts,
@@ -160,6 +186,7 @@ def register(app: AsyncApp) -> None:
             notify_callback=notify_cb,
             result_callback=result_cb,
             on_message=on_message_cb,
+            heartbeat=heartbeat,
         )
 
         if not enqueue(task):

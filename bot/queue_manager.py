@@ -40,6 +40,7 @@ class QueuedTask:
     clean_text: str = ""         # original user message for error formatting
     cwd: str | None = None      # worktree path for code-change tasks
     on_message: object = None    # async callable(AssistantMessage) for milestone detection
+    heartbeat: object = None     # Heartbeat instance for progress edits
     notify_callback: Callable = None   # async -- called when task starts
     result_callback: Callable = None   # async -- called with result dict when done
 
@@ -120,6 +121,8 @@ async def run_queue_loop() -> None:
         except asyncio.CancelledError:
             # /cancel triggered -- treat as user-initiated cancellation
             log.info("queue_loop.task_cancelled", user=task.user_id)
+            if task.heartbeat:
+                await task.heartbeat.stop()
             result = {
                 "session_id": task.session_id,
                 "result": None,
@@ -131,6 +134,8 @@ async def run_queue_loop() -> None:
             # Do NOT re-raise -- let queue loop continue to next task
         except Exception as exc:
             log.exception("queue_loop.unexpected_error", error=str(exc))
+            if task.heartbeat:
+                await task.heartbeat.stop()
             await task.result_callback({
                 "session_id": task.session_id,
                 "result": str(exc),
