@@ -264,13 +264,17 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ERUX-01 | Phase 13 | Complete |
 | ERUX-02 | Phase 13 | Complete |
 | ERUX-03 | Phase 13 | Complete |
+| HRTB-01 | Phase 14 | Pending |
+| HRTB-02 | Phase 14 | Pending |
+| HRTB-03 | Phase 14 | Pending |
+| HRTB-04 | Phase 14 | Pending |
 
 **Coverage:**
 - v1.0 requirements: 32 total (all complete)
 - v1.1 requirements: 4 total (all complete)
 - v1.2 requirements: 22 total (20 complete, 2 blocked)
 - v1.3 requirements: 2 total (all complete)
-- v1.4 requirements: 6 total (all pending)
+- v1.4 requirements: 6 total (all complete)
 - v1.5 requirements: 11 total (all complete)
 - v1.6 requirements: 4 total (all pending)
 - Mapped to phases: 4/4
@@ -278,4 +282,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-03-18*
-*Last updated: 2026-03-24 after v1.6 requirements defined*
+*Last updated: 2026-03-24 after v1.6 roadmap created*

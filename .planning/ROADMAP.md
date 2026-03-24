@@ -25,6 +25,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 11: Fast-Path Crawl and Status** - Nicole can trigger single-location EyeMed crawls and filtered status queries via pattern-matched commands that bypass the agent pipeline and respond in-place (completed 2026-03-24)
 - [x] **Phase 12: Background Tasks and Batch Crawl** - Nicole can trigger a full batch crawl across all sites and get progress updates without blocking the agent queue or hitting timeouts (completed 2026-03-24)
 - [x] **Phase 13: Error UX** - Timeout and error messages give Nicole enough context to know what happened and what to do next, including live status queries (completed 2026-03-24)
+- [ ] **Phase 14: Progress Heartbeat** - Bot edits a single progress message every 5 minutes during long agent sessions showing last activity, turn count, and elapsed time
 
 ## Phase Details
 
@@ -265,10 +266,30 @@ Plans:
 
 ---
 
+## v1.6: Progress Heartbeat
+
+**Milestone Goal:** During long-running sessions (up to 30 min), the bot posts periodic progress updates every 5 minutes by editing a single message -- so users always know it is still working.
+
+### Phase 14: Progress Heartbeat
+**Goal**: During long agent sessions, the bot edits a single progress message every 5 minutes with current status -- users never wonder whether the bot is stuck or still working
+**Depends on**: Phase 13
+**Requirements**: HRTB-01, HRTB-02, HRTB-03, HRTB-04
+**Success Criteria** (what must be TRUE):
+  1. When an agent session runs longer than 5 minutes, the bot edits its progress message in-place showing elapsed time, the last activity the agent performed, and the current turn count (e.g., "Still working... Searching codebase for payment logic | Turn 8/25 | 5m 12s elapsed")
+  2. The heartbeat fires on schedule even when the agent is in a long thinking phase with no tool calls -- it does not depend on agent tool use events to trigger
+  3. When the agent completes, times out, or is cancelled, the heartbeat timer stops cleanly with no further edits to the progress message after the final result is posted
+  4. The progress message uses a consistent format: "Still working... [Last Activity] | Turn X/25 | Ym Zs elapsed"
+**Plans**: TBD
+
+Plans:
+- [ ] 14-01-PLAN.md — TBD
+
+---
+
 ## Progress
 
 **Execution Order:**
-Phases execute in order: 1 -> 2 -> 3 -> 4 -> v1.1 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10 -> 11 -> 12 -> 13
+Phases execute in order: 1 -> 2 -> 3 -> 4 -> v1.1 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10 -> 11 -> 12 -> 13 -> 14
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -281,8 +302,9 @@ Phases execute in order: 1 -> 2 -> 3 -> 4 -> v1.1 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 6. Read-Only Status and Storage Tools | v1.2 | 2/2 | Complete | 2026-03-23 |
 | 7. Mutation Tools | v1.2 | 2/2 | Complete | 2026-03-23 |
 | 8. Response Timing | v1.3 | 1/1 | Complete | 2026-03-24 |
-| 9. Git Activity Logging | v1.4 | Complete    | 2026-03-24 | - |
-| 10. Digest Changelog | 1/1 | Complete    | 2026-03-24 | - |
+| 9. Git Activity Logging | v1.4 | 1/1 | Complete | 2026-03-24 |
+| 10. Digest Changelog | v1.4 | 1/1 | Complete | 2026-03-24 |
 | 11. Fast-Path Crawl and Status | v1.5 | 1/1 | Complete | 2026-03-24 |
-| 12. Background Tasks and Batch Crawl | 1/1 | Complete    | 2026-03-24 | - |
-| 13. Error UX | 1/1 | Complete    | 2026-03-24 | - |
+| 12. Background Tasks and Batch Crawl | v1.5 | 1/1 | Complete | 2026-03-24 |
+| 13. Error UX | v1.5 | 1/1 | Complete | 2026-03-24 |
+| 14. Progress Heartbeat | v1.6 | 0/TBD | Not started | - |
