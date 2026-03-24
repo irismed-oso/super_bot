@@ -231,6 +231,9 @@ async def run_agent_with_timeout(
     dict with subtype="error_timeout" and retains the prior session_id so
     the caller can still resume the session.
 
+    Captures partial_texts via a shared list so they survive timeout
+    cancellation -- the user sees what the agent was last working on.
+
     Args:
         prompt: The user's prompt text.
         session_id: Session ID to resume, or None for a new session.
@@ -243,13 +246,21 @@ async def run_agent_with_timeout(
     Returns:
         dict with keys: session_id, result, subtype, num_turns, partial_texts
     """
+    # Shared mutable state so partial_texts survive timeout cancellation
+    shared_partials: list[str] = []
+
+    async def _capturing_on_text(text: str):
+        shared_partials.append(text)
+        if on_text:
+            await on_text(text)
+
     try:
         return await asyncio.wait_for(
             run_agent(
                 prompt,
                 session_id,
                 cwd=cwd,
-                on_text=on_text,
+                on_text=_capturing_on_text,
                 on_message=on_message,
                 max_turns=max_turns,
             ),
@@ -260,11 +271,12 @@ async def run_agent_with_timeout(
             "agent.timeout",
             session_id=session_id,
             timeout_seconds=timeout_seconds,
+            partial_count=len(shared_partials),
         )
         return {
             "session_id": session_id,   # Retain prior session_id -- can still resume
             "result": None,
             "subtype": "error_timeout",
             "num_turns": -1,
-            "partial_texts": [],
+            "partial_texts": shared_partials,
         }
