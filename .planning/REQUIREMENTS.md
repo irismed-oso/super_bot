@@ -105,8 +105,8 @@ Requirements for Response Timing milestone.
 
 ### Timing Display
 
-- [ ] **TMG-01**: Completion messages show elapsed time as human-readable footer (e.g. "Completed in 2m 34s")
-- [ ] **TMG-02**: Error/timeout messages also show elapsed time
+- [x] **TMG-01**: Completion messages show elapsed time as human-readable footer (e.g. "Completed in 2m 34s")
+- [x] **TMG-02**: Error/timeout messages also show elapsed time
 
 ## Future Requirements
 
@@ -198,8 +198,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MTTL-06 | Phase 7 | Blocked (SSH) |
 | MTTL-07 | Phase 7 | Blocked (SSH) |
 | MTTL-08 | Phase 7 | Complete |
-| TMG-01 | Phase 8 | Pending |
-| TMG-02 | Phase 8 | Pending |
+| TMG-01 | Phase 8 | Complete |
+| TMG-02 | Phase 8 | Complete |
 
 **Coverage:**
 - v1.0 requirements: 32 total (all complete)
