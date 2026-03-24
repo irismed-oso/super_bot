@@ -19,6 +19,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 5: VM Validation and MCP Wiring** - mic-transformer MCP server wired into SuperBot as stdio subprocess with all VM prerequisites validated and one confirmed working tool call (completed 2026-03-23)
 - [x] **Phase 6: Read-Only Status and Storage Tools** - All read-only MCP tools verified working through Slack -- status checks, storage browsing, pipeline audits, and credential pathway validation (completed 2026-03-23)
 - [x] **Phase 7: Mutation Tools** - All write/trigger MCP tools verified working through Slack — extraction, reduction, posting, ingestion, sync, and benefits operations (6/8 tools working, 2 blocked by SSH; completed 2026-03-23)
+- [ ] **Phase 8: Response Timing** - Bot's final Slack replies show elapsed time so the team sees how long each task took
 
 ## Phase Details
 
@@ -157,10 +158,26 @@ Plans:
 - [x] 07-01-PLAN.md — Validate API-triggered mutation tools (extraction, reduction, ingestion, requeue)
 - [x] 07-02-PLAN.md — Validate subprocess/Prefect mutation tools (autopost dry_run, posting prep, Azure mirror sync, benefits fetch)
 
+---
+
+## v1.3: Response Timing
+
+**Milestone Goal:** The team has visibility into how long each bot task takes, with elapsed time displayed in every completion and error message.
+
+### Phase 8: Response Timing
+**Goal**: Every bot reply includes elapsed time so the team can see how long tasks take without checking logs or timestamps
+**Depends on**: Phase 7
+**Requirements**: TMG-01, TMG-02
+**Success Criteria** (what must be TRUE):
+  1. When a task completes successfully, the bot's final Slack message includes a human-readable elapsed time footer (e.g. "Completed in 2m 34s")
+  2. When a task fails or times out, the bot's error message also includes elapsed time so the team knows how long it ran before failing
+  3. The elapsed time is accurate to within a few seconds of the actual wall-clock duration from @mention to final reply
+**Plans**: TBD
+
 ## Progress
 
 **Execution Order:**
-Phases execute in order: 1 → 2 → 3 → 4 → v1.1 → 5 → 6 → 7
+Phases execute in order: 1 → 2 → 3 → 4 → v1.1 → 5 → 6 → 7 → 8
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -169,6 +186,7 @@ Phases execute in order: 1 → 2 → 3 → 4 → v1.1 → 5 → 6 → 7
 | 3. End-to-End Integration | v1.0 | 4/5 | In progress | - |
 | 4. Operational Hardening | v1.0 | 0/TBD | Not started | - |
 | v1.1 Capability Parity | v1.1 | 1/TBD | In progress | - |
-| 5. VM Validation and MCP Wiring | v1.2 | Complete    | 2026-03-23 | 2026-03-23 |
-| 6. Read-Only Status and Storage Tools | v1.2 | Complete    | 2026-03-24 | 2026-03-23 |
-| 7. Mutation Tools | v1.2 | Complete    | 2026-03-24 | 2026-03-23 |
+| 5. VM Validation and MCP Wiring | v1.2 | Complete | 2026-03-23 | 2026-03-23 |
+| 6. Read-Only Status and Storage Tools | v1.2 | Complete | 2026-03-24 | 2026-03-23 |
+| 7. Mutation Tools | v1.2 | Complete | 2026-03-24 | 2026-03-23 |
+| 8. Response Timing | v1.3 | 0/TBD | Not started | - |
