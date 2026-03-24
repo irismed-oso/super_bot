@@ -99,6 +99,15 @@ Requirements for MCP Parity milestone. Each maps to roadmap phases.
 - [ ] **MTTL-07**: User can fetch vision benefits via Slack (skipped: 10-min polling vs 10-min session timeout)
 - [x] **MTTL-08**: User can requeue missing extraction pages via Slack
 
+## v1.3 Requirements
+
+Requirements for Response Timing milestone.
+
+### Timing Display
+
+- [ ] **TMG-01**: Completion messages show elapsed time as human-readable footer (e.g. "Completed in 2m 34s")
+- [ ] **TMG-02**: Error/timeout messages also show elapsed time
+
 ## Future Requirements
 
 ### Crawler
@@ -189,14 +198,17 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MTTL-06 | Phase 7 | Blocked (SSH) |
 | MTTL-07 | Phase 7 | Blocked (SSH) |
 | MTTL-08 | Phase 7 | Complete |
+| TMG-01 | Phase 8 | Pending |
+| TMG-02 | Phase 8 | Pending |
 
 **Coverage:**
 - v1.0 requirements: 32 total (all complete)
 - v1.1 requirements: 4 total (all complete)
-- v1.2 requirements: 22 total
-- Mapped to phases: 22/22
+- v1.2 requirements: 22 total (20 complete, 2 blocked)
+- v1.3 requirements: 2 total
+- Mapped to phases: 2/2
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-18*
-*Last updated: 2026-03-23 after v1.2 roadmap created (Phases 5-7)*
+*Last updated: 2026-03-23 after v1.3 requirements defined*
