@@ -108,6 +108,22 @@ Requirements for Response Timing milestone.
 - [x] **TMG-01**: Completion messages show elapsed time as human-readable footer (e.g. "Completed in 2m 34s")
 - [x] **TMG-02**: Error/timeout messages also show elapsed time
 
+## v1.4 Requirements
+
+Requirements for Digest Changelog milestone.
+
+### Git Activity Logging
+
+- [ ] **GITLOG-01**: Bot logs each commit (hash, message, repo, branch) during sessions
+- [ ] **GITLOG-02**: Bot logs each PR created (URL, title, repo) during sessions
+- [ ] **GITLOG-03**: Bot logs file changes per commit during sessions
+
+### Digest Changelog
+
+- [ ] **DGCL-01**: Daily digest includes a changelog section listing commits and PRs from the day
+- [ ] **DGCL-02**: Changelog entries are grouped by repository
+- [ ] **DGCL-03**: Digest scans git log at build time to catch activity missed by session logging
+
 ## Future Requirements
 
 ### Crawler
