@@ -244,16 +244,28 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DGCL-01 | Phase 10 | Pending |
 | DGCL-02 | Phase 10 | Pending |
 | DGCL-03 | Phase 10 | Pending |
+| FAST-01 | Phase 11 | Pending |
+| FAST-02 | Phase 11 | Pending |
+| FAST-04 | Phase 11 | Pending |
+| FAST-03 | Phase 12 | Pending |
+| BGTK-01 | Phase 12 | Pending |
+| BGTK-02 | Phase 12 | Pending |
+| BGTK-03 | Phase 12 | Pending |
+| BGTK-04 | Phase 12 | Pending |
+| ERUX-01 | Phase 13 | Pending |
+| ERUX-02 | Phase 13 | Pending |
+| ERUX-03 | Phase 13 | Pending |
 
 **Coverage:**
 - v1.0 requirements: 32 total (all complete)
 - v1.1 requirements: 4 total (all complete)
 - v1.2 requirements: 22 total (20 complete, 2 blocked)
 - v1.3 requirements: 2 total (all complete)
-- v1.4 requirements: 6 total
-- Mapped to phases: 6/6
+- v1.4 requirements: 6 total (all pending)
+- v1.5 requirements: 11 total (all pending)
+- Mapped to phases: 11/11
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-18*
-*Last updated: 2026-03-24 after v1.4 roadmap created*
+*Last updated: 2026-03-24 after v1.5 roadmap created*

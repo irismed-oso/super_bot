@@ -22,6 +22,9 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 8: Response Timing** - Bot's final Slack replies show elapsed time so the team sees how long each task took (completed 2026-03-24)
 - [ ] **Phase 9: Git Activity Logging** - Bot captures commit, PR, and file-change data during sessions into a persistent activity log
 - [ ] **Phase 10: Digest Changelog** - Daily digest includes a changelog section with commits and PRs grouped by repository, with git-log verification
+- [ ] **Phase 11: Fast-Path Crawl and Status** - Nicole can trigger single-location EyeMed crawls and filtered status queries via pattern-matched commands that bypass the agent pipeline and respond in-place
+- [ ] **Phase 12: Background Tasks and Batch Crawl** - Nicole can trigger a full batch crawl across all sites and get progress updates without blocking the agent queue or hitting timeouts
+- [ ] **Phase 13: Error UX** - Timeout and error messages give Nicole enough context to know what happened and what to do next, including live status queries
 
 ## Phase Details
 
@@ -213,10 +216,59 @@ Plans:
 Plans:
 - [ ] 10-01: TBD
 
+---
+
+## v1.5: Nicole-Ready Operations
+
+**Milestone Goal:** Nicole can check status, trigger crawls (single or batch), and get clear feedback — all without hitting timeouts or confusing error messages.
+
+### Phase 11: Fast-Path Crawl and Status
+**Goal**: Nicole can trigger a single-location EyeMed crawl or run a filtered status query with a natural-language command that resolves in seconds — no agent pipeline overhead, result edited in-place into the "Working on it." message
+**Depends on**: Phase 8
+**Requirements**: FAST-01, FAST-02, FAST-04
+**Success Criteria** (what must be TRUE):
+  1. Nicole types "crawl eyemed DME 03.20" and the bot pattern-matches it, posts "Working on it.", triggers the `eyemed-crawler-dme-manual` Prefect deployment via API, and edits the message in-place with a confirmation (run ID, location, date) — all within 5 seconds, no agent session started
+  2. Nicole types "status on DME eyemed 03.16 to today" and the bot runs the status script directly with the location and date filters, then edits the "Working on it." message in-place with the results
+  3. Both fast-path commands complete and update the Slack message before any agent session would even initialize, visibly faster than a standard @mention
+  4. Unrecognized commands still fall through to the agent pipeline — fast-path matching does not intercept general requests
+**Plans**: TBD
+
+Plans:
+- [ ] 11-01: TBD
+
+### Phase 12: Background Tasks and Batch Crawl
+**Goal**: Nicole can say "crawl all sites for 03.20" and the bot triggers every EyeMed crawler deployment in parallel via the Prefect API, then tracks and reports progress without blocking the agent queue or timing out
+**Depends on**: Phase 11
+**Requirements**: FAST-03, BGTK-01, BGTK-02, BGTK-03, BGTK-04
+**Success Criteria** (what must be TRUE):
+  1. Nicole types "crawl all sites for 03.20" and the bot triggers all EyeMed Prefect manual deployments in parallel, posting a confirmation with how many locations were queued — the bot's response arrives in under 10 seconds regardless of how many locations there are
+  2. While crawls are running, the bot posts a progress update to the thread every 2-3 minutes showing which locations finished, which are still running, and any errors — without Nicole having to ask
+  3. A separate agent task (e.g., a code question) submitted while a batch crawl is in progress executes normally — the background polling does not occupy the agent queue
+  4. When all crawl runs finish, the bot posts a final summary showing per-location outcomes: files found, no disbursement, or error with message
+**Plans**: TBD
+
+Plans:
+- [ ] 12-01: TBD
+
+### Phase 13: Error UX
+**Goal**: When something goes wrong or takes too long, Nicole sees a message that tells her what was attempted, what the current state is, and what to do next — never a bare timeout or generic error
+**Depends on**: Phase 11
+**Requirements**: ERUX-01, ERUX-02, ERUX-03
+**Success Criteria** (what must be TRUE):
+  1. When a task times out, the bot's message names what was being attempted (e.g., "was running: crawl eyemed DME") and suggests a concrete next action (e.g., "check status with: status on DME eyemed today")
+  2. The timeout message is visually distinct from a hard failure message — Nicole can tell at a glance whether the task timed out, failed outright, or is still running in the background
+  3. When Nicole sends "are you broken?" or "are you still going?", the bot pattern-matches it as a status query and replies with the actual current task state (idle, running, what it's doing) instead of spawning a new agent session
+**Plans**: TBD
+
+Plans:
+- [ ] 13-01: TBD
+
+---
+
 ## Progress
 
 **Execution Order:**
-Phases execute in order: 1 -> 2 -> 3 -> 4 -> v1.1 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
+Phases execute in order: 1 -> 2 -> 3 -> 4 -> v1.1 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10 -> 11 -> 12 -> 13
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -231,3 +283,6 @@ Phases execute in order: 1 -> 2 -> 3 -> 4 -> v1.1 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 8. Response Timing | v1.3 | 1/1 | Complete | 2026-03-24 |
 | 9. Git Activity Logging | v1.4 | 0/TBD | Not started | - |
 | 10. Digest Changelog | v1.4 | 0/TBD | Not started | - |
+| 11. Fast-Path Crawl and Status | v1.5 | 0/TBD | Not started | - |
+| 12. Background Tasks and Batch Crawl | v1.5 | 0/TBD | Not started | - |
+| 13. Error UX | v1.5 | 0/TBD | Not started | - |
