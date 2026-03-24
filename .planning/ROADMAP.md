@@ -19,7 +19,9 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 5: VM Validation and MCP Wiring** - mic-transformer MCP server wired into SuperBot as stdio subprocess with all VM prerequisites validated and one confirmed working tool call (completed 2026-03-23)
 - [x] **Phase 6: Read-Only Status and Storage Tools** - All read-only MCP tools verified working through Slack -- status checks, storage browsing, pipeline audits, and credential pathway validation (completed 2026-03-23)
 - [x] **Phase 7: Mutation Tools** - All write/trigger MCP tools verified working through Slack — extraction, reduction, posting, ingestion, sync, and benefits operations (6/8 tools working, 2 blocked by SSH; completed 2026-03-23)
-- [ ] **Phase 8: Response Timing** - Bot's final Slack replies show elapsed time so the team sees how long each task took
+- [x] **Phase 8: Response Timing** - Bot's final Slack replies show elapsed time so the team sees how long each task took (completed 2026-03-24)
+- [ ] **Phase 9: Git Activity Logging** - Bot captures commit, PR, and file-change data during sessions into a persistent activity log
+- [ ] **Phase 10: Digest Changelog** - Daily digest includes a changelog section with commits and PRs grouped by repository, with git-log verification
 
 ## Phase Details
 
@@ -175,12 +177,46 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 08-01-PLAN.md — Add elapsed time footer to completion and error messages
+- [x] 08-01-PLAN.md — Add elapsed time footer to completion and error messages
+
+---
+
+## v1.4: Digest Changelog
+
+**Milestone Goal:** The daily digest shows a changelog of git commits and PRs the bot created, so the team sees what actually changed each day.
+
+### Phase 9: Git Activity Logging
+**Goal**: The bot captures every commit, PR, and file change it produces during sessions into a persistent activity log that downstream consumers (digest, audits) can query
+**Depends on**: Phase 8
+**Requirements**: GITLOG-01, GITLOG-02, GITLOG-03
+**Success Criteria** (what must be TRUE):
+  1. After the bot commits code during a session, the commit hash, message, repo name, and branch are recorded in the activity log
+  2. After the bot creates a PR during a session, the PR URL, title, and repo name are recorded in the activity log
+  3. After the bot commits code, the list of files changed in that commit is recorded alongside the commit entry
+  4. Activity log entries persist across bot restarts and are queryable by date
+**Plans**: TBD
+
+Plans:
+- [ ] 09-01: TBD
+
+### Phase 10: Digest Changelog
+**Goal**: The daily digest includes a changelog section that shows what the bot built and shipped, with commits and PRs grouped by repository and verified against git history
+**Depends on**: Phase 9
+**Requirements**: DGCL-01, DGCL-02, DGCL-03
+**Success Criteria** (what must be TRUE):
+  1. The daily digest message in Slack contains a "Changelog" section listing commits and PRs the bot created that day
+  2. Changelog entries are visually grouped by repository so the team can see which repo each change landed in
+  3. If session logging missed any bot commits (e.g., due to a crash), the digest still includes them because it cross-checks git log at build time
+  4. When the bot had no git activity for the day, the changelog section is either absent or shows "No changes" rather than displaying stale data
+**Plans**: TBD
+
+Plans:
+- [ ] 10-01: TBD
 
 ## Progress
 
 **Execution Order:**
-Phases execute in order: 1 → 2 → 3 → 4 → v1.1 → 5 → 6 → 7 → 8
+Phases execute in order: 1 -> 2 -> 3 -> 4 -> v1.1 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -189,7 +225,9 @@ Phases execute in order: 1 → 2 → 3 → 4 → v1.1 → 5 → 6 → 7 → 8
 | 3. End-to-End Integration | v1.0 | 4/5 | In progress | - |
 | 4. Operational Hardening | v1.0 | 0/TBD | Not started | - |
 | v1.1 Capability Parity | v1.1 | 1/TBD | In progress | - |
-| 5. VM Validation and MCP Wiring | v1.2 | Complete | 2026-03-23 | 2026-03-23 |
-| 6. Read-Only Status and Storage Tools | v1.2 | Complete | 2026-03-24 | 2026-03-23 |
-| 7. Mutation Tools | v1.2 | Complete | 2026-03-24 | 2026-03-23 |
-| 8. Response Timing | v1.3 | 0/1 | Not started | - |
+| 5. VM Validation and MCP Wiring | v1.2 | 2/2 | Complete | 2026-03-23 |
+| 6. Read-Only Status and Storage Tools | v1.2 | 2/2 | Complete | 2026-03-23 |
+| 7. Mutation Tools | v1.2 | 2/2 | Complete | 2026-03-23 |
+| 8. Response Timing | v1.3 | 1/1 | Complete | 2026-03-24 |
+| 9. Git Activity Logging | v1.4 | 0/TBD | Not started | - |
+| 10. Digest Changelog | v1.4 | 0/TBD | Not started | - |

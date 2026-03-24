@@ -238,15 +238,22 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MTTL-08 | Phase 7 | Complete |
 | TMG-01 | Phase 8 | Complete |
 | TMG-02 | Phase 8 | Complete |
+| GITLOG-01 | Phase 9 | Pending |
+| GITLOG-02 | Phase 9 | Pending |
+| GITLOG-03 | Phase 9 | Pending |
+| DGCL-01 | Phase 10 | Pending |
+| DGCL-02 | Phase 10 | Pending |
+| DGCL-03 | Phase 10 | Pending |
 
 **Coverage:**
 - v1.0 requirements: 32 total (all complete)
 - v1.1 requirements: 4 total (all complete)
 - v1.2 requirements: 22 total (20 complete, 2 blocked)
-- v1.3 requirements: 2 total
-- Mapped to phases: 2/2
+- v1.3 requirements: 2 total (all complete)
+- v1.4 requirements: 6 total
+- Mapped to phases: 6/6
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-18*
-*Last updated: 2026-03-23 after v1.3 requirements defined*
+*Last updated: 2026-03-24 after v1.4 roadmap created*
