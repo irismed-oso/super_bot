@@ -21,23 +21,20 @@ Nicole can ask the bot to do anything on mic_transformer through Slack and it ju
 - Git worktree isolation, branch/commit/PR operations (v1.0 Phase 3)
 - Linear MCP and Sentry MCP integration (v1.1)
 - Multi-repo read access (v1.1)
+- mic-transformer MCP server wired as stdio subprocess with 35+ tools (v1.2)
+- All credential pathways confirmed: GCS, S3, PostgreSQL x3, Google Drive (v1.2)
 
 ### Active
 
-- [ ] mic-transformer MCP server wired into SuperBot Claude Agent SDK sessions
-- [ ] All 25+ operational tools available through Slack (status, extraction, reduction, posting, crawling, etc.)
-- [ ] VM environment has all mic-transformer MCP dependencies installed
-- [ ] Required credentials/env vars configured on VM for MCP tools
+- [ ] Elapsed time displayed in bot's final Slack reply (e.g. "Completed in 2m 34s")
 
-## Current Milestone: v1.2 MCP Parity
+## Current Milestone: v1.3 Response Timing
 
-**Goal:** SuperBot has direct access to all mic-transformer MCP tools locally on the VM, giving Nicole the same operational capabilities through Slack that local Claude Code has.
+**Goal:** Show how long each bot response took in the final Slack reply, so the team has visibility into task duration.
 
 **Target features:**
-- mic-transformer MCP server wired into SuperBot's Claude Agent SDK sessions as stdio subprocess
-- All 13 tool modules (25+ tools) available: status, extraction, reduction, posting, storage, crawler, gdrive, ingestion, benefits, deploy, azure_mirror, ivt_ingestion, analytics
-- VM mic_transformer .venv has `mcp` and `fastmcp` packages installed
-- Required cloud credentials (GCS, S3, Azure, Prefect, Revolution) accessible to MCP subprocess
+- Pass elapsed duration from handler to post_result
+- Append human-readable elapsed time footer to completion and error messages
 
 ### Out of Scope
 
@@ -76,4 +73,4 @@ Nicole can ask the bot to do anything on mic_transformer through Slack and it ju
 | Flexible VM sizing | Start small, scale if needed — avoid over-provisioning | — Pending |
 
 ---
-*Last updated: 2026-03-23 after milestone v1.2 started*
+*Last updated: 2026-03-23 after milestone v1.3 started*
