@@ -172,7 +172,10 @@ Plans:
   1. When a task completes successfully, the bot's final Slack message includes a human-readable elapsed time footer (e.g. "Completed in 2m 34s")
   2. When a task fails or times out, the bot's error message also includes elapsed time so the team knows how long it ran before failing
   3. The elapsed time is accurate to within a few seconds of the actual wall-clock duration from @mention to final reply
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 08-01-PLAN.md — Add elapsed time footer to completion and error messages
 
 ## Progress
 
@@ -189,4 +192,4 @@ Phases execute in order: 1 → 2 → 3 → 4 → v1.1 → 5 → 6 → 7 → 8
 | 5. VM Validation and MCP Wiring | v1.2 | Complete | 2026-03-23 | 2026-03-23 |
 | 6. Read-Only Status and Storage Tools | v1.2 | Complete | 2026-03-24 | 2026-03-23 |
 | 7. Mutation Tools | v1.2 | Complete | 2026-03-24 | 2026-03-23 |
-| 8. Response Timing | v1.3 | 0/TBD | Not started | - |
+| 8. Response Timing | v1.3 | 0/1 | Not started | - |
