@@ -114,9 +114,9 @@ Requirements for Digest Changelog milestone.
 
 ### Git Activity Logging
 
-- [ ] **GITLOG-01**: Bot logs each commit (hash, message, repo, branch) during sessions
-- [ ] **GITLOG-02**: Bot logs each PR created (URL, title, repo) during sessions
-- [ ] **GITLOG-03**: Bot logs file changes per commit during sessions
+- [x] **GITLOG-01**: Bot logs each commit (hash, message, repo, branch) during sessions
+- [x] **GITLOG-02**: Bot logs each PR created (URL, title, repo) during sessions
+- [x] **GITLOG-03**: Bot logs file changes per commit during sessions
 
 ### Digest Changelog
 
@@ -238,9 +238,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MTTL-08 | Phase 7 | Complete |
 | TMG-01 | Phase 8 | Complete |
 | TMG-02 | Phase 8 | Complete |
-| GITLOG-01 | Phase 9 | Pending |
-| GITLOG-02 | Phase 9 | Pending |
-| GITLOG-03 | Phase 9 | Pending |
+| GITLOG-01 | Phase 9 | Complete |
+| GITLOG-02 | Phase 9 | Complete |
+| GITLOG-03 | Phase 9 | Complete |
 | DGCL-01 | Phase 10 | Pending |
 | DGCL-02 | Phase 10 | Pending |
 | DGCL-03 | Phase 10 | Pending |
