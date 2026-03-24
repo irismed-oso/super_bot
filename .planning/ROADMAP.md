@@ -258,10 +258,10 @@ Plans:
   1. When a task times out, the bot's message names what was being attempted (e.g., "was running: crawl eyemed DME") and suggests a concrete next action (e.g., "check status with: status on DME eyemed today")
   2. The timeout message is visually distinct from a hard failure message — Nicole can tell at a glance whether the task timed out, failed outright, or is still running in the background
   3. When Nicole sends "are you broken?" or "are you still going?", the bot pattern-matches it as a status query and replies with the actual current task state (idle, running, what it's doing) instead of spawning a new agent session
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 13-01: TBD
+- [ ] 13-01-PLAN.md — Contextual error messages, visual error distinction, and fast-path bot status query
 
 ---
 
