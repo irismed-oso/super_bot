@@ -302,10 +302,10 @@ Plans:
   2. The deploy script exits with a clear success/failure status and prints the service health (systemd active, no crash loops in recent journal logs)
   3. The same deploy script can be reused for the next milestone without modification (no hardcoded version numbers or one-shot logic)
   4. After the deploy script completes, the bot responds to a Slack @mention within 30 seconds, confirming it is live and functional
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 15-01: Deploy script and VM deployment
+- [ ] 15-01-PLAN.md — Reusable deploy script + DEPLOY.md update + VM deployment checkpoint
 
 ### Phase 16: Live Verification
 **Goal**: Every feature shipped in v1.4-v1.6 is smoke-tested on the production VM -- the team confirms the bot works end-to-end in its real environment, not just locally
@@ -316,7 +316,7 @@ Plans:
   2. Nicole can type "crawl eyemed DME [date]" and "status on DME eyemed [date range]" in the production Slack channel and receive fast-path responses edited in-place within seconds -- verifying VRFY-02
   3. Nicole can trigger a batch crawl ("crawl all sites for [date]") and observe background progress updates posting to the thread every 2-3 minutes without blocking other bot tasks -- verifying VRFY-03
   4. When a long agent session runs on the VM, the progress message is edited with heartbeat updates (last activity, turn count, elapsed time), and on completion the message shows "Completed in Xm Ys" -- verifying VRFY-04
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
 - [ ] 16-01: Live smoke tests for all v1.4-v1.6 features
