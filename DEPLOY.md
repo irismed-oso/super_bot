@@ -193,6 +193,70 @@ Send `@SuperBot hello` in the Slack channel. Expected: response within 30 second
 
 For milestone-specific setup (new env vars, new repos, new services), see the version-specific sections below. The deploy script only handles code deployment.
 
+## Deploy via Prefect (No gcloud auth needed)
+
+This method triggers a Prefect flow running on the VM. No SSH, no `gcloud auth login`, no VPN -- just network access to the Prefect server.
+
+The flow performs the same steps as `scripts/deploy.sh`: git pull, install dependencies, restart service, and health check.
+
+### Prerequisites
+
+- Network access to `136.111.85.127:4200` (the Prefect server)
+- Python 3.10+
+
+### One-Time Setup (on VM)
+
+The deploy flow must be running on the VM so Prefect can execute it. SSH once to start it:
+
+```bash
+gcloud compute ssh bot@superbot-vm --zone=us-west1-a -- "
+  sudo -u bot bash -c '
+    cd /home/bot/super_bot
+    source .venv/bin/activate
+    nohup python prefect/deploy_superbot_flow.py > /tmp/deploy-flow.log 2>&1 &
+  '
+"
+```
+
+This registers the `deploy-superbot` deployment with Prefect and keeps the flow served. It only needs to run once (or after VM reboot).
+
+### Usage
+
+```bash
+# Deploy main branch (pushes first, installs deps, restarts, health checks)
+python scripts/deploy_via_prefect.py
+
+# Deploy a specific branch
+python scripts/deploy_via_prefect.py --branch feature-x
+
+# Skip dependency install (code-only change)
+python scripts/deploy_via_prefect.py --skip-deps
+
+# Skip git push (already pushed)
+python scripts/deploy_via_prefect.py --no-push
+
+# Combine flags
+python scripts/deploy_via_prefect.py --branch feature-x --skip-deps --no-push
+```
+
+### What It Does
+
+1. Pushes the branch to origin (unless `--no-push`)
+2. Finds the `deploy-superbot` Prefect deployment via API
+3. Creates a flow run with the specified parameters
+4. Polls the flow run status every 5 seconds until completion
+5. Reports final status (COMPLETED or FAILED with message)
+
+The flow on the VM then executes: git pull, uv pip install, systemctl restart, and health check (service status + log inspection).
+
+### Troubleshooting
+
+| Symptom | Likely Cause | Fix |
+|---------|-------------|-----|
+| "Deployment 'deploy-superbot' not found" | Flow not running on VM | SSH to VM and start it (see One-Time Setup above) |
+| "Connection error" | No network access to Prefect server | Verify you can reach `136.111.85.127:4200` |
+| Deploy FAILED with health check errors | Service crashed after restart | Check logs: `gcloud compute ssh bot@superbot-vm --zone=us-west1-a -- "sudo journalctl -u superbot -n 50 --no-pager"` |
+
 ## Verification Tests
 
 After Step 9 shows clean startup, run these 8 tests in sequence.
