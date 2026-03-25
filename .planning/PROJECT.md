@@ -46,9 +46,16 @@ Nicole can ask the bot to do anything on mic_transformer through Slack and it ju
 
 ### Active
 
-(None — planning next milestone)
+- [ ] Deploy v1.4-v1.6 features to production VM with deploy script
+- [ ] Live smoke tests verifying each feature works on the VM
 
-## Current Milestone: Completed v1.6 — Planning Next
+## Current Milestone: v1.7 Deploy & Verify
+
+**Goal:** Get v1.4-v1.6 features deployed and verified on the production VM with a reusable deploy script.
+
+**Target features:**
+- Full deploy script (push, pull, deps, restart, verification)
+- Live smoke tests for digest changelog, fast-path commands, background tasks, heartbeat
 
 ### Out of Scope
 
@@ -96,4 +103,4 @@ Nicole can ask the bot to do anything on mic_transformer through Slack and it ju
 | finish() vs stop() for heartbeat | Completion gets final edit, cancel/error doesn't | Good |
 
 ---
-*Last updated: 2026-03-25 after v1.5 + v1.6 milestones complete*
+*Last updated: 2026-03-25 after milestone v1.7 started*
