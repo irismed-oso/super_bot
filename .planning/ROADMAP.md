@@ -28,7 +28,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 14: Progress Heartbeat** - Bot edits a single progress message every 5 minutes during long agent sessions showing last activity, turn count, and elapsed time (completed 2026-03-24)
 - [x] **Phase 15: Deploy Script** - Reusable deploy script that pushes code, installs deps, restarts service, and verifies health on the production VM (completed 2026-03-25)
 - [x] **Phase 16: Live Verification** - All v1.4-v1.6 features smoke-tested on the production VM -- digest changelog, fast-path commands, background tasks, heartbeat (completed 2026-03-25)
-- [ ] **Phase 17: Deploy Foundation** - Deploy super_bot and mic_transformer from Slack with self-restart handling, deploy status, diff preview, and active-task guard plus live verification of v1.4-v1.6 features
+- [x] **Phase 17: Deploy Foundation** - Deploy super_bot and mic_transformer from Slack with self-restart handling, deploy status, diff preview, and active-task guard plus live verification of v1.4-v1.6 features (completed 2026-03-25)
 - [ ] **Phase 18: Rollback** - Git-based rollback to previous commit with health check and automatic roll-forward on failure
 - [ ] **Phase 19: Log Access** - Tail and filter journald logs, view Prefect flow logs, with structlog parsing and Slack-safe truncation
 - [ ] **Phase 20: Health Dashboard** - Fast-path bot health overview showing uptime, queue depth, errors, memory, version, and last restart
@@ -348,9 +348,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 17-01-PLAN.md — Deploy-state persistence, repo config, and fast-path deploy status/preview commands
-- [ ] 17-02-PLAN.md — Deploy execution via Prefect (self-deploy + mic_transformer polling) + app.py startup recovery
-- [ ] 17-03-PLAN.md — VM deployment + live verification of deploy commands and v1.4-v1.6 features
+- [x] 17-01-PLAN.md — Deploy-state persistence, repo config, and fast-path deploy status/preview commands
+- [x] 17-02-PLAN.md — Deploy execution via Prefect (self-deploy + mic_transformer polling) + app.py startup recovery
+- [x] 17-03-PLAN.md — VM deployment + live verification of deploy commands and v1.4-v1.6 features
 ### Phase 18: Rollback
 **Goal**: The team can undo a bad deploy by rolling back to the previous commit and redeploying, with automatic recovery if the rollback itself fails
 **Depends on**: Phase 17

@@ -135,10 +135,10 @@ Requirements for Deploy & Verify milestone.
 
 ### Verification
 
-- [ ] **VRFY-01**: Digest changelog verified working on VM (git activity captured, digest posts changelog)
-- [ ] **VRFY-02**: Fast-path commands verified on VM (single crawl, batch crawl, status query)
-- [ ] **VRFY-03**: Background task monitoring verified on VM (progress polling, final summary)
-- [ ] **VRFY-04**: Progress heartbeat verified on VM (timer fires, completion edit, clean stop)
+- [x] **VRFY-01**: Digest changelog verified working on VM (git activity captured, digest posts changelog)
+- [x] **VRFY-02**: Fast-path commands verified on VM (single crawl, batch crawl, status query)
+- [x] **VRFY-03**: Background task monitoring verified on VM (progress polling, final summary)
+- [x] **VRFY-04**: Progress heartbeat verified on VM (timer fires, completion edit, clean stop)
 
 ## v1.8 Requirements
 
@@ -373,10 +373,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | HRTB-04 | Phase 14 | Complete |
 | DPLY-01 | Phase 15 | Complete |
 | DPLY-02 | Phase 15 | Complete |
-| VRFY-01 | Phase 17 | Pending |
-| VRFY-02 | Phase 17 | Pending |
-| VRFY-03 | Phase 17 | Pending |
-| VRFY-04 | Phase 17 | Pending |
+| VRFY-01 | Phase 17 | Complete |
+| VRFY-02 | Phase 17 | Complete |
+| VRFY-03 | Phase 17 | Complete |
+| VRFY-04 | Phase 17 | Complete |
 | SDPL-01 | Phase 17 | Complete |
 | SDPL-02 | Phase 17 | Complete |
 | SDPL-03 | Phase 17 | Complete |
@@ -417,7 +417,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 - v1.4 requirements: 6 total (all complete)
 - v1.5 requirements: 11 total (all complete)
 - v1.6 requirements: 4 total (all complete)
-- v1.7 requirements: 6 total (2 complete, 4 moved to Phase 17)
+- v1.7 requirements: 6 total (all complete)
 - v1.8 requirements: 14 total (all pending, mapped to Phases 17-21)
 - v1.9 requirements: 18 total (all pending, mapped to Phases 22-24)
 
