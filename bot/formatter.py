@@ -112,9 +112,9 @@ def split_long_message(text: str, max_chars: int = 3800) -> list[str]:
     return chunks
 
 
-def format_mr_link(mr_url: str) -> str:
-    """Return a formatted string for surfacing an MR URL in Slack."""
-    return f"MR ready for review: {mr_url}"
+def format_pr_link(pr_url: str) -> str:
+    """Return a formatted string for surfacing a PR URL in Slack."""
+    return f"PR ready for review: {pr_url}"
 
 
 def format_test_result(summary_line: str) -> str:

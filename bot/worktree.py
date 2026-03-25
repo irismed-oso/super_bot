@@ -5,7 +5,7 @@ Code-change tasks run in isolated worktrees (../worktree-{thread_ts})
 so concurrent tasks don't conflict on the same branch. Q&A/read-only
 tasks run in the main repo with no worktree created.
 
-Worktrees persist until MR merge to support follow-up messages in the
+Worktrees persist until PR merge to support follow-up messages in the
 same Slack thread.
 """
 
@@ -87,8 +87,8 @@ def is_code_task(prompt: str) -> bool:
     code_change_keywords = [
         "improve", "fix", "change", "update", "add", "modify", "refactor",
         "implement", "create", "delete", "remove", "write", "edit",
-        "make the code", "code change", "commit", "merge request", "mr",
-        "pull request", "pr", "rewrite", "optimize", "enhance",
+        "make the code", "code change", "commit", "pull request", "pr",
+        "rewrite", "optimize", "enhance",
     ]
 
     readonly_keywords = [
