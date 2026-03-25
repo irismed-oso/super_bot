@@ -343,5 +343,5 @@ Phases execute in order: 1 -> 2 -> 3 -> 4 -> v1.1 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 12. Background Tasks and Batch Crawl | v1.5 | 1/1 | Complete | 2026-03-24 |
 | 13. Error UX | v1.5 | 1/1 | Complete | 2026-03-24 |
 | 14. Progress Heartbeat | v1.6 | Complete    | 2026-03-25 | 2026-03-24 |
-| 15. Deploy Script | 1/1 | Complete   | 2026-03-25 | - |
+| 15. Deploy Script | 1/1 | Complete    | 2026-03-25 | - |
 | 16. Live Verification | v1.7 | 0/1 | Not started | - |
