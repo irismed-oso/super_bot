@@ -320,10 +320,23 @@ Which phases cover which requirements. Updated during roadmap creation.
 | HRTB-04 | Phase 14 | Complete |
 | DPLY-01 | Phase 15 | Complete |
 | DPLY-02 | Phase 15 | Complete |
-| VRFY-01 | Phase 16 | Pending |
-| VRFY-02 | Phase 16 | Pending |
-| VRFY-03 | Phase 16 | Pending |
-| VRFY-04 | Phase 16 | Pending |
+| VRFY-01 | Phase 17 | Pending |
+| VRFY-02 | Phase 17 | Pending |
+| VRFY-03 | Phase 17 | Pending |
+| VRFY-04 | Phase 17 | Pending |
+| SDPL-01 | Phase 17 | Pending |
+| SDPL-02 | Phase 17 | Pending |
+| SDPL-03 | Phase 17 | Pending |
+| SDPL-04 | Phase 17 | Pending |
+| SDPL-05 | Phase 17 | Pending |
+| RLBK-01 | Phase 18 | Pending |
+| RLBK-02 | Phase 18 | Pending |
+| LOGS-01 | Phase 19 | Pending |
+| LOGS-02 | Phase 19 | Pending |
+| LOGS-03 | Phase 19 | Pending |
+| LOGS-04 | Phase 19 | Pending |
+| HLTH-01 | Phase 20 | Pending |
+| HLTH-02 | Phase 21 | Pending |
 
 **Coverage:**
 - v1.0 requirements: 32 total (all complete)
@@ -333,10 +346,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 - v1.4 requirements: 6 total (all complete)
 - v1.5 requirements: 11 total (all complete)
 - v1.6 requirements: 4 total (all complete)
-- v1.7 requirements: 6 total (4 pending, 2 complete)
-- v1.8 requirements: 14 total (all pending)
-- Mapped to phases: TBD (v1.8 roadmap pending)
+- v1.7 requirements: 6 total (2 complete, 4 moved to Phase 17)
+- v1.8 requirements: 14 total (all pending, mapped to Phases 17-21)
+- Total mapped: 17/17 v1.7+v1.8 pending requirements
 
 ---
 *Requirements defined: 2026-03-18*
-*Last updated: 2026-03-25 after v1.8 requirements defined*
+*Last updated: 2026-03-25 after v1.8 roadmap created*

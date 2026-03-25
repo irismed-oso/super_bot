@@ -28,6 +28,11 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 14: Progress Heartbeat** - Bot edits a single progress message every 5 minutes during long agent sessions showing last activity, turn count, and elapsed time (completed 2026-03-24)
 - [x] **Phase 15: Deploy Script** - Reusable deploy script that pushes code, installs deps, restarts service, and verifies health on the production VM (completed 2026-03-25)
 - [x] **Phase 16: Live Verification** - All v1.4-v1.6 features smoke-tested on the production VM -- digest changelog, fast-path commands, background tasks, heartbeat (completed 2026-03-25)
+- [ ] **Phase 17: Deploy Foundation** - Deploy super_bot and mic_transformer from Slack with self-restart handling, deploy status, diff preview, and active-task guard plus live verification of v1.4-v1.6 features
+- [ ] **Phase 18: Rollback** - Git-based rollback to previous commit with health check and automatic roll-forward on failure
+- [ ] **Phase 19: Log Access** - Tail and filter journald logs, view Prefect flow logs, with structlog parsing and Slack-safe truncation
+- [ ] **Phase 20: Health Dashboard** - Fast-path bot health overview showing uptime, queue depth, errors, memory, version, and last restart
+- [ ] **Phase 21: Pipeline Status** - Fast-path Prefect pipeline summary showing completed, failed, and running flow runs in the last 24 hours
 
 ## Phase Details
 
@@ -321,10 +326,69 @@ Plans:
 Plans:
 - [ ] 16-01-PLAN.md — Live smoke tests for all v1.4-v1.6 features
 
+---
+
+## v1.8: Production Ops
+
+**Milestone Goal:** Full production observability and deployment control from Slack -- deploy any repo, rollback, read logs, monitor bot health and pipeline status. Also completes pending v1.7 live verification (VRFY-01 through VRFY-04).
+
+### Phase 17: Deploy Foundation
+**Goal**: The team can deploy super_bot and mic_transformer from Slack with a single command, see what would be deployed before deploying, and get blocked if an agent task is running -- with self-restart handling for super_bot deploys and live verification of v1.4-v1.6 features baked into the deploy workflow
+**Depends on**: Phase 16
+**Requirements**: SDPL-01, SDPL-02, SDPL-03, SDPL-04, SDPL-05, VRFY-01, VRFY-02, VRFY-03, VRFY-04
+**Success Criteria** (what must be TRUE):
+  1. Nicole types "deploy super_bot" and the bot posts "Deploying now, I'll be back shortly", restarts itself, and after restart posts an "I'm back" confirmation to the original thread with the new commit SHA
+  2. Nicole types "deploy mic_transformer" and the bot pulls latest code, installs deps, and reports success or failure -- all without restarting itself
+  3. Nicole types "deploy status" and sees the current commit, branch, last deploy time, and count of pending changes for each configured repo
+  4. Nicole types "deploy preview super_bot" and sees the list of commits that would be deployed (between current HEAD and origin/main)
+  5. If Nicole types "deploy super_bot" while an agent task is running, the bot warns about the active task and requires "deploy force super_bot" to proceed
+**Plans**: TBD
+
+### Phase 18: Rollback
+**Goal**: The team can undo a bad deploy by rolling back to the previous commit and redeploying, with automatic recovery if the rollback itself fails
+**Depends on**: Phase 17
+**Requirements**: RLBK-01, RLBK-02
+**Success Criteria** (what must be TRUE):
+  1. Nicole types "rollback super_bot" and the bot reverts to the previous commit, redeploys (with self-restart handling for super_bot), and confirms the rollback succeeded with the restored commit SHA
+  2. Nicole types "rollback mic_transformer" and the bot reverts to the previous commit, reinstalls deps, and confirms the rollback succeeded
+  3. If a rollback fails the post-deploy health check, the bot automatically rolls forward to the pre-rollback commit and reports that the rollback was aborted with the reason
+**Plans**: TBD
+
+### Phase 19: Log Access
+**Goal**: The team can read service logs and Prefect flow logs from Slack without SSHing to the VM -- with output parsed and truncated to fit Slack messages
+**Depends on**: Phase 17
+**Requirements**: LOGS-01, LOGS-02, LOGS-03, LOGS-04
+**Success Criteria** (what must be TRUE):
+  1. Nicole types "logs superbot 50" and sees the last 50 lines of journald output for the superbot service, with structlog JSON parsed down to timestamp, level, and event
+  2. Nicole types "logs superbot error last 1h" and sees only journald lines matching "error" from the last hour
+  3. Nicole types "prefect logs [run-id]" and sees the log output for that specific Prefect flow run
+  4. Log output longer than Slack's message limit is truncated with a line count indicator (e.g., "showing 20 of 150 lines") and secret-like patterns are scrubbed before posting
+**Plans**: TBD
+
+### Phase 20: Health Dashboard
+**Goal**: The team can see a snapshot of bot health at a glance -- uptime, queue depth, error rate, memory usage, and version -- via a fast-path command
+**Depends on**: Phase 19
+**Requirements**: HLTH-01
+**Success Criteria** (what must be TRUE):
+  1. Nicole types "bot health" and sees a formatted dashboard with uptime, queue depth, recent error count, memory usage, current git version, and last restart time
+  2. The health dashboard responds in under 3 seconds as a fast-path command (no agent session)
+  3. The error count reflects actual journald errors in the last 24 hours, not a static counter
+**Plans**: TBD
+
+### Phase 21: Pipeline Status
+**Goal**: The team can see a summary of Prefect pipeline activity via a fast-path command -- how many flows completed, failed, or are running in the last 24 hours
+**Depends on**: Phase 19
+**Requirements**: HLTH-02
+**Success Criteria** (what must be TRUE):
+  1. Nicole types "pipeline status" and sees a compact summary of Prefect flow runs in the last 24 hours, grouped by status (completed, failed, running)
+  2. The summary includes flow names and timestamps, not just counts, so Nicole can identify which specific runs succeeded or failed
+  3. The pipeline status responds in under 5 seconds as a fast-path command (no agent session)
+**Plans**: TBD
+
 ## Progress
 
 **Execution Order:**
-Phases execute in order: 1 -> 2 -> 3 -> 4 -> v1.1 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10 -> 11 -> 12 -> 13 -> 14 -> 15 -> 16
+Phases execute in order: 1 -> 2 -> 3 -> 4 -> v1.1 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10 -> 11 -> 12 -> 13 -> 14 -> 15 -> 16 -> 17 -> 18 -> 19 -> 20 -> 21
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -338,10 +402,15 @@ Phases execute in order: 1 -> 2 -> 3 -> 4 -> v1.1 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 7. Mutation Tools | v1.2 | 2/2 | Complete | 2026-03-23 |
 | 8. Response Timing | v1.3 | 1/1 | Complete | 2026-03-24 |
 | 9. Git Activity Logging | v1.4 | 1/1 | Complete | 2026-03-24 |
-| 10. Digest Changelog | v1.4 | Complete    | 2026-03-24 | 2026-03-24 |
+| 10. Digest Changelog | v1.4 | 1/1 | Complete | 2026-03-24 |
 | 11. Fast-Path Crawl and Status | v1.5 | 1/1 | Complete | 2026-03-24 |
 | 12. Background Tasks and Batch Crawl | v1.5 | 1/1 | Complete | 2026-03-24 |
 | 13. Error UX | v1.5 | 1/1 | Complete | 2026-03-24 |
-| 14. Progress Heartbeat | v1.6 | Complete    | 2026-03-25 | 2026-03-24 |
-| 15. Deploy Script | 1/1 | Complete    | 2026-03-25 | - |
-| 16. Live Verification | 1/1 | Complete    | 2026-03-25 | - |
+| 14. Progress Heartbeat | v1.6 | 1/1 | Complete | 2026-03-24 |
+| 15. Deploy Script | v1.7 | 1/1 | Complete | 2026-03-25 |
+| 16. Live Verification | v1.7 | 1/1 | Complete | 2026-03-25 |
+| 17. Deploy Foundation | v1.8 | 0/TBD | Not started | - |
+| 18. Rollback | v1.8 | 0/TBD | Not started | - |
+| 19. Log Access | v1.8 | 0/TBD | Not started | - |
+| 20. Health Dashboard | v1.8 | 0/TBD | Not started | - |
+| 21. Pipeline Status | v1.8 | 0/TBD | Not started | - |

@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-03-25)
 
 **Core value:** Nicole can ask the bot to do anything on mic_transformer through Slack and it just does it -- writes code, runs scripts, debugs issues, deploys -- with full autonomy and persistent awareness.
-**Current focus:** Milestone v1.8: Production Ops
+**Current focus:** Milestone v1.8: Production Ops -- Phase 17 (Deploy Foundation)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 17 of 21 (Deploy Foundation)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-03-25 - Completed quick task 2: create way to deploy super bot production via prefect
+Status: Ready to plan
+Last activity: 2026-03-25 - Roadmap created for v1.8 (Phases 17-21)
 
 ## Performance Metrics
 
@@ -33,6 +33,10 @@ Last activity: 2026-03-25 - Completed quick task 2: create way to deploy super b
 - v1.6: Heartbeat timer 60s first tick then 180s intervals
 - v1.7: Deploy script before live verification -- must deploy before you can verify
 - v1.7: Reusable deploy script (no hardcoded versions) so future milestones use the same script
+- v1.8: All ops commands implemented as fast-path handlers (no agent pipeline)
+- v1.8: No new Python dependencies -- asyncio subprocess, httpx, resource module only
+- v1.8: Self-deploy uses deploy-state file for post-restart confirmation
+- v1.8: VRFY-01-04 folded into Phase 17 (verified during deploy workflow)
 
 ### Pending Todos
 
@@ -40,7 +44,8 @@ None yet.
 
 ### Blockers/Concerns
 
-None.
+- Verify sudoers on VM: bot user needs passwordless systemctl/journalctl access
+- Verify mic_transformer service name: STACK.md shows `service: None` -- confirm before Phase 17
 
 ### Quick Tasks Completed
 
@@ -52,5 +57,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-25
-Stopped at: Completed quick task 2 -- Prefect deploy pipeline
+Stopped at: Roadmap created for v1.8 Production Ops (Phases 17-21)
 Resume file: None
