@@ -16,7 +16,7 @@ from datetime import date
 
 import structlog
 
-from bot import prefect_api, queue_manager, background_monitor, task_state
+from bot import memory_store, prefect_api, queue_manager, background_monitor, task_state
 from bot.deploy_state import (
     REPO_CONFIG,
     get_deploy_preview,
@@ -79,6 +79,147 @@ async def _run_script(script_path: str, args: list[str], cwd: str = None) -> str
         raise RuntimeError(f"Script failed (exit {proc.returncode}): {err[:500]}")
 
     return stdout.decode().strip()
+
+
+# ---------------------------------------------------------------------------
+# Memory commands (v1.9) -- placed before deploy commands to avoid collisions
+# ---------------------------------------------------------------------------
+
+_REMEMBER_RE = re.compile(r"^\s*remember\b\s+(.+)", re.IGNORECASE | re.DOTALL)
+_RECALL_RE = re.compile(
+    r"^\s*(?:recall|what\s+do\s+you\s+know\s+about|what\s+do\s+you\s+remember\s+about)\b\s+(.+)",
+    re.IGNORECASE | re.DOTALL,
+)
+_FORGET_RE = re.compile(r"^\s*forget\b\s+(.+)", re.IGNORECASE | re.DOTALL)
+_LIST_MEMORIES_RE = re.compile(
+    r"^\s*list\s+memories(?:\s+(rules?|facts?|history|preferences?))?",
+    re.IGNORECASE,
+)
+
+# Category normalization for list command filters
+_CATEGORY_NORMALIZE = {
+    "rules": "rule",
+    "facts": "fact",
+    "preferences": "preference",
+}
+
+
+async def _handle_remember(text: str, **kwargs) -> str:
+    """Store a memory with auto-categorization."""
+    match = _REMEMBER_RE.search(text)
+    if not match:
+        return "Usage: `remember [text to remember]`"
+
+    content = match.group(1).strip()
+    category = memory_store.categorize(content)
+
+    ctx = kwargs.get("slack_context", {})
+    source_user = ctx.get("user_id", "unknown")
+    source_channel = ctx.get("channel", "")
+
+    try:
+        row_id = await memory_store.store(content, category, source_user, source_channel)
+        if row_id is None:
+            return "Failed to store memory. The memory system may be unavailable."
+        display = content[:100] + ("..." if len(content) > 100 else "")
+        return f"Remembered as *{category}*: _{display}_"
+    except Exception:
+        return "Failed to store memory. The memory system may be unavailable."
+
+
+async def _handle_recall(text: str, **kwargs) -> str:
+    """Search memories using FTS5 ranked search."""
+    match = _RECALL_RE.search(text)
+    if not match:
+        return "Usage: `recall [search query]`"
+
+    query = match.group(1).strip()
+    results = await memory_store.search(query, limit=10)
+
+    if not results:
+        return f"No memories found matching '{query}'."
+
+    lines = [f"Found {len(results)} memories matching \"{query}\":"]
+    for i, mem in enumerate(results, 1):
+        created = mem.get("created_at", "unknown")
+        user = mem.get("source_user", "unknown")
+        cat = mem.get("category", "?")
+        content = mem["content"]
+        mid = mem["id"]
+        lines.append(f"{i}. [{cat}] {content} -- stored by <@{user}> on {created} (id: {mid})")
+
+    return "\n".join(lines)
+
+
+async def _handle_forget(text: str, **kwargs) -> str:
+    """Delete a memory by ID or search query."""
+    match = _FORGET_RE.search(text)
+    if not match:
+        return "Usage: `forget [id or search query]`"
+
+    query = match.group(1).strip()
+
+    # Check if query is a numeric ID for direct delete
+    if query.isdigit():
+        mem = await memory_store.get_by_id(int(query))
+        if mem and mem.get("active", 0):
+            await memory_store.deactivate(int(query))
+            display = mem["content"][:80] + ("..." if len(mem["content"]) > 80 else "")
+            return f"Forgot memory #{query}: _{display}_"
+        return f"No active memory found with id {query}."
+
+    # Search for matching memories
+    results = await memory_store.search(query, limit=5)
+
+    if not results:
+        return f"No memories found matching '{query}'."
+
+    if len(results) == 1:
+        mem = results[0]
+        await memory_store.deactivate(mem["id"])
+        display = mem["content"][:80] + ("..." if len(mem["content"]) > 80 else "")
+        return f"Forgot: _{display}_"
+
+    # Multiple matches -- ask user to be specific
+    lines = ["Multiple matches found. Use `forget {id}` to remove a specific one:"]
+    for i, mem in enumerate(results, 1):
+        display = mem["content"][:80] + ("..." if len(mem["content"]) > 80 else "")
+        lines.append(f"{i}. _{display}_ (id: {mem['id']})")
+
+    return "\n".join(lines)
+
+
+async def _handle_list_memories(text: str, **kwargs) -> str:
+    """List all memories, optionally filtered by category."""
+    match = _LIST_MEMORIES_RE.search(text)
+    category_filter = None
+
+    if match and match.group(1):
+        raw = match.group(1).strip().lower()
+        category_filter = _CATEGORY_NORMALIZE.get(raw, raw)
+
+    memories = await memory_store.list_all(category=category_filter, limit=50)
+
+    if not memories:
+        if category_filter:
+            return f"No memories in category '{category_filter}'. Use `remember [text]` to add one."
+        return "No memories stored yet. Use `remember [text]` to add one."
+
+    # Group by category
+    grouped: dict[str, list[dict]] = {}
+    for mem in memories:
+        cat = mem.get("category", "uncategorized")
+        grouped.setdefault(cat, []).append(mem)
+
+    lines = []
+    for cat in sorted(grouped.keys()):
+        items = grouped[cat]
+        lines.append(f"*{cat.title()}* ({len(items)})")
+        for mem in items:
+            lines.append(f"- {mem['content']} (id: {mem['id']})")
+        lines.append("")  # blank line between categories
+
+    return "\n".join(lines).rstrip()
 
 
 # ---------------------------------------------------------------------------
@@ -506,12 +647,20 @@ async def _handle_bot_status(text: str, **kwargs) -> str:
 # - Crawl BEFORE eyemed status (so "crawl eyemed DME" doesn't match status regex)
 # - Bot status last (specific phrases won't collide with other commands)
 FAST_COMMANDS = [
+    # Memory commands (v1.9) -- must be first to avoid regex collisions
+    (_REMEMBER_RE, _handle_remember),
+    (_RECALL_RE, _handle_recall),
+    (_FORGET_RE, _handle_forget),
+    (_LIST_MEMORIES_RE, _handle_list_memories),
+    # Deploy commands
     (_DEPLOY_STATUS_RE, _handle_deploy_status),
     (_DEPLOY_PREVIEW_RE, _handle_deploy_preview),
     (_DEPLOY_GUARD_RE, _handle_deploy_guard),
+    # Crawl commands
     (_BATCH_CRAWL_RE, _handle_batch_crawl),
     (_EYEMED_CRAWL_RE, _handle_eyemed_crawl),
     (_EYEMED_STATUS_RE, _handle_eyemed_status),
+    # Bot status
     (_BOT_STATUS_RE, _handle_bot_status),
 ]
 
