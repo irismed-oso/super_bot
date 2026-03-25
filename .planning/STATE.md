@@ -5,21 +5,21 @@
 See: .planning/PROJECT.md (updated 2026-03-25)
 
 **Core value:** Nicole can ask the bot to do anything on mic_transformer through Slack and it just does it -- writes code, runs scripts, debugs issues, deploys -- with full autonomy and persistent awareness.
-**Current focus:** Phase 18: Rollback (v1.8)
+**Current focus:** Phase 19: Log Access (v1.4)
 
 ## Current Position
 
-Phase: 18-rollback
+Phase: 19-log-access
 Plan: 01 of 01 complete
-Status: Phase 18 complete
-Last activity: 2026-03-25 - Completed 18-01: Rollback with auto-roll-forward
+Status: Phase 19 complete
+Last activity: 2026-03-25 - Completed 19-01: Log access with journald/Prefect retrieval
 
-Progress: [==================..] 93% (phases 1-21 scoped, 16 complete; phases 22-24, 18 complete)
+Progress: [==================..] 95% (phases 1-21 scoped, 17 complete; phases 22-24, 19 complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 33
+- Total plans completed: 34
 - Average duration: --
 - Total execution time: --
 
@@ -41,6 +41,9 @@ Progress: [==================..] 93% (phases 1-21 scoped, 16 complete; phases 22
 - v1.9: Lazy Anthropic client init with try/except ImportError for graceful degradation
 - v1.9: Substring-based dedup for memory extraction (bidirectional containment check)
 - v1.9: claude-sonnet-4-20250514 for extraction (fast, cheap, sufficient)
+- v1.4: CLI entry point over MCP tool for log access (agent has bash, simpler wiring)
+- v1.4: Truncation from beginning keeps most recent lines, 2800 char limit for Slack headroom
+- v1.4: Conservative secret scrubbing (known patterns only, not aggressive heuristics)
 - v1.8: Rollback reuses Prefect deploy pipeline with target SHA as branch parameter
 - v1.8: Auto-roll-forward on any rollback failure (health check, Prefect failure, timeout)
 - v1.8: Health check: systemctl + journal scan for services; Prefect COMPLETED suffices for service-less repos
@@ -67,5 +70,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-25
-Stopped at: Completed quick task 4 (strip fast-path to memory + guards)
+Stopped at: Completed 19-01-PLAN.md (log access)
 Resume file: None

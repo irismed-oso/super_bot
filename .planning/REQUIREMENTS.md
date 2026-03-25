@@ -159,10 +159,10 @@ Requirements for Production Ops milestone.
 
 ### Logs (LOGS)
 
-- [ ] **LOGS-01**: User can tail last N lines of journald logs for any service via Slack
-- [ ] **LOGS-02**: User can filter journald logs by keyword or time range
-- [ ] **LOGS-03**: User can view Prefect flow run logs by run ID via fast-path command
-- [ ] **LOGS-04**: Log output is truncated and parsed (structlog JSON stripped to timestamp/level/event) to fit Slack message limits
+- [x] **LOGS-01**: User can tail last N lines of journald logs for any service via Slack
+- [x] **LOGS-02**: User can filter journald logs by keyword or time range
+- [x] **LOGS-03**: User can view Prefect flow run logs by run ID via fast-path command
+- [x] **LOGS-04**: Log output is truncated and parsed (structlog JSON stripped to timestamp/level/event) to fit Slack message limits
 
 ### Health & Monitoring (HLTH)
 
@@ -384,10 +384,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SDPL-05 | Phase 17 | Complete |
 | RLBK-01 | Phase 18 | Complete |
 | RLBK-02 | Phase 18 | Complete |
-| LOGS-01 | Phase 19 | Pending |
-| LOGS-02 | Phase 19 | Pending |
-| LOGS-03 | Phase 19 | Pending |
-| LOGS-04 | Phase 19 | Pending |
+| LOGS-01 | Phase 19 | Complete |
+| LOGS-02 | Phase 19 | Complete |
+| LOGS-03 | Phase 19 | Complete |
+| LOGS-04 | Phase 19 | Complete |
 | HLTH-01 | Phase 20 | Pending |
 | HLTH-02 | Phase 21 | Pending |
 | STOR-01 | Phase 22 | Complete |
