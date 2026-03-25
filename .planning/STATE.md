@@ -9,17 +9,17 @@ See: .planning/PROJECT.md (updated 2026-03-25)
 
 ## Current Position
 
-Phase: 17-deploy-foundation
-Plan: 02 of 03 complete
-Status: Executing phase 17
-Last activity: 2026-03-25 - Completed 17-02: deploy execution logic and wiring
+Phase: 22-sqlite-foundation-and-memory-commands
+Plan: 01 of 02 complete
+Status: Executing phase 22
+Last activity: 2026-03-25 - Completed 22-01: SQLite foundation and memory store
 
-Progress: [==================..] 88% (phases 1-21 scoped, 16 complete)
+Progress: [==================..] 88% (phases 1-21 scoped, 16 complete; phase 22 in progress)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 28
+- Total plans completed: 29
 - Average duration: --
 - Total execution time: --
 
@@ -27,6 +27,8 @@ Progress: [==================..] 88% (phases 1-21 scoped, 16 complete)
 
 ### Decisions
 
+- v1.9: FTS5 MATCH with LIKE fallback for resilient search on malformed queries
+- v1.9: porter unicode61 tokenizer for stemmed multilingual FTS
 - v1.9: SQLite + FTS5 over vector DB (2 GB RAM constraint, sub-1K memory scale)
 - v1.9: Single aiosqlite connection with WAL mode (prevents database locked errors)
 - v1.9: Memory commands as fast-path (before existing patterns to avoid regex collisions)
@@ -55,5 +57,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-25
-Stopped at: Completed 17-02-PLAN.md (deploy execution logic and wiring)
+Stopped at: Completed 22-01-PLAN.md (SQLite foundation and memory store)
 Resume file: None

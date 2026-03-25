@@ -175,10 +175,10 @@ Requirements for Persistent Memory milestone.
 
 ### Storage
 
-- [ ] **STOR-01**: Bot initializes SQLite database with FTS5 at startup with WAL mode and single shared connection
-- [ ] **STOR-02**: Memories are stored with category (rule/fact/history/preference), content, source user, source channel, and timestamp
-- [ ] **STOR-03**: Memory search uses FTS5 BM25 ranking for relevance-ordered results
-- [ ] **STOR-04**: Database file lives in a persistent path on the VM (survives restarts)
+- [x] **STOR-01**: Bot initializes SQLite database with FTS5 at startup with WAL mode and single shared connection
+- [x] **STOR-02**: Memories are stored with category (rule/fact/history/preference), content, source user, source channel, and timestamp
+- [x] **STOR-03**: Memory search uses FTS5 BM25 ranking for relevance-ordered results
+- [x] **STOR-04**: Database file lives in a persistent path on the VM (survives restarts)
 
 ### Commands
 
@@ -390,10 +390,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | LOGS-04 | Phase 19 | Pending |
 | HLTH-01 | Phase 20 | Pending |
 | HLTH-02 | Phase 21 | Pending |
-| STOR-01 | Phase 22 | Pending |
-| STOR-02 | Phase 22 | Pending |
-| STOR-03 | Phase 22 | Pending |
-| STOR-04 | Phase 22 | Pending |
+| STOR-01 | Phase 22 | Complete |
+| STOR-02 | Phase 22 | Complete |
+| STOR-03 | Phase 22 | Complete |
+| STOR-04 | Phase 22 | Complete |
 | CMD-01 | Phase 22 | Pending |
 | CMD-02 | Phase 22 | Pending |
 | CMD-03 | Phase 22 | Pending |
