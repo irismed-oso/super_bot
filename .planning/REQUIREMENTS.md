@@ -124,6 +124,22 @@ Requirements for Digest Changelog milestone.
 - [x] **DGCL-02**: Changelog entries are grouped by repository
 - [x] **DGCL-03**: Digest scans git log at build time to catch activity missed by session logging
 
+## v1.7 Requirements
+
+Requirements for Deploy & Verify milestone.
+
+### Deployment
+
+- [ ] **DPLY-01**: Deploy script pushes code, installs deps, restarts service, verifies health
+- [ ] **DPLY-02**: Deploy script is reusable for future milestones (not one-shot)
+
+### Verification
+
+- [ ] **VRFY-01**: Digest changelog verified working on VM (git activity captured, digest posts changelog)
+- [ ] **VRFY-02**: Fast-path commands verified on VM (single crawl, batch crawl, status query)
+- [ ] **VRFY-03**: Background task monitoring verified on VM (progress polling, final summary)
+- [ ] **VRFY-04**: Progress heartbeat verified on VM (timer fires, completion edit, clean stop)
+
 ## Future Requirements
 
 ### Crawler
