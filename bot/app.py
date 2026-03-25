@@ -7,7 +7,7 @@ load_dotenv("/home/bot/.env")
 
 from slack_bolt.app.async_app import AsyncApp
 from slack_bolt.adapter.socket_mode.async_handler import AsyncSocketModeHandler
-from bot import handlers, queue_manager, daily_digest, db
+from bot import handlers, queue_manager, daily_digest, db, memory_store
 import config
 import structlog
 
@@ -53,6 +53,9 @@ async def _check_deploy_recovery(client) -> None:
 async def main() -> None:
     # Initialize session database (gracefully degrades if unavailable)
     await db.init()
+    # Initialize memory store (gracefully degrades if unavailable)
+    os.makedirs(os.path.dirname(config.MEMORY_DB_PATH), exist_ok=True)
+    await memory_store.init(db_path=config.MEMORY_DB_PATH)
     # Start the task queue consumer before accepting Slack events
     asyncio.create_task(queue_manager.run_queue_loop())
     # Start daily digest scheduler (posts activity summary each morning)

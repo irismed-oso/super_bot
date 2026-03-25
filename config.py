@@ -30,3 +30,6 @@ ADDITIONAL_REPOS: list[str] = [
     for r in os.environ.get("ADDITIONAL_REPOS", "").split(",")
     if r.strip()
 ]
+
+# v1.9: Memory database path
+MEMORY_DB_PATH: str = os.environ.get("MEMORY_DB_PATH", "/home/bot/data/superbot_memory.db")
