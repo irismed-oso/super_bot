@@ -140,6 +140,35 @@ Requirements for Deploy & Verify milestone.
 - [ ] **VRFY-03**: Background task monitoring verified on VM (progress polling, final summary)
 - [ ] **VRFY-04**: Progress heartbeat verified on VM (timer fires, completion edit, clean stop)
 
+## v1.8 Requirements
+
+Requirements for Production Ops milestone.
+
+### Slack Deploy (SDPL)
+
+- [ ] **SDPL-01**: User can deploy super_bot from Slack with self-restart handling and post-restart "I'm back" confirmation
+- [ ] **SDPL-02**: User can deploy mic_transformer from Slack with git pull, deps install, and health check
+- [ ] **SDPL-03**: User can check deploy status showing current commit, branch, last deploy time, and pending changes count
+- [ ] **SDPL-04**: User can preview what would be deployed (commits between current and latest)
+- [ ] **SDPL-05**: Deploy blocks with a warning if an agent task is currently running (force override available)
+
+### Rollback (RLBK)
+
+- [ ] **RLBK-01**: User can rollback a repo to its previous commit and redeploy from Slack
+- [ ] **RLBK-02**: If rollback fails health check, system automatically rolls forward to the pre-rollback state
+
+### Logs (LOGS)
+
+- [ ] **LOGS-01**: User can tail last N lines of journald logs for any service via Slack
+- [ ] **LOGS-02**: User can filter journald logs by keyword or time range
+- [ ] **LOGS-03**: User can view Prefect flow run logs by run ID via fast-path command
+- [ ] **LOGS-04**: Log output is truncated and parsed (structlog JSON stripped to timestamp/level/event) to fit Slack message limits
+
+### Health & Monitoring (HLTH)
+
+- [ ] **HLTH-01**: User can view bot health dashboard showing uptime, queue depth, error count, memory, version, and last restart
+- [ ] **HLTH-02**: User can view pipeline status fast-path summary (completed/failed/running flow runs in last 24h)
+
 ## Future Requirements
 
 ### Crawler
@@ -196,6 +225,11 @@ Requirements for Deploy & Verify milestone.
 | Crawler tools (v1.2) | Requires Chrome/Chromium on VM — deferred until confirmed available |
 | Flask API bridge | Direct stdio MCP is simpler and sufficient |
 | Token-by-token streaming to Slack | Rate limits will get the bot throttled/banned |
+| Deploy irismed-service / oso-fe-gsnap | Deploy paths undefined — different infrastructure from VM |
+| Deploy approval gates | Full autonomy by design — channel visibility is the safety net |
+| Blue-green / canary deploys | Over-engineering for single-VM internal tool |
+| Continuous log streaming | Slack rate limits make streaming an anti-feature — use tail snapshots |
+| Deploy history database | Git log IS the deploy history — no separate DB needed |
 
 ## Traceability
 
@@ -299,9 +333,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 - v1.4 requirements: 6 total (all complete)
 - v1.5 requirements: 11 total (all complete)
 - v1.6 requirements: 4 total (all complete)
-- v1.7 requirements: 6 total (all pending)
-- Mapped to phases: 6/6
+- v1.7 requirements: 6 total (4 pending, 2 complete)
+- v1.8 requirements: 14 total (all pending)
+- Mapped to phases: TBD (v1.8 roadmap pending)
 
 ---
 *Requirements defined: 2026-03-18*
-*Last updated: 2026-03-25 after v1.7 roadmap created*
+*Last updated: 2026-03-25 after v1.8 requirements defined*
