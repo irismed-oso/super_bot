@@ -423,7 +423,10 @@ Plans:
   2. All memories categorized as "rule" are always included in recall regardless of query relevance -- rules are non-negotiable institutional knowledge
   3. When the bot uses a recalled memory to inform its response, it includes a brief citation (e.g., "Remembered: always dry_run first") so the team can see which memories influenced the output
   4. Fast-path commands (crawl, status, remember, recall, etc.) do not trigger auto-recall -- there is no latency regression on commands that bypass the agent pipeline
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 23-01-PLAN.md — Auto-recall module and prompt injection wiring
 
 ### Phase 24: Post-Session Thread Scanning
 **Goal**: The memory store grows organically from every bot conversation -- the team does not need to manually "remember" most knowledge because the bot extracts it automatically from threads
