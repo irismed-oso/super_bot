@@ -84,7 +84,7 @@ def register(app: AsyncApp) -> None:
         db_session_fk = await db.upsert_session(channel, thread_ts, user_id)
         await db.log_message(db_session_fk, "user_input", clean_text, slack_ts=event["ts"])
 
-        # Fast-path commands (deploy status, preview, guard, eyemed status/crawl)
+        # Fast-path commands (memory, deploy guard, rollback guard)
         slack_context = {"client": client, "channel": channel, "thread_ts": thread_ts, "user_id": user_id}
         fast_result = await try_fast_command(clean_text, slack_context=slack_context)
         if fast_result is not None:
