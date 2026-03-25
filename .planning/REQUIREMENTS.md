@@ -182,11 +182,11 @@ Requirements for Persistent Memory milestone.
 
 ### Commands
 
-- [ ] **CMD-01**: User can store a memory via "remember [text]" and bot auto-categorizes it
-- [ ] **CMD-02**: User can search memories via "recall [query]" or "what do you know about [query]"
-- [ ] **CMD-03**: User can delete a memory via "forget [query]" with confirmation when multiple matches
-- [ ] **CMD-04**: User can list all memories via "list memories" with optional category filter
-- [ ] **CMD-05**: Memory commands are fast-path (no agent session) and placed before existing patterns to avoid regex collisions
+- [x] **CMD-01**: User can store a memory via "remember [text]" and bot auto-categorizes it
+- [x] **CMD-02**: User can search memories via "recall [query]" or "what do you know about [query]"
+- [x] **CMD-03**: User can delete a memory via "forget [query]" with confirmation when multiple matches
+- [x] **CMD-04**: User can list all memories via "list memories" with optional category filter
+- [x] **CMD-05**: Memory commands are fast-path (no agent session) and placed before existing patterns to avoid regex collisions
 
 ### Auto-Recall
 
@@ -394,11 +394,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | STOR-02 | Phase 22 | Complete |
 | STOR-03 | Phase 22 | Complete |
 | STOR-04 | Phase 22 | Complete |
-| CMD-01 | Phase 22 | Pending |
-| CMD-02 | Phase 22 | Pending |
-| CMD-03 | Phase 22 | Pending |
-| CMD-04 | Phase 22 | Pending |
-| CMD-05 | Phase 22 | Pending |
+| CMD-01 | Phase 22 | Complete |
+| CMD-02 | Phase 22 | Complete |
+| CMD-03 | Phase 22 | Complete |
+| CMD-04 | Phase 22 | Complete |
+| CMD-05 | Phase 22 | Complete |
 | RECALL-01 | Phase 23 | Pending |
 | RECALL-02 | Phase 23 | Pending |
 | RECALL-03 | Phase 23 | Pending |

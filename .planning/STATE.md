@@ -10,16 +10,16 @@ See: .planning/PROJECT.md (updated 2026-03-25)
 ## Current Position
 
 Phase: 22-sqlite-foundation-and-memory-commands
-Plan: 01 of 02 complete
-Status: Executing phase 22
-Last activity: 2026-03-25 - Completed 22-01: SQLite foundation and memory store
+Plan: 02 of 02 complete
+Status: Phase 22 complete
+Last activity: 2026-03-25 - Completed 22-02: Memory commands
 
-Progress: [==================..] 88% (phases 1-21 scoped, 16 complete; phase 22 in progress)
+Progress: [==================..] 88% (phases 1-21 scoped, 16 complete; phase 22 complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 29
+- Total plans completed: 30
 - Average duration: --
 - Total execution time: --
 
@@ -32,6 +32,7 @@ Progress: [==================..] 88% (phases 1-21 scoped, 16 complete; phase 22 
 - v1.9: SQLite + FTS5 over vector DB (2 GB RAM constraint, sub-1K memory scale)
 - v1.9: Single aiosqlite connection with WAL mode (prevents database locked errors)
 - v1.9: Memory commands as fast-path (before existing patterns to avoid regex collisions)
+- v1.9: Forget command uses search-then-confirm for multiple matches, direct delete for single/numeric ID
 - v1.9: Auto-recall capped at 5-8 memories with rules always included
 - v1.9: Thread scanning as asyncio.create_task (does not block queue)
 - v1.9: Conservative extraction only (explicit directives, not speculative statements)
@@ -57,5 +58,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-25
-Stopped at: Completed 22-01-PLAN.md (SQLite foundation and memory store)
+Stopped at: Completed 22-02-PLAN.md (Memory commands)
 Resume file: None
