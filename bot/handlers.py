@@ -9,6 +9,7 @@ from bot.queue_manager import QueuedTask, enqueue, queue_depth
 from bot.deploy_state import resolve_repo
 from bot.deploy import handle_deploy
 from bot.fast_commands import try_fast_command
+from bot import memory_recall
 from config import BOT_USER_ID
 
 _DEPLOY_CMD_RE = re.compile(
@@ -33,11 +34,15 @@ def _build_prompt(
     worktree_path: str | None,
     channel: str,
     thread_ts: str,
+    recall_block: str | None = None,
 ) -> str:
     """Construct the agent prompt with operational context injected."""
     ts_nodot = thread_ts.replace(".", "")
     slack_link = f"https://slack.com/archives/{channel}/p{ts_nodot}"
-    lines = [user_text, "", _AGENT_RULES]
+    lines = [user_text]
+    if recall_block:
+        lines += ["", recall_block]
+    lines += ["", _AGENT_RULES]
     if worktree_path:
         lines += [
             "",
@@ -120,7 +125,13 @@ def register(app: AsyncApp) -> None:
                     text=formatter.format_error("Failed to create worktree", str(exc)),
                 )
                 return
-        prompt = _build_prompt(clean_text, worktree_path_val, channel, thread_ts)
+        # Auto-recall: inject relevant memories into agent prompt
+        recall_block = await memory_recall.build_recall_block(clean_text)
+        if recall_block:
+            mem_count = sum(1 for ln in recall_block.splitlines() if ln.startswith("- ["))
+            log.info("memory_recall.injected", memories_count=mem_count, prompt_len=len(recall_block))
+
+        prompt = _build_prompt(clean_text, worktree_path_val, channel, thread_ts, recall_block=recall_block)
         progress_msg = None
         _inner_cb = None
         heartbeat = Heartbeat()
