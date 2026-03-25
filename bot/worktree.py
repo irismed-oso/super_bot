@@ -5,7 +5,7 @@ Code-change tasks run in isolated worktrees (../worktree-{thread_ts})
 so concurrent tasks don't conflict on the same branch. Q&A/read-only
 tasks run in the main repo with no worktree created.
 
-Worktrees persist until MR merge to support follow-up messages in the
+Worktrees persist until PR merge to support follow-up messages in the
 same Slack thread.
 """
 
@@ -79,12 +79,31 @@ def is_code_task(prompt: str) -> bool:
 
     Conservative: defaults to True (code task) when uncertain because
     worktrees are cheap. Returns False only for clearly read-only prompts.
+
+    Code-change keywords take precedence over read-only keywords to avoid
+    false negatives (e.g., "improve status check" should be a code task).
     """
+    # Strong signals for code changes - if present, it's definitely a code task
+    code_change_keywords = [
+        "improve", "fix", "change", "update", "add", "modify", "refactor",
+        "implement", "create", "delete", "remove", "write", "edit",
+        "make the code", "code change", "commit", "pull request", "pr",
+        "rewrite", "optimize", "enhance",
+    ]
+
     readonly_keywords = [
         "what", "why", "how", "explain", "describe", "show me", "list",
-        "find", "search", "read", "look at", "check", "tell me",
+        "find", "search", "read", "look at", "tell me",
     ]
+
     lower = prompt.lower()
+
+    # If any code-change keyword is present, it's a code task
+    if any(kw in lower for kw in code_change_keywords):
+        return True
+
+    # Only if no code keywords AND has readonly keywords, then it's readonly
+    # Note: removed "check" from readonly_keywords as it's ambiguous
     return not any(
         lower.startswith(kw) or f" {kw} " in lower
         for kw in readonly_keywords

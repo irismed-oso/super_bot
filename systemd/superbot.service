@@ -1,6 +1,6 @@
 [Unit]
 Description=SuperBot Slack Bridge
-Documentation=https://gitlab.com/irismed/super_bot
+Documentation=https://github.com/irismed-oso/super_bot
 After=network-online.target
 Wants=network-online.target
 

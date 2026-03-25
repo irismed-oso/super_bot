@@ -19,10 +19,7 @@ log = structlog.get_logger(__name__)
 
 _READ_TOOLS = {"Read", "Grep", "Glob", "WebSearch", "LS"}
 _WRITE_TOOLS = {"Edit", "Write", "MultiEdit"}
-PR_URL_RE = re.compile(
-    r"https://github\.com/[^\s>]+/pull/\d+"
-    r"|https://gitlab\.com/[^\s>]+/merge_requests/\d+"
-)
+PR_URL_RE = re.compile(r"https://github\.com/[^\s>]+/pull/\d+")
 
 
 async def post_started(
@@ -74,7 +71,7 @@ def make_on_message(client, channel: str, thread_ts: str, progress_msg: dict | N
         milestone = None
         if any(t in _WRITE_TOOLS for t in tools):
             milestone = "Making changes..."
-        elif "gh pr" in bash_cmd or "glab mr" in bash_cmd or "mr create" in bash_cmd:
+        elif "gh pr" in bash_cmd:
             milestone = "Creating PR..."
         elif "pytest" in bash_cmd:
             milestone = "Running tests..."
@@ -139,7 +136,7 @@ async def post_result(
     else:
         msg = _format_completion(result.get("result", "") or "", is_code_task)
 
-    # Surface PR/MR URL prominently if present
+    # Surface PR URL prominently if present
     pr_match = PR_URL_RE.search(result.get("result", "") or "")
     if pr_match:
         msg += f"\n\nPR: {pr_match.group(0)}"
