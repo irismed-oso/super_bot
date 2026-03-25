@@ -161,7 +161,7 @@ Requirements for Production Ops milestone.
 
 - [x] **LOGS-01**: User can tail last N lines of journald logs for any service via Slack
 - [x] **LOGS-02**: User can filter journald logs by keyword or time range
-- [x] **LOGS-03**: User can view Prefect flow run logs by run ID via fast-path command
+- [x] **LOGS-03**: User can view Prefect flow run logs by run ID or name via agent pipeline
 - [x] **LOGS-04**: Log output is truncated and parsed (structlog JSON stripped to timestamp/level/event) to fit Slack message limits
 
 ### Health & Monitoring (HLTH)
