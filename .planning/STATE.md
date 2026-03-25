@@ -5,19 +5,21 @@
 See: .planning/PROJECT.md (updated 2026-03-25)
 
 **Core value:** Nicole can ask the bot to do anything on mic_transformer through Slack and it just does it -- writes code, runs scripts, debugs issues, deploys -- with full autonomy and persistent awareness.
-**Current focus:** Milestone v1.9: Persistent Memory
+**Current focus:** Phase 22: SQLite Foundation and Memory Commands (v1.9)
 
 ## Current Position
 
 Phase: 17-deploy-foundation
-Plan: 01 of 03 complete
+Plan: 02 of 03 complete
 Status: Executing phase 17
-Last activity: 2026-03-25 - Completed 17-01: deploy foundation infrastructure
+Last activity: 2026-03-25 - Completed 17-02: deploy execution logic and wiring
+
+Progress: [==================..] 88% (phases 1-21 scoped, 16 complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 27
+- Total plans completed: 28
 - Average duration: --
 - Total execution time: --
 
@@ -25,20 +27,14 @@ Last activity: 2026-03-25 - Completed 17-01: deploy foundation infrastructure
 
 ### Decisions
 
-- v1.2: mic-transformer MCP server runs locally on VM as stdio subprocess
-- v1.2: Direct MCP wiring (not Flask bridge) -- simpler, standard pattern
-- v1.5: Fast-path single crawl (Phase 11) before batch/background (Phase 12)
-- v1.5: asyncio.create_task monitor in bot event loop, no agent queue involvement
-- v1.6: finish() edits progress message to show completion time; stop() silently cancels for error paths
-- v1.6: Heartbeat timer 60s first tick then 180s intervals
-- v1.7: Deploy script before live verification -- must deploy before you can verify
-- v1.7: Reusable deploy script (no hardcoded versions) so future milestones use the same script
-- v1.8: All ops commands implemented as fast-path handlers (no agent pipeline)
-- v1.8: No new Python dependencies -- asyncio subprocess, httpx, resource module only
-- v1.8: Self-deploy uses deploy-state file for post-restart confirmation
-- v1.8: VRFY-01-04 folded into Phase 17 (verified during deploy workflow)
-- v1.8: Recreated fast_commands.py with only deploy handlers after buggy version was removed
-- v1.8: Deploy guard returns None to fall through to agent pipeline for actual deploys
+- v1.9: SQLite + FTS5 over vector DB (2 GB RAM constraint, sub-1K memory scale)
+- v1.9: Single aiosqlite connection with WAL mode (prevents database locked errors)
+- v1.9: Memory commands as fast-path (before existing patterns to avoid regex collisions)
+- v1.9: Auto-recall capped at 5-8 memories with rules always included
+- v1.9: Thread scanning as asyncio.create_task (does not block queue)
+- v1.9: Conservative extraction only (explicit directives, not speculative statements)
+- v1.8: Deploy commands handled outside agent queue (super_bot dies, mic_transformer polls directly)
+- v1.8: Fast-path commands integrated into handlers.py _run_agent_real before agent queue dispatch
 
 ### Pending Todos
 
@@ -46,7 +42,7 @@ None yet.
 
 ### Blockers/Concerns
 
-None yet.
+- Phase 24 (Thread Scanning): Extraction prompt quality is the primary unknown -- no proven template exists; plan for shadow-mode validation before auto-storing
 
 ### Quick Tasks Completed
 
@@ -59,5 +55,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-25
-Stopped at: Completed 17-01-PLAN.md (deploy foundation infrastructure)
+Stopped at: Completed 17-02-PLAN.md (deploy execution logic and wiring)
 Resume file: None

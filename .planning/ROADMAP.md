@@ -33,6 +33,9 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 19: Log Access** - Tail and filter journald logs, view Prefect flow logs, with structlog parsing and Slack-safe truncation
 - [ ] **Phase 20: Health Dashboard** - Fast-path bot health overview showing uptime, queue depth, errors, memory, version, and last restart
 - [ ] **Phase 21: Pipeline Status** - Fast-path Prefect pipeline summary showing completed, failed, and running flow runs in the last 24 hours
+- [ ] **Phase 22: SQLite Foundation and Memory Commands** - SQLite database with FTS5 search, memory CRUD module, and fast-path remember/recall/forget/list commands
+- [ ] **Phase 23: Auto-Recall Injection** - Relevant memories automatically retrieved and injected into every agent session prompt with brief citation
+- [ ] **Phase 24: Post-Session Thread Scanning** - Automatic extraction of memorable information from completed threads with task history auto-capture
 
 ## Phase Details
 
@@ -389,10 +392,51 @@ Plans:
   3. The pipeline status responds in under 5 seconds as a fast-path command (no agent session)
 **Plans**: TBD
 
+---
+
+## v1.9: Persistent Memory
+
+**Milestone Goal:** The bot remembers rules, facts, history, and preferences across sessions using a local SQLite database, auto-recalls relevant memories during tasks, and automatically extracts knowledge from Slack threads.
+
+### Phase 22: SQLite Foundation and Memory Commands
+**Goal**: The team can explicitly store, search, and manage bot memories through Slack commands -- the database foundation is live and the bot has immediate utility as a shared knowledge store
+**Depends on**: Phase 21
+**Requirements**: STOR-01, STOR-02, STOR-03, STOR-04, CMD-01, CMD-02, CMD-03, CMD-04, CMD-05
+**Success Criteria** (what must be TRUE):
+  1. Nicole types "remember always run autopost with dry_run first" and the bot stores it as a rule, confirms storage with the assigned category, and the memory persists across bot restarts
+  2. Nicole types "recall autopost" and the bot returns relevant memories ranked by FTS5 BM25 relevance, showing content, category, who stored it, and when
+  3. Nicole types "forget dry_run" and if multiple memories match, the bot lists them with IDs and asks which to delete -- a single match is deleted with confirmation
+  4. Nicole types "list memories" and sees all stored memories grouped by category (rules, facts, history, preferences), with optional category filter ("list memories rules")
+  5. All memory commands respond in under 2 seconds as fast-path commands -- they never spawn an agent session and do not collide with existing fast-path patterns like "crawl" or "status"
+**Plans**: TBD
+
+### Phase 23: Auto-Recall Injection
+**Goal**: Every agent session is automatically enriched with relevant memories from the store -- the bot applies institutional knowledge without anyone having to re-explain rules or context
+**Depends on**: Phase 22
+**Requirements**: RECALL-01, RECALL-02, RECALL-03, RECALL-04
+**Success Criteria** (what must be TRUE):
+  1. When Nicole asks the bot to do a task, the agent session prompt includes up to 5-8 relevant memories retrieved from the store based on the user's message -- visible in the bot's behavior (e.g., it follows a stored rule without being told)
+  2. All memories categorized as "rule" are always included in recall regardless of query relevance -- rules are non-negotiable institutional knowledge
+  3. When the bot uses a recalled memory to inform its response, it includes a brief citation (e.g., "Remembered: always dry_run first") so the team can see which memories influenced the output
+  4. Fast-path commands (crawl, status, remember, recall, etc.) do not trigger auto-recall -- there is no latency regression on commands that bypass the agent pipeline
+**Plans**: TBD
+
+### Phase 24: Post-Session Thread Scanning
+**Goal**: The memory store grows organically from every bot conversation -- the team does not need to manually "remember" most knowledge because the bot extracts it automatically from threads
+**Depends on**: Phase 23
+**Requirements**: SCAN-01, SCAN-02, SCAN-03, SCAN-04, SCAN-05
+**Success Criteria** (what must be TRUE):
+  1. After an agent session completes, the bot automatically scans the thread and extracts memorable information (explicit directives, stated facts, corrections) via a lightweight Claude call -- without blocking the next queued task
+  2. The bot only extracts from human messages in the thread -- it never stores content from its own replies (preventing echo loops where the bot memorizes its own output)
+  3. Extraction is conservative: only explicit directives ("always do X", "never do Y", "the rule is Z") and stated facts are stored -- speculative statements, questions, and tentative language are skipped
+  4. After each agent session, a one-line task summary (what was asked, what was done) is automatically stored as task history -- the team can later recall what the bot worked on
+  5. Thread scanning runs as a fire-and-forget background task via asyncio -- completing in the background while the bot is already processing the next queued request
+**Plans**: TBD
+
 ## Progress
 
 **Execution Order:**
-Phases execute in order: 1 -> 2 -> 3 -> 4 -> v1.1 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10 -> 11 -> 12 -> 13 -> 14 -> 15 -> 16 -> 17 -> 18 -> 19 -> 20 -> 21
+Phases execute in order: 1 -> 2 -> 3 -> 4 -> v1.1 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10 -> 11 -> 12 -> 13 -> 14 -> 15 -> 16 -> 17 -> 18 -> 19 -> 20 -> 21 -> 22 -> 23 -> 24
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -413,8 +457,11 @@ Phases execute in order: 1 -> 2 -> 3 -> 4 -> v1.1 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 14. Progress Heartbeat | v1.6 | 1/1 | Complete | 2026-03-24 |
 | 15. Deploy Script | v1.7 | 1/1 | Complete | 2026-03-25 |
 | 16. Live Verification | v1.7 | 1/1 | Complete | 2026-03-25 |
-| 17. Deploy Foundation | 1/3 | In Progress|  | - |
+| 17. Deploy Foundation | 2/3 | In Progress|  | - |
 | 18. Rollback | v1.8 | 0/TBD | Not started | - |
 | 19. Log Access | v1.8 | 0/TBD | Not started | - |
 | 20. Health Dashboard | v1.8 | 0/TBD | Not started | - |
 | 21. Pipeline Status | v1.8 | 0/TBD | Not started | - |
+| 22. SQLite Foundation and Memory Commands | v1.9 | 0/TBD | Not started | - |
+| 23. Auto-Recall Injection | v1.9 | 0/TBD | Not started | - |
+| 24. Post-Session Thread Scanning | v1.9 | 0/TBD | Not started | - |

@@ -146,11 +146,11 @@ Requirements for Production Ops milestone.
 
 ### Slack Deploy (SDPL)
 
-- [ ] **SDPL-01**: User can deploy super_bot from Slack with self-restart handling and post-restart "I'm back" confirmation
-- [ ] **SDPL-02**: User can deploy mic_transformer from Slack with git pull, deps install, and health check
-- [x] **SDPL-03**: User can check deploy status showing current commit, branch, last deploy time, and pending changes count
-- [x] **SDPL-04**: User can preview what would be deployed (commits between current and latest)
-- [x] **SDPL-05**: Deploy blocks with a warning if an agent task is currently running (force override available)
+- [x] **SDPL-01**: User can deploy super_bot from Slack with self-restart handling and post-restart "I'm back" confirmation
+- [x] **SDPL-02**: User can deploy mic_transformer from Slack with git pull, deps install, and health check
+- [ ] **SDPL-03**: User can check deploy status showing current commit, branch, last deploy time, and pending changes count
+- [ ] **SDPL-04**: User can preview what would be deployed (commits between current and latest)
+- [ ] **SDPL-05**: Deploy blocks with a warning if an agent task is currently running (force override available)
 
 ### Rollback (RLBK)
 
@@ -377,8 +377,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | VRFY-02 | Phase 17 | Pending |
 | VRFY-03 | Phase 17 | Pending |
 | VRFY-04 | Phase 17 | Pending |
-| SDPL-01 | Phase 17 | Pending |
-| SDPL-02 | Phase 17 | Pending |
+| SDPL-01 | Phase 17 | Complete |
+| SDPL-02 | Phase 17 | Complete |
 | SDPL-03 | Phase 17 | Complete |
 | SDPL-04 | Phase 17 | Complete |
 | SDPL-05 | Phase 17 | Complete |
@@ -390,6 +390,24 @@ Which phases cover which requirements. Updated during roadmap creation.
 | LOGS-04 | Phase 19 | Pending |
 | HLTH-01 | Phase 20 | Pending |
 | HLTH-02 | Phase 21 | Pending |
+| STOR-01 | Phase 22 | Pending |
+| STOR-02 | Phase 22 | Pending |
+| STOR-03 | Phase 22 | Pending |
+| STOR-04 | Phase 22 | Pending |
+| CMD-01 | Phase 22 | Pending |
+| CMD-02 | Phase 22 | Pending |
+| CMD-03 | Phase 22 | Pending |
+| CMD-04 | Phase 22 | Pending |
+| CMD-05 | Phase 22 | Pending |
+| RECALL-01 | Phase 23 | Pending |
+| RECALL-02 | Phase 23 | Pending |
+| RECALL-03 | Phase 23 | Pending |
+| RECALL-04 | Phase 23 | Pending |
+| SCAN-01 | Phase 24 | Pending |
+| SCAN-02 | Phase 24 | Pending |
+| SCAN-03 | Phase 24 | Pending |
+| SCAN-04 | Phase 24 | Pending |
+| SCAN-05 | Phase 24 | Pending |
 
 **Coverage:**
 - v1.0 requirements: 32 total (all complete)
@@ -401,8 +419,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 - v1.6 requirements: 4 total (all complete)
 - v1.7 requirements: 6 total (2 complete, 4 moved to Phase 17)
 - v1.8 requirements: 14 total (all pending, mapped to Phases 17-21)
-- v1.9 requirements: 18 total (all pending, unmapped)
+- v1.9 requirements: 18 total (all pending, mapped to Phases 22-24)
 
 ---
 *Requirements defined: 2026-03-18*
-*Last updated: 2026-03-25 after v1.9 requirements defined*
+*Last updated: 2026-03-25 after v1.9 roadmap created*
