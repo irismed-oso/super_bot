@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-03-25)
 
 **Core value:** Nicole can ask the bot to do anything on mic_transformer through Slack and it just does it -- writes code, runs scripts, debugs issues, deploys -- with full autonomy and persistent awareness.
-**Current focus:** Milestone v1.8: Production Ops -- Phase 17 (Deploy Foundation)
+**Current focus:** Milestone v1.9: Persistent Memory
 
 ## Current Position
 
-Phase: 17 of 21 (Deploy Foundation)
+Phase: Not started (defining requirements)
 Plan: —
-Status: Ready to plan
-Last activity: 2026-03-25 - Roadmap created for v1.8 (Phases 17-21)
+Status: Defining requirements
+Last activity: 2026-03-25 — Milestone v1.9 started
 
 ## Performance Metrics
 
@@ -44,8 +44,7 @@ None yet.
 
 ### Blockers/Concerns
 
-- Verify sudoers on VM: bot user needs passwordless systemctl/journalctl access
-- Verify mic_transformer service name: STACK.md shows `service: None` -- confirm before Phase 17
+None yet.
 
 ### Quick Tasks Completed
 
@@ -57,5 +56,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-25
-Stopped at: Roadmap created for v1.8 Production Ops (Phases 17-21)
+Stopped at: Milestone v1.9 started — defining requirements
 Resume file: None

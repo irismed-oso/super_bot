@@ -48,25 +48,24 @@ Nicole can ask the bot to do anything on mic_transformer through Slack and it ju
 
 ### Active
 
-- [ ] Deploy from Slack for all 4 IrisMed repos (push, pull, deps, restart, verify)
-- [ ] Git-based rollback and redeploy from Slack
-- [ ] Deploy status: running version, last deploy time, changes since last deploy
-- [ ] Log access via Slack: journald tail + filtered, Prefect flow logs, app logs
-- [ ] Bot health dashboard: uptime, errors, current activity (fast-path)
-- [ ] Pipeline status: fast-path summary + agent deep investigation
-- [ ] Live smoke tests for v1.4-v1.6 features on production VM
+- [ ] SQL-backed persistent memory system (local SQLite)
+- [ ] 4 memory types: rules/procedures, facts/context, task history, user preferences
+- [ ] Auto-recall: relevant memories injected into every agent session with brief citation
+- [ ] Automatic thread scanning: extract memorable info from threads bot participates in
+- [ ] Memory management commands: remember, recall, forget, list
+- [ ] All allowed users can add, edit, delete memories
 
-## Current Milestone: v1.8 Production Ops
+## Current Milestone: v1.9 Persistent Memory
 
-**Goal:** Full production observability and deployment control from Slack — deploy any repo, rollback, read logs, monitor bot health and pipeline status.
+**Goal:** The bot remembers rules, facts, history, and preferences across sessions using a local SQL database, auto-recalls relevant memories during tasks, and automatically extracts knowledge from Slack threads.
 
 **Target features:**
-- Deploy any of the 4 IrisMed repos from Slack with one command
-- Git-based rollback to previous version + redeploy
-- Deploy status showing what's running and what changed
-- Log access: journald tail/filter, Prefect flow logs, application logs
-- Bot health and pipeline status as fast-path commands
-- Live verification of v1.4-v1.6 features (folded from v1.7 Phase 16)
+- SQLite database for persistent memory storage and retrieval
+- Four memory categories: rules/procedures, facts/context, task history, user preferences
+- Auto-recall injects relevant memories into agent sessions with brief citation
+- Automatic extraction of memorable info from every thread the bot participates in
+- Explicit commands: "remember X", "what do you know about Y", "forget X"
+- All allowed users can manage memories
 
 ### Out of Scope
 
@@ -114,4 +113,4 @@ Nicole can ask the bot to do anything on mic_transformer through Slack and it ju
 | finish() vs stop() for heartbeat | Completion gets final edit, cancel/error doesn't | Good |
 
 ---
-*Last updated: 2026-03-25 after milestone v1.8 started*
+*Last updated: 2026-03-25 after milestone v1.9 started*
