@@ -359,7 +359,10 @@ Plans:
   1. Nicole types "rollback super_bot" and the bot reverts to the previous commit, redeploys (with self-restart handling for super_bot), and confirms the rollback succeeded with the restored commit SHA
   2. Nicole types "rollback mic_transformer" and the bot reverts to the previous commit, reinstalls deps, and confirms the rollback succeeded
   3. If a rollback fails the post-deploy health check, the bot automatically rolls forward to the pre-rollback commit and reports that the rollback was aborted with the reason
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 18-01-PLAN.md — Rollback execution with health check, auto-roll-forward, and self-rollback recovery
 
 ### Phase 19: Log Access
 **Goal**: The team can read service logs and Prefect flow logs from Slack without SSHing to the VM -- with output parsed and truncated to fit Slack messages
@@ -370,7 +373,10 @@ Plans:
   2. Nicole types "logs superbot error last 1h" and sees only journald lines matching "error" from the last hour
   3. Nicole types "prefect logs [run-id]" and sees the log output for that specific Prefect flow run
   4. Log output longer than Slack's message limit is truncated with a line count indicator (e.g., "showing 20 of 150 lines") and secret-like patterns are scrubbed before posting
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 18-01-PLAN.md — Rollback execution with health check, auto-roll-forward, and self-rollback recovery
 
 ### Phase 20: Health Dashboard
 **Goal**: The team can see a snapshot of bot health at a glance -- uptime, queue depth, error rate, memory usage, and version -- via a fast-path command
@@ -380,7 +386,10 @@ Plans:
   1. Nicole types "bot health" and sees a formatted dashboard with uptime, queue depth, recent error count, memory usage, current git version, and last restart time
   2. The health dashboard responds in under 3 seconds as a fast-path command (no agent session)
   3. The error count reflects actual journald errors in the last 24 hours, not a static counter
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 18-01-PLAN.md — Rollback execution with health check, auto-roll-forward, and self-rollback recovery
 
 ### Phase 21: Pipeline Status
 **Goal**: The team can see a summary of Prefect pipeline activity via a fast-path command -- how many flows completed, failed, or are running in the last 24 hours
@@ -390,7 +399,10 @@ Plans:
   1. Nicole types "pipeline status" and sees a compact summary of Prefect flow runs in the last 24 hours, grouped by status (completed, failed, running)
   2. The summary includes flow names and timestamps, not just counts, so Nicole can identify which specific runs succeeded or failed
   3. The pipeline status responds in under 5 seconds as a fast-path command (no agent session)
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 18-01-PLAN.md — Rollback execution with health check, auto-roll-forward, and self-rollback recovery
 
 ---
 
