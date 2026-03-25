@@ -570,3 +570,60 @@ Send this message in the SuperBot Slack channel:
 ```
 
 Expected: Bot responds in-thread with real pipeline status data from the mic-transformer MCP `check_pipeline_status` tool. If you see an error about missing tools or credentials, check the troubleshooting table above.
+
+## v1.8: Production Ops
+
+**When to run:** After v1.2 is deployed and verified. This release adds deploy-from-Slack commands, deploy status/preview, and an active-task guard so Nicole can deploy without SSH or gcloud.
+
+### New Features
+
+- **Deploy from Slack** -- type `deploy super_bot` or `deploy mic_transformer` directly in the Slack channel
+- **Deploy status** -- see current commit, branch, and pending changes for both repos
+- **Deploy preview** -- see which commits would be deployed before pulling the trigger
+- **Active-task guard** -- deploy is blocked while an agent task is running (use `force` to override)
+
+### Deploy Commands Reference
+
+| Command | Description |
+|---------|-------------|
+| `deploy super_bot` | Deploy super_bot: pushes, pulls, restarts service, posts "I'm back" to thread |
+| `deploy mic_transformer` | Deploy mic_transformer: triggers Prefect flow, polls until complete |
+| `deploy status` | Shows current commit SHA, branch, and pending changes for both repos |
+| `deploy preview super_bot` | Shows list of commits that would be deployed (or "nothing to deploy") |
+| `deploy preview mic_transformer` | Shows list of commits that would be deployed for mic_transformer |
+| `deploy force super_bot` | Deploy even if an agent task is currently running |
+| `deploy force mic_transformer` | Deploy mic_transformer even if an agent task is running |
+
+### Deployment
+
+No additional VM setup needed. Deploy using the standard Prefect method:
+
+```bash
+python scripts/deploy_via_prefect.py
+```
+
+Or from Slack itself: `deploy super_bot`
+
+### Verification Checklist
+
+After deploying v1.8, verify these items in the Slack channel:
+
+- [ ] **SDPL-01**: `deploy status` returns commit SHA, branch, and pending changes for both repos
+- [ ] **SDPL-02**: `deploy preview super_bot` shows commit list or "nothing to deploy"
+- [ ] **SDPL-03**: `deploy super_bot` posts pre-restart message with SHA details, restarts, posts "I'm back"
+- [ ] **SDPL-04**: `deploy mic_transformer` triggers Prefect flow, shows polling progress, reports success/failure
+- [ ] **SDPL-05**: `deploy force super_bot` works even when an agent task is running
+- [ ] **VRFY-01**: Daily digest includes a changelog section
+- [ ] **VRFY-02**: `crawl eyemed DME [date]` and `status on DME eyemed [date]` return fast-path responses
+- [ ] **VRFY-03**: `crawl all sites for [date]` triggers batch crawl with background progress updates
+- [ ] **VRFY-04**: Long agent tasks receive heartbeat edits on the progress message every few minutes
+
+### Troubleshooting
+
+| Symptom | Likely Cause | Fix |
+|---------|-------------|-----|
+| "deploy" command not recognized | Bot running old code without deploy handler | Redeploy via `python scripts/deploy_via_prefect.py` |
+| Deploy blocked by active task | Agent task is running | Wait for task to finish or use `deploy force super_bot` |
+| "I'm back" message never appears | Service failed to restart | Check logs: `sudo journalctl -u superbot -n 50 --no-pager` |
+| mic_transformer deploy hangs | Prefect flow not served on VM | SSH to VM and start the flow: `cd /home/bot/super_bot && python prefect/deploy_superbot_flow.py` |
+| Deploy preview shows no commits | Already up to date | Nothing to deploy; code on VM matches origin |
