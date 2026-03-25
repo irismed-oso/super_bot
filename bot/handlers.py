@@ -126,13 +126,17 @@ def register(app: AsyncApp) -> None:
         task_started_at = __import__("time").time()
 
         async def result_cb(result: dict):
-            await heartbeat.finish()
+            # Stop heartbeat: finish() for normal completion, stop() for errors
+            error_subtypes = {"error_timeout", "error_cancelled", "error_internal"}
+            if result.get("subtype") in error_subtypes:
+                await heartbeat.stop()
+            else:
+                await heartbeat.finish()
             # Persist session + CWD for thread continuity
             if result.get("session_id"):
                 session_map.set(channel, thread_ts, result["session_id"], cwd=worktree_path_val)
                 await db.upsert_session(channel, thread_ts, user_id, session_id=result["session_id"])
             # On failure, stash uncommitted worktree changes
-            error_subtypes = {"error_timeout", "error_cancelled", "error_internal"}
             if result.get("subtype") in error_subtypes:
                 await worktree.stash(thread_ts)
             duration_s = int(__import__("time").time() - task_started_at)
