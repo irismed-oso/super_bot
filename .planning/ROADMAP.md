@@ -438,7 +438,10 @@ Plans:
   3. Extraction is conservative: only explicit directives ("always do X", "never do Y", "the rule is Z") and stated facts are stored -- speculative statements, questions, and tentative language are skipped
   4. After each agent session, a one-line task summary (what was asked, what was done) is automatically stored as task history -- the team can later recall what the bot worked on
   5. Thread scanning runs as a fire-and-forget background task via asyncio -- completing in the background while the bot is already processing the next queued request
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 24-01-PLAN.md — Thread scanner with extraction prompt, dedup, task history, and fire-and-forget wiring
 
 ## Progress
 
@@ -471,4 +474,4 @@ Phases execute in order: 1 -> 2 -> 3 -> 4 -> v1.1 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 21. Pipeline Status | v1.8 | 0/TBD | Not started | - |
 | 22. SQLite Foundation and Memory Commands | 2/2 | Complete    | 2026-03-25 | - |
 | 23. Auto-Recall Injection | 1/1 | Complete    | 2026-03-25 | - |
-| 24. Post-Session Thread Scanning | v1.9 | 0/TBD | Not started | - |
+| 24. Post-Session Thread Scanning | v1.9 | 0/1 | Not started | - |
