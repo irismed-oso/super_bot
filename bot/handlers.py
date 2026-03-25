@@ -6,7 +6,15 @@ from bot.deduplication import is_seen, mark_seen
 from bot import task_state, formatter, worktree, progress, session_map, activity_log, git_activity, db
 from bot.heartbeat import Heartbeat
 from bot.queue_manager import QueuedTask, enqueue, queue_depth
+from bot.deploy_state import resolve_repo
+from bot.deploy import handle_deploy
+from bot.fast_commands import try_fast_command
 from config import BOT_USER_ID
+
+_DEPLOY_CMD_RE = re.compile(
+    r"deploy\s+(?:force\s+)?(\S+)\s*$",
+    re.IGNORECASE,
+)
 
 
 _AGENT_RULES = """
@@ -62,6 +70,33 @@ def register(app: AsyncApp) -> None:
         # DB: upsert session and log user input
         db_session_fk = await db.upsert_session(channel, thread_ts, user_id)
         await db.log_message(db_session_fk, "user_input", clean_text, slack_ts=event["ts"])
+
+        # Fast-path commands (deploy status, preview, guard)
+        fast_result = await try_fast_command(clean_text)
+        if fast_result is not None:
+            ts_to_edit = ack_ts or thread_ts
+            try:
+                await client.chat_update(channel=channel, ts=ts_to_edit, text=fast_result)
+            except Exception:
+                await client.chat_postMessage(channel=channel, thread_ts=thread_ts, text=fast_result)
+            return
+
+        # Deploy command routing -- handled outside the agent queue
+        if _DEPLOY_CMD_RE.search(clean_text):
+            resolved = resolve_repo(clean_text)
+            if resolved is None:
+                msg = "Unknown repo. Available: super_bot, mic_transformer"
+                if ack_ts:
+                    await client.chat_update(channel=channel, ts=ack_ts, text=msg)
+                else:
+                    await client.chat_postMessage(channel=channel, thread_ts=thread_ts, text=msg)
+                return
+            repo_name, repo_config = resolved
+            await handle_deploy(
+                repo_name, repo_config, client, channel,
+                thread_ts, user_id, ack_ts=ack_ts,
+            )
+            return
 
         session_id = session_map.get(channel, thread_ts)
         is_code_task_flag = worktree.is_code_task(clean_text)
