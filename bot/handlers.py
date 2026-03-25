@@ -1,3 +1,4 @@
+import asyncio
 import re
 
 from slack_bolt.app.async_app import AsyncApp
@@ -10,6 +11,7 @@ from bot.deploy_state import resolve_repo
 from bot.deploy import handle_deploy
 from bot.fast_commands import try_fast_command
 from bot import memory_recall
+from bot import thread_scanner
 from config import BOT_USER_ID
 
 _DEPLOY_CMD_RE = re.compile(
@@ -201,6 +203,18 @@ def register(app: AsyncApp) -> None:
                 )
             except Exception as exc:
                 log.warning("git_activity.capture_failed", error=str(exc))
+            # Auto-scan thread for memorable information (fire-and-forget)
+            if result.get("subtype") not in error_subtypes:
+                task_summary = f"Task: {clean_text[:150]} | Result: {result.get('subtype', 'success')}"
+                asyncio.create_task(
+                    thread_scanner.scan_and_store(
+                        client=client,
+                        channel=channel,
+                        thread_ts=thread_ts,
+                        user_id=user_id,
+                        task_summary=task_summary,
+                    )
+                )
 
         task = QueuedTask(
             prompt=prompt,
