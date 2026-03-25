@@ -5,21 +5,21 @@
 See: .planning/PROJECT.md (updated 2026-03-25)
 
 **Core value:** Nicole can ask the bot to do anything on mic_transformer through Slack and it just does it -- writes code, runs scripts, debugs issues, deploys -- with full autonomy and persistent awareness.
-**Current focus:** Phase 24: Post-Session Thread Scanning (v1.9)
+**Current focus:** Phase 18: Rollback (v1.8)
 
 ## Current Position
 
-Phase: 24-post-session-thread-scanning
+Phase: 18-rollback
 Plan: 01 of 01 complete
-Status: Phase 24 complete
-Last activity: 2026-03-25 - Completed 24-01: Post-session thread scanning
+Status: Phase 18 complete
+Last activity: 2026-03-25 - Completed 18-01: Rollback with auto-roll-forward
 
-Progress: [==================..] 92% (phases 1-21 scoped, 16 complete; phases 22-24 complete)
+Progress: [==================..] 93% (phases 1-21 scoped, 16 complete; phases 22-24, 18 complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 32
+- Total plans completed: 33
 - Average duration: --
 - Total execution time: --
 
@@ -41,6 +41,9 @@ Progress: [==================..] 92% (phases 1-21 scoped, 16 complete; phases 22
 - v1.9: Lazy Anthropic client init with try/except ImportError for graceful degradation
 - v1.9: Substring-based dedup for memory extraction (bidirectional containment check)
 - v1.9: claude-sonnet-4-20250514 for extraction (fast, cheap, sufficient)
+- v1.8: Rollback reuses Prefect deploy pipeline with target SHA as branch parameter
+- v1.8: Auto-roll-forward on any rollback failure (health check, Prefect failure, timeout)
+- v1.8: Health check: systemctl + journal scan for services; Prefect COMPLETED suffices for service-less repos
 - v1.8: Deploy commands handled outside agent queue (super_bot dies, mic_transformer polls directly)
 - v1.8: Fast-path commands integrated into handlers.py _run_agent_real before agent queue dispatch
 
@@ -63,5 +66,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-25
-Stopped at: Completed 24-01-PLAN.md (post-session thread scanning with Claude extraction)
+Stopped at: Completed 18-01-PLAN.md (rollback with auto-roll-forward)
 Resume file: None

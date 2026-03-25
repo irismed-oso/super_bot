@@ -154,8 +154,8 @@ Requirements for Production Ops milestone.
 
 ### Rollback (RLBK)
 
-- [ ] **RLBK-01**: User can rollback a repo to its previous commit and redeploy from Slack
-- [ ] **RLBK-02**: If rollback fails health check, system automatically rolls forward to the pre-rollback state
+- [x] **RLBK-01**: User can rollback a repo to its previous commit and redeploy from Slack
+- [x] **RLBK-02**: If rollback fails health check, system automatically rolls forward to the pre-rollback state
 
 ### Logs (LOGS)
 
@@ -382,8 +382,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SDPL-03 | Phase 17 | Complete |
 | SDPL-04 | Phase 17 | Complete |
 | SDPL-05 | Phase 17 | Complete |
-| RLBK-01 | Phase 18 | Pending |
-| RLBK-02 | Phase 18 | Pending |
+| RLBK-01 | Phase 18 | Complete |
+| RLBK-02 | Phase 18 | Complete |
 | LOGS-01 | Phase 19 | Pending |
 | LOGS-02 | Phase 19 | Pending |
 | LOGS-03 | Phase 19 | Pending |
