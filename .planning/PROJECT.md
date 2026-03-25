@@ -114,4 +114,4 @@ Nicole can ask the bot to do anything on mic_transformer through Slack and it ju
 | finish() vs stop() for heartbeat | Completion gets final edit, cancel/error doesn't | Good |
 
 ---
-*Last updated: 2026-03-25 after v1.7 milestone complete*
+*Last updated: 2026-03-25 after milestone v1.8 started*
