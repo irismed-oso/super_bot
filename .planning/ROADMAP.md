@@ -376,7 +376,9 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 18-01-PLAN.md — Rollback execution with health check, auto-roll-forward, and self-rollback recovery
+- [ ] 19-01-PLAN.md — Log tools module (journald + Prefect logs) with structlog parsing, secret scrubbing, and agent wiring
+
+
 
 ### Phase 20: Health Dashboard
 **Goal**: The team can see a snapshot of bot health at a glance -- uptime, queue depth, error rate, memory usage, and version -- via a fast-path command
