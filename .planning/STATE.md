@@ -62,9 +62,10 @@ None yet.
 | 1 | extend run time timeout to 30 min | 2026-03-24 | 34a4444 | [1-extend-run-time-timeout-to-30-min](./quick/1-extend-run-time-timeout-to-30-min/) |
 | 2 | create Prefect deploy pipeline for SuperBot | 2026-03-25 | 08fa13f | [2-create-way-to-deploy-super-bot-productio](./quick/2-create-way-to-deploy-super-bot-productio/) |
 | 3 | fast path is buggy. remove it | 2026-03-25 | d5fa074 | [3-fast-path-is-buggy-remove-it](./quick/3-fast-path-is-buggy-remove-it/) |
+| 4 | strip fast-path to memory + guards only | 2026-03-25 | a8b27e1 | [4-1-remove-fast-path-2-handle-autopost](./quick/4-1-remove-fast-path-2-handle-autopost/) |
 
 ## Session Continuity
 
 Last session: 2026-03-25
-Stopped at: Completed 18-01-PLAN.md (rollback with auto-roll-forward)
+Stopped at: Completed quick task 4 (strip fast-path to memory + guards)
 Resume file: None
