@@ -72,8 +72,14 @@ _STALE_SECONDS = 300  # 5 minutes
 DEPLOY_HISTORY_PATH = "/home/bot/.deploy-history.json"
 
 
-def record_deploy(repo_name: str, sha: str) -> None:
-    """Record a successful deploy timestamp for a repo."""
+def record_deploy(repo_name: str, sha: str, pre_sha: str | None = None) -> None:
+    """Record a successful deploy timestamp for a repo.
+
+    Args:
+        repo_name: Canonical repo name (e.g. "super_bot").
+        sha: The SHA now running after deploy/rollback.
+        pre_sha: The SHA that was running before the deploy/rollback.
+    """
     history = {}
     if os.path.isfile(DEPLOY_HISTORY_PATH):
         try:
@@ -81,7 +87,10 @@ def record_deploy(repo_name: str, sha: str) -> None:
                 history = json.load(f)
         except (json.JSONDecodeError, OSError):
             pass
-    history[repo_name] = {"sha": sha, "deployed_at": time.time()}
+    entry: dict = {"sha": sha, "deployed_at": time.time()}
+    if pre_sha is not None:
+        entry["pre_sha"] = pre_sha
+    history[repo_name] = entry
     with open(DEPLOY_HISTORY_PATH, "w") as f:
         json.dump(history, f)
 
@@ -99,19 +108,26 @@ def get_last_deploy(repo_name: str) -> dict | None:
 
 
 def write_deploy_state(
-    channel: str, thread_ts: str, pre_sha: str, user_id: str
+    channel: str, thread_ts: str, pre_sha: str, user_id: str,
+    action: str = "deploy",
 ) -> None:
-    """Write deploy-state file before triggering self-deploy."""
+    """Write deploy-state file before triggering self-deploy or self-rollback.
+
+    Args:
+        action: "deploy" or "rollback" -- used by app.py recovery to post
+                the appropriate message.
+    """
     state = {
         "channel": channel,
         "thread_ts": thread_ts,
         "pre_sha": pre_sha,
         "user_id": user_id,
+        "action": action,
         "triggered_at": time.time(),
     }
     with open(DEPLOY_STATE_PATH, "w") as f:
         json.dump(state, f)
-    log.info("deploy_state.written", channel=channel, pre_sha=pre_sha)
+    log.info("deploy_state.written", channel=channel, pre_sha=pre_sha, action=action)
 
 
 def read_and_clear_deploy_state() -> dict | None:
