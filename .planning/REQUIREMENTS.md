@@ -130,8 +130,8 @@ Requirements for Deploy & Verify milestone.
 
 ### Deployment
 
-- [ ] **DPLY-01**: Deploy script pushes code, installs deps, restarts service, verifies health
-- [ ] **DPLY-02**: Deploy script is reusable for future milestones (not one-shot)
+- [x] **DPLY-01**: Deploy script pushes code, installs deps, restarts service, verifies health
+- [x] **DPLY-02**: Deploy script is reusable for future milestones (not one-shot)
 
 ### Verification
 
@@ -284,8 +284,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | HRTB-02 | Phase 14 | Complete |
 | HRTB-03 | Phase 14 | Complete |
 | HRTB-04 | Phase 14 | Complete |
-| DPLY-01 | Phase 15 | Pending |
-| DPLY-02 | Phase 15 | Pending |
+| DPLY-01 | Phase 15 | Complete |
+| DPLY-02 | Phase 15 | Complete |
 | VRFY-01 | Phase 16 | Pending |
 | VRFY-02 | Phase 16 | Pending |
 | VRFY-03 | Phase 16 | Pending |
