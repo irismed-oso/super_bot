@@ -319,7 +319,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 16-01: Live smoke tests for all v1.4-v1.6 features
+- [ ] 16-01-PLAN.md — Live smoke tests for all v1.4-v1.6 features
 
 ## Progress
 
