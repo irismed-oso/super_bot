@@ -70,3 +70,39 @@
 
 ---
 
+
+## v1.5 -- Nicole-Ready Operations (Phases 11-13, shipped 2026-03-25)
+
+**Goal:** Nicole can check status, trigger crawls, and get clear feedback — all without hitting timeouts or confusing error messages.
+
+**Shipped:**
+- Fast-path crawl trigger: "crawl eyemed DME 03.20" triggers Prefect deployment in <5 seconds, no agent session
+- Fast-path status: "status on DME eyemed 03.16 to today" runs status script with location/date filters
+- Batch crawl: "crawl all sites for 03.20" triggers all 23 Prefect deployments in parallel
+- Background task monitoring with progress updates every 2.5 min and final summary
+- Background tasks don't block agent queue — other tasks can run while crawls are in progress
+- Error UX: timeout messages include what was attempted + suggested next action
+- Error messages distinguish timeout vs failure vs still-running
+- "Are you broken?" returns actual task status without spawning a new agent session
+- All fast-path responses edit "Working on it." message in-place
+
+**Stats:** 3 phases, 3 plans
+
+---
+
+
+## v1.6 -- Progress Heartbeat (Phase 14, shipped 2026-03-25)
+
+**Goal:** During long sessions, the bot posts periodic progress updates so users never wonder if it's stuck.
+
+**Shipped:**
+- Heartbeat timer edits progress message every 3 min (first tick at 1 min) with last activity, turn count, elapsed time
+- Heartbeat fires independently of agent tool use — pure asyncio timer
+- On normal completion: progress message edited to "Completed in Xm Ys" before result posts
+- On timeout/cancel: heartbeat stops cleanly with no further edits
+- Format: ":hourglass: Still working... [Activity] | Turn X/25 | Ym Zs"
+
+**Stats:** 1 phase, 1 plan
+
+---
+

@@ -40,19 +40,15 @@ Nicole can ask the bot to do anything on mic_transformer through Slack and it ju
 - Background task support for long-running operations -- v1.5
 - Better error/timeout messages with suggested next actions -- v1.5
 
+- Progress heartbeat during long sessions (1 min first, then every 3 min) -- v1.6
+- Heartbeat shows last activity, turn count, elapsed time -- v1.6
+- Completion edit ("Completed in Xm Ys") before result posts -- v1.6
+
 ### Active
 
-- [ ] Periodic progress heartbeat every 5 minutes during long sessions
-- [ ] Progress message shows last activity, turn count, and elapsed time
+(None — planning next milestone)
 
-## Current Milestone: v1.6 Progress Heartbeat
-
-**Goal:** During long-running sessions (up to 30 min), the bot posts periodic progress updates every 5 minutes by editing a single message — so users always know it's still working.
-
-**Target features:**
-- Periodic heartbeat timer that fires every 5 minutes during agent execution
-- Progress message edited in-place showing: last activity + turn count + elapsed time
-- Heartbeat survives silent thinking periods (no tool use required to trigger)
+## Current Milestone: Completed v1.6 — Planning Next
 
 ### Out of Scope
 
@@ -94,6 +90,10 @@ Nicole can ask the bot to do anything on mic_transformer through Slack and it ju
 | Autopost dry_run default | Built-in safety for mutation tools | Good |
 | Post-session git log (not real-time stream) | Simpler, more reliable, git log is source of truth | Good |
 | Separate digest_changelog.py module | Testability, keeps daily_digest.py focused | Good |
+| Fast-path regex before agent enqueue | Sub-second response for known commands | Good |
+| httpx.AsyncClient for Prefect API | Native async, no thread wrapping needed | Good |
+| asyncio timer heartbeat (not tool-use driven) | Fires during silent thinking phases | Good |
+| finish() vs stop() for heartbeat | Completion gets final edit, cancel/error doesn't | Good |
 
 ---
-*Last updated: 2026-03-24 after v1.4 milestone complete*
+*Last updated: 2026-03-25 after v1.5 + v1.6 milestones complete*
