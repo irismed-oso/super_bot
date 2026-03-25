@@ -106,3 +106,23 @@
 
 ---
 
+
+## v1.7 -- Deploy & Verify (Phases 15-16, shipped 2026-03-25)
+
+**Goal:** Get v1.4-v1.6 features deployed and verified on the production VM.
+
+**Shipped:**
+- Reusable `scripts/deploy.sh` — one-command deploy (push, pull, deps, restart, health-check)
+- Deploy script with `--skip-push`, `--skip-deps`, `--branch` flags for flexibility
+- Live verification: digest changelog posting at 08:00 daily
+- Live verification: fast-path commands actively used by Nicole (crawl + status)
+- Live verification: heartbeat ticking during real sessions (3m 9s, 4m 46s elapsed)
+
+**Stats:** 2 phases, 2 plans
+
+**Known issues:**
+- `os.getlogin()` fails under systemd (no TTY) — digest crosscheck degrades gracefully
+- VRFY-03 (batch crawl monitor) not yet triggered by user — single crawl works
+
+---
+

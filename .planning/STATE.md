@@ -5,16 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-03-25)
 
 **Core value:** Nicole can ask the bot to do anything on mic_transformer through Slack and it just does it -- writes code, runs scripts, debugs issues, deploys -- with full autonomy and persistent awareness.
-**Current focus:** Phase 15: Deploy Script (v1.7 Deploy & Verify)
+**Current focus:** Milestone v1.8: Production Ops
 
 ## Current Position
 
-Phase: 15 of 16 (Deploy Script)
-Plan: 1 of 1 in current phase (COMPLETE)
-Status: Phase 15 complete -- ready for Phase 16
-Last activity: 2026-03-25 -- Phase 15 deploy script executed and verified
-
-Progress: [###############░] 90% (26/29 plans across all milestones)
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-25 — Milestone v1.8 started
 
 ## Performance Metrics
 

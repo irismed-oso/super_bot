@@ -43,19 +43,30 @@ Nicole can ask the bot to do anything on mic_transformer through Slack and it ju
 - Progress heartbeat during long sessions (1 min first, then every 3 min) -- v1.6
 - Heartbeat shows last activity, turn count, elapsed time -- v1.6
 - Completion edit ("Completed in Xm Ys") before result posts -- v1.6
+- Reusable deploy script (scripts/deploy.sh) with push/pull/deps/restart/health-check -- v1.7
+- All v1.4-v1.6 features verified working on production VM -- v1.7
 
 ### Active
 
-- [ ] Deploy v1.4-v1.6 features to production VM with deploy script
-- [ ] Live smoke tests verifying each feature works on the VM
+- [ ] Deploy from Slack for all 4 IrisMed repos (push, pull, deps, restart, verify)
+- [ ] Git-based rollback and redeploy from Slack
+- [ ] Deploy status: running version, last deploy time, changes since last deploy
+- [ ] Log access via Slack: journald tail + filtered, Prefect flow logs, app logs
+- [ ] Bot health dashboard: uptime, errors, current activity (fast-path)
+- [ ] Pipeline status: fast-path summary + agent deep investigation
+- [ ] Live smoke tests for v1.4-v1.6 features on production VM
 
-## Current Milestone: v1.7 Deploy & Verify
+## Current Milestone: v1.8 Production Ops
 
-**Goal:** Get v1.4-v1.6 features deployed and verified on the production VM with a reusable deploy script.
+**Goal:** Full production observability and deployment control from Slack — deploy any repo, rollback, read logs, monitor bot health and pipeline status.
 
 **Target features:**
-- Full deploy script (push, pull, deps, restart, verification)
-- Live smoke tests for digest changelog, fast-path commands, background tasks, heartbeat
+- Deploy any of the 4 IrisMed repos from Slack with one command
+- Git-based rollback to previous version + redeploy
+- Deploy status showing what's running and what changed
+- Log access: journald tail/filter, Prefect flow logs, application logs
+- Bot health and pipeline status as fast-path commands
+- Live verification of v1.4-v1.6 features (folded from v1.7 Phase 16)
 
 ### Out of Scope
 
@@ -103,4 +114,4 @@ Nicole can ask the bot to do anything on mic_transformer through Slack and it ju
 | finish() vs stop() for heartbeat | Completion gets final edit, cancel/error doesn't | Good |
 
 ---
-*Last updated: 2026-03-25 after milestone v1.7 started*
+*Last updated: 2026-03-25 after v1.7 milestone complete*
