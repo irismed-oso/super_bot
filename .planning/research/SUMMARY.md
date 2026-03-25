@@ -1,201 +1,175 @@
 # Project Research Summary
 
-**Project:** SuperBot v1.2 MCP Parity
-**Domain:** Slack-integrated autonomous coding and operations agent with mic-transformer MCP tool integration
-**Researched:** 2026-03-23 (v1.2 update; baseline research 2026-03-18)
+**Project:** SuperBot v1.8 Production Ops
+**Domain:** Slack-integrated production operations (deploy, rollback, logs, health monitoring, pipeline status)
+**Researched:** 2026-03-25
 **Confidence:** HIGH
 
 ## Executive Summary
 
-SuperBot v1.2 is a tightly scoped integration milestone: wire the existing mic-transformer MCP server (35+ operational tools across 13 modules) into SuperBot's Claude Agent SDK sessions so Nicole and Han can invoke production pipeline operations directly from Slack. The architecture is already correct — `_build_mcp_servers()` in `bot/agent.py` already wires the mic-transformer server as a stdio subprocess using mic_transformer's own Python interpreter. The code changes required are minimal (under 10 lines across two files). The real work is VM prerequisite validation and systematic credential verification across four distinct credential pathways (GCS, S3, Google Drive, PostgreSQL).
+SuperBot v1.8 is a production operations milestone that gives a small engineering team the ability to deploy code, tail logs, roll back, check bot health, and monitor Prefect pipelines — all from Slack, without SSH. The key insight from research is that because the bot runs ON the same GCP VM as all target repos, every new feature can be built using the existing stack (`asyncio.create_subprocess_exec`, `httpx`, `task_state`, `fast_commands`) with zero new dependencies. The recommended approach is to implement all ops commands as fast-path handlers — deterministic shell-command sequences that bypass the Claude agent pipeline entirely, keeping costs low and response times under 5 seconds.
 
-The recommended approach is to deploy in four phases ordered by credential complexity and operational blast radius: start with the 20+ read-only status and audit tools (no risk to production data), then API-triggered mutating tools (validated by the production Flask API before reaching Celery workers), then SSH and Prefect tools (remote execution but no local subprocess exposure), and finally subprocess-based mutating tools (autopost, posting prep) which interact with Revolution EMR and require the most careful dry-run testing. The key distinction from all commercial agents (Claude Code in Slack, Kilo, GitHub Copilot) is that no commercial product ships with 35+ domain-specific operational tools. MCP integration transforms SuperBot from a coding agent into an operational platform where Nicole can ask "what's the VSP status for today?" and get a real answer pulling from GCS, S3, Google Drive, and PostgreSQL simultaneously.
+The highest-value features are deploy and rollback for `super_bot` and `mic_transformer` (the two repos on the same VM with defined deploy paths). Log access via `journalctl` and the enhanced health dashboard are lower complexity and can ship alongside or just after deploy. Pipeline status is a straightforward extension of the existing `prefect_api.py` client. All four features share a common architecture: regex handler in `fast_commands.py` -> new ops module -> subprocess or httpx call -> truncated, formatted Slack response.
 
-The most significant risks are environment variable propagation under systemd and MCP server startup timeout due to heavy Python dependency imports. Both are addressable before any feature testing: validate that `/home/bot/.env` uses strict `KEY=VALUE` systemd syntax (no `export` prefix, no shell variable interpolation), and benchmark the MCP server cold-start time on the actual GCP VM — it must complete under the SDK's fixed 60-second connection timeout. The credential model is correct: mic-transformer tools load credentials from `config/*.yml` files via relative paths after `os.chdir(PROJECT_ROOT)`, not from environment variables, so the primary deployment prerequisite is verifying those YAML config files exist on the VM with production values.
+The defining risk of this milestone is self-deploy: when SuperBot deploys itself, `systemctl restart superbot` kills the running process before it can post a success message to Slack. This must be solved architecturally in the first phase with a pre-restart message and a post-startup confirmation file. A secondary risk cluster covers regression during rollback (broken deps, incompatible env vars) and log output flooding Slack with raw structlog JSON. Both have well-documented mitigations in the research.
 
 ## Key Findings
 
 ### Recommended Stack
 
-SuperBot's existing stack requires no changes for v1.2. The only new dependency is `mcp[cli]~=1.26.0` installed in mic_transformer's venv (NOT super_bot's venv). This is the official Anthropic MCP Python SDK, which bundles FastMCP 1.0 at `mcp.server.fastmcp`. The mic-transformer server already imports from this path (`from mcp.server.fastmcp import FastMCP`). Do NOT install the standalone `fastmcp` PyPI package — it is a separate project maintained by Prefect/jlowin that would be unused and could cause import shadowing.
+No new Python packages are required for v1.8. Every feature is achievable with the existing production stack. The bot is already on the VM alongside all target repos, so `gcloud compute ssh` is not needed — direct `asyncio.create_subprocess_exec` calls to `git`, `pip`, `systemctl`, and `journalctl` are simpler, faster, and already used in `git_activity.py`, `worktree.py`, and `fast_commands.py`. The one infrastructure change required is a one-time manual sudoers update on the VM granting the `bot` user passwordless `systemctl` and `journalctl` access.
 
-See [STACK.md](STACK.md) for full version compatibility matrix and alternatives considered.
+See [STACK.md](STACK.md) for the full integration point details, code patterns, and alternatives considered.
 
 **Core technologies:**
-- `claude-agent-sdk==0.1.49`: Agent engine with `mcp_servers` support — already installed, no change needed
-- `mcp[cli]~=1.26.0` (in mic_transformer venv only): MCP server runtime — the only new package; one `pip install` command
-- `McpStdioServerConfig` type (SDK): defines `command`, `args`, and optional `env` fields — no `cwd` field exists or is needed
-- `FastMCP` (bundled inside `mcp` package): already used by server.py; no server code changes required
-- Systemd `EnvironmentFile=/home/bot/.env`: credential delivery to bot process — must use strict `KEY=VALUE` syntax, no shell extensions
+- `asyncio.create_subprocess_exec` — all deploy/rollback/log subprocess calls — already established pattern throughout codebase
+- `httpx.AsyncClient` — Prefect API queries for pipeline status and flow run logs — already in `prefect_api.py`
+- `resource.getrusage()` (stdlib) — memory metrics for health dashboard — no new dep needed
+- `config.py` `DEPLOY_REPOS` dict — new centralized registry of repo paths, service names, venvs, branches
+
+**What NOT to add:** `paramiko`/`fabric` (SSH not needed), `psutil` (overkill), `systemd-python` (native deps), `prefect` SDK (100+ transitive deps), new DB tables for deploy history (in-memory list is sufficient for a 2-person team).
 
 ### Expected Features
 
-SuperBot v1.2 must expose all 35+ mic-transformer MCP tools through a single stdio subprocess wired into each Claude Agent SDK session. Tools divide into a clear risk hierarchy: read-only queries with no blast radius, API-mediated writes validated by the production Flask API, Prefect-triggered remote jobs, and local subprocess execution.
+See [FEATURES.md](FEATURES.md) for full feature inventory with complexity estimates and dependency graph.
 
-See [FEATURES.md](FEATURES.md) for the complete 35+ tool inventory with per-tool credentials and complexity ratings.
+**Must have (table stakes):**
+- Deploy `super_bot` from Slack — including self-deploy restart handling and post-restart confirmation
+- Deploy `mic_transformer` from Slack — git pull + pip install
+- Deploy status — current commit, branch, last deploy time, pending changes count
+- Git-based rollback — with health check and auto-roll-forward on failure
+- Journald log tail — last N lines with optional grep filter, output truncated and parsed
+- Bot health dashboard — uptime, queue depth, error count, memory, current version
+- Pipeline status fast-path — Prefect flow run summary for last 24 hours
 
-**Must have (table stakes for MCP parity):**
-- All 11 Module 1 status/audit tools — Nicole's primary workflow starts with "what's the status?"; requires GCS, S3, GDrive, DB, and SSH credentials
-- All Module 5 read-only storage tools (5 tools) — "did the PDF arrive? is the AIOUT there?"
-- Module 2 extraction triggers (`vsp_extract`, `eyemed_extract`, `requeue_missing_pages`) — daily operational workflow
-- Module 3 reduction triggers (`reduce_aiout`, `reduce_all_vsp`) — daily workflow immediately after extraction
-- Module 10 deploy version check — validates end-to-end MCP connectivity with zero risk
-- `check_prefect_flow_status`, `get_prefect_logs` — diagnosing why pipeline stages are not processing
+**Should have (differentiators):**
+- Automatic health verification after deploy — confirms Slack connectivity, not just `systemctl is-active`
+- Post-restart "I'm back" confirmation for self-deploys via deploy-state file checked on startup
+- Log output parsing — extract timestamp + level + event from structlog JSON, strip context noise
+- Deploy diff preview — `git log origin/main..HEAD` to show pending changes before deploying
+- Prefect flow log access by run ID — fast-path command for what already exists as MCP tool
 
-**Should have (differentiators beyond coding agents):**
-- Module 4 posting prep (3 tools) — prepare GDrive and GCS files for manual posting team
-- Module 9 benefits fetch (3 tools) — trigger and poll long-running Prefect jobs from Slack; up to 10-minute polling
-- Module 11 azure mirror audit and trigger — 24-location CrystalPM sync monitoring from Slack
-- Module 12 IVT ingestion audit — cross-system health check (Prefect + prod-ivt DB)
-- Module 13 provider revenue analytics — business intelligence query from Slack
-- Module 4 autopost tools (`vsp_autopost`, `eyemed_autopost`) — `dry_run=True` default; highest operational value but highest risk; test dry_run exhaustively before live use
-
-**Defer to v2+:**
-- `remit_crawler` (Module 6) — requires Chrome/Chromium headless browser on GCP VM and insurance portal credentials; unclear if viable; interim workaround: SSH to production server for manual crawler invocation
-
-**Anti-features to reject:**
-- Approval gates on mutating MCP tools — PROJECT.md explicitly scopes this out; full autonomy by design; team visibility in channel is the audit trail
-- Custom wrappers around MCP tools — tools have clean interfaces; wiring the server as stdio subprocess makes all 35+ tools available automatically
-- Tool-level access control — only 2-3 trusted users; existing Slack allowlist from v1.0 is sufficient
+**Defer:**
+- Deploy `irismed-service` and `oso-fe-gsnap` — deploy paths on VM not yet defined
+- Application log file tailing — verify journald covers everything first
+- Error rate trending / alerting — daily digest already handles this use case
+- Blue-green or approval-gated deploys — explicitly out of scope per PROJECT.md
 
 ### Architecture Approach
 
-The integration architecture is a pure subprocess model requiring minimal code changes. SuperBot's `_build_mcp_servers()` passes mic_transformer's venv Python binary plus the `server.py` path to `ClaudeAgentOptions.mcp_servers`. The Claude CLI spawns the MCP server as a stdio subprocess per `query()` call; the subprocess lives only for that session's duration and is killed by the CLI when the session ends. No persistent MCP server process management is needed. The MCP server calls `os.chdir(PROJECT_ROOT)` internally at startup, making all relative-path `config/*.yml` credential loads work regardless of spawn directory. Each session gets a fresh subprocess instance with no shared state between sessions.
+All v1.8 features follow the established fast-path pattern: `handlers.py` event routing -> `fast_commands.py` regex matching -> dedicated ops module -> subprocess or API call -> formatted Slack response. Four new modules are introduced with clean separation of concerns. Two existing modules are extended. The critical structural change is that ops commands must be checked BEFORE `is_action_request()` in the command routing logic to prevent "deploy super_bot" from routing to the full agent pipeline.
 
-See [ARCHITECTURE.md](ARCHITECTURE.md) for the full data flow diagram, anti-patterns, and recommended `_build_mcp_servers()` implementation.
+See [ARCHITECTURE.md](ARCHITECTURE.md) for full data flow diagrams, regex patterns, and anti-patterns.
 
 **Major components:**
-1. `bot/agent.py` `_build_mcp_servers()` — only component requiring code changes; add optional `env` dict entry for `MIC_TRANSFORMER_API_URL` (currently already wired, minor enhancement)
-2. `config.py` — add `MIC_TRANSFORMER_API_URL` env var mapping; single line addition
-3. mic_transformer `config/*.yml` files on VM — the primary deployment prerequisite; must contain production DB, GCS, Google Drive, and CrystalPM credentials
-4. mic_transformer `.venv` on VM — must have `mcp[cli]~=1.26.0` installed
-5. All other bot components (`app.py`, `handlers.py`, `queue_manager.py`, `worktree.py`, `progress.py`) — no changes required
+1. `bot/deploy_ops.py` (new) — deploy/rollback engine; runs git/pip/systemctl locally via subprocess; handles self-deploy with delayed restart and deploy-state file
+2. `bot/log_reader.py` (new) — reads journald via subprocess and Prefect logs via API; mandatory truncation to 3000 chars and structlog JSON parsing
+3. `bot/health_ops.py` (new) — assembles health dashboard from `task_state`, `queue_manager`, git version, and journald error count
+4. `bot/pipeline_ops.py` (new) — queries `prefect_api.list_recent_flow_runs()` and formats a compact status summary
+5. `bot/fast_commands.py` (modified) — new command entries for deploy, rollback, logs, health, pipeline
+6. `bot/prefect_api.py` (modified) — add `list_recent_flow_runs()` and `get_flow_run_logs()` endpoints
 
 ### Critical Pitfalls
 
-See [PITFALLS.md](PITFALLS.md) for the full 12-pitfall inventory with detection signals, recovery costs, and phase assignments.
+See [PITFALLS.md](PITFALLS.md) for the full pitfall inventory with phase assignments, warning signs, and recovery strategies.
 
-1. **env dict replaces rather than extends subprocess environment** — passing any `env` field to `McpStdioServerConfig` may replace the entire inherited process environment (Python `subprocess.Popen` behavior), causing all credential lookups to fail silently while the server reports "connected." Prevention: if adding env vars, always merge with `{**os.environ, "EXTRA_VAR": "value"}`; verify by testing one tool from each credential category immediately after wiring.
+1. **Self-deploy kills the bot before confirming success** — Post "Deploying now, I'll be back shortly" BEFORE triggering `systemctl restart`. Write a deploy-state file with channel, thread_ts, and pre-SHA. On startup, check for this file and post "Deploy complete" or "Deploy failed" to the saved thread, then delete the file.
 
-2. **systemd EnvironmentFile syntax silently drops variables** — `export KEY=val`, `$VAR` interpolation, and backtick substitution are all invalid in systemd's `EnvironmentFile` parser and are silently dropped (not flagged as errors). Works locally under `python-dotenv` but breaks under systemd. Prevention: audit `/home/bot/.env` for non-`KEY=VALUE` lines; validate with `sudo -u bot env | grep EXPECTED_VAR` on the VM after deployment.
+2. **Deploy during an active agent session destroys in-progress work** — Before deploying `super_bot`, check `get_current_task()`. If a task is running, warn: "A task is in progress. Say 'deploy force' to proceed." Notify the interrupted thread when force-deploying.
 
-3. **MCP server startup timeout kills the session** — the Claude Agent SDK has a fixed 60-second connection timeout for MCP servers. mic_transformer's heavy dependency tree (boto3, google-cloud-storage, SQLAlchemy, Prefect client) may exceed this on a resource-constrained GCP VM, especially cold (no `.pyc` cache). Prevention: benchmark `time /path/to/venv/bin/python server.py` on the actual VM; lazy-import heavy modules inside tool functions rather than at the module level if startup exceeds 30 seconds.
+3. **Fast-path regex collisions and `is_action_request()` routing** — New ops commands overlap with existing patterns and `is_action_request()` can intercept "deploy super_bot" and route it to the agent instead of fast-path. Use anchored prefix patterns and add a dedicated `try_ops_command()` check before the action filter. Test the full command matrix before deploying.
 
-4. **Wrong fastmcp package installed** — the server imports `from mcp.server.fastmcp import FastMCP` (FastMCP 1.0 bundled inside the official `mcp` PyPI package). The standalone `fastmcp` package on PyPI (jlowin/Prefect project, version 3.x) is a different project entirely. Installing standalone `fastmcp` would be unused and risks import shadowing. Prevention: install `mcp[cli]~=1.26.0` only; verify with `python -c "from mcp.server.fastmcp import FastMCP; print('OK')"`.
+4. **Rollback to an incompatible commit with no recovery** — Record the pre-rollback SHA before any `git reset`. After checkout + `pip install` + restart, run the full health check. If it fails, automatically revert to the pre-rollback SHA. Never skip `pip install` on rollback.
 
-5. **stdout pollution corrupts the JSON-RPC protocol stream** — MCP stdio uses stdout exclusively for JSON-RPC messages. Any `print()` call in the server or its dependencies corrupts the stream and kills the connection. Prevention: audit with `grep -r "print(" server.py tools/`; configure all Python logging to write to stderr only.
+5. **Log output floods Slack with raw structlog JSON** — Default to 15-20 lines. Parse structlog JSON to extract `{timestamp} [{level}] {event}` only. Cap output at 3000 chars. Use `files_upload_v2` for large outputs. Scrub lines containing secret patterns before posting.
 
 ## Implications for Roadmap
 
-The integration should proceed in four phases ordered by credential complexity and operational blast radius. Total code changes are under 10 lines across two files. The phases differ primarily in which VM prerequisites must be verified before each phase's tools can be tested.
+Based on research, suggested phase structure:
 
-### Phase 1: VM Validation and MCP Server Wiring
+### Phase 1: Deploy Foundation
+**Rationale:** Highest-value feature with no dependencies on other new modules. Architectural decisions made here — subprocess pattern, config registry, self-deploy handling, ops command routing fix — underpin all subsequent phases. The self-deploy problem must be designed before any deploy code is written, not retrofitted.
+**Delivers:** `deploy super_bot` (with post-restart confirmation), `deploy mic_transformer`, deploy status command, `DEPLOY_REPOS` config registry, ops command routing fix before `is_action_request()`
+**Addresses:** All FEATURES.md priority 1 deploy features
+**Avoids:** Self-deploy confirmation loss (Pitfall 1), deploy during active session (Pitfall 2), regex collision and `is_action_request()` bypass (Pitfall 6), concurrent deploy race condition
 
-**Rationale:** Environment issues under systemd are the most common MCP integration failure mode and must be caught before any feature testing. A single broken env variable silently disables ~80% of tools. This phase has zero production risk and ends with one confirmed working tool call.
+### Phase 2: Rollback
+**Rationale:** Natural follow-on to deploy — shares the same subprocess infrastructure and config registry from Phase 1. Rollback depends on having deploy working (same health-check mechanism). Scoped separately because it has its own pitfall cluster (incompatible deps, no auto-recovery) that requires distinct test coverage.
+**Delivers:** Git-based rollback with health check, automatic roll-forward on failure, pre-rollback SHA tracking
+**Uses:** `deploy_ops.py` from Phase 1, same `_run_cmd` helper, same config registry
+**Avoids:** Rollback to incompatible commit (Pitfall 4)
 
-**Delivers:** End-to-end verified MCP connectivity; `deploy_version` tool returns the production API version from a Slack message. All credential infrastructure confirmed working.
+### Phase 3: Log Access
+**Rationale:** Can be built in parallel with Phase 2 — no dependency on rollback. The most-requested debugging tool after deploy. Purely additive: new module, new fast-path entries, no changes to existing logic beyond extending `prefect_api.py`.
+**Delivers:** `log_reader.py` with journald tail, grep filter, structlog parsing, output truncation; Prefect flow log fast-path
+**Uses:** `asyncio.create_subprocess_exec` (established), `prefect_api.py` extension for `get_flow_run_logs()`
+**Avoids:** Log flood in Slack (Pitfall 5), secret leakage in log output
 
-**Addresses (features):** `deploy_version` (zero-risk connectivity proof); at least one read-only status tool as GCS/DB connectivity validation.
+### Phase 4: Health Dashboard
+**Rationale:** Lowest complexity — mostly assembles data from modules already built in Phases 1-3 (git version from deploy_ops, error count via journald from log_reader, uptime from task_state). Build last because existing `_handle_bot_status()` already answers "is the bot alive?" for immediate needs.
+**Delivers:** `health_ops.py` with uptime, queue depth, error count, memory, current version, last restart, active monitors
+**Addresses:** FEATURES.md priority 3 health features
+**Avoids:** Shallow health check that only checks `systemctl is-active` without confirming Slack connectivity (Pitfall 7)
 
-**Avoids (pitfalls):** Pitfall 2 (systemd EnvironmentFile syntax), Pitfall 5 (wrong fastmcp package), Pitfall 6 (startup timeout), Pitfall 9 (stdout pollution) — all must be caught here.
-
-**Tasks (in order):**
-- Install `mcp[cli]~=1.26.0` in `/home/bot/mic_transformer/.venv`; verify with import test
-- Confirm `config/*.yml` files exist with production credentials for DB, GCS, GDrive, CrystalPM
-- Audit `/home/bot/.env` for systemd-incompatible syntax; fix any `export` or interpolation lines
-- Add `MIC_TRANSFORMER_API_URL` to `config.py` (single line)
-- Update `_build_mcp_servers()` to include optional `env` dict (minimal change)
-- Benchmark MCP server cold-start time on VM; lazy-import boto3/GCS if needed
-- End-to-end test: send "check deploy version" to Slack channel; confirm tool returns real data
-
-### Phase 2: Read-Only Status and Storage Tools
-
-**Rationale:** The 20+ read-only tools covering Nicole's primary daily queries have no blast radius and validate that all four credential categories (GCS, S3, Google Drive, PostgreSQL) work correctly. This builds confidence before any write operations are attempted.
-
-**Delivers:** Nicole can ask "what's the VSP status for today?" or "did the EyeMed PDF arrive for this location?" from Slack and receive real pipeline state data.
-
-**Addresses (features):** All 11 Module 1 status/audit tools, Module 5 storage tools (5 read-only), `check_pipeline_status`, `pipeline_stage_view`, `gdrive_audit`, `provider_revenue`, `ocea_health_check`.
-
-**Avoids (pitfall 1):** Test one tool from each credential category (GCS: `list_gcs_aiout`; S3: `list_s3_remits`; GDrive: `gdrive_audit`; DB: `provider_revenue`; SSH: `check_prefect_flow_status`) to verify env inheritance is working across all pathways.
-
-### Phase 3: API-Triggered and Prefect Tools
-
-**Rationale:** Extraction, reduction, benefits fetch, and Prefect flow status tools mutate state but do so through validated production infrastructure. The Flask API validates inputs before dispatching to Celery workers; Prefect provides its own retry and audit trail. These are safer than local subprocess execution.
-
-**Delivers:** Full daily pipeline workflow operable from Slack: check status, trigger VSP/EyeMed extraction, trigger reduction, check and diagnose Prefect flow status. Benefits fetch, Azure mirror, and IVT audit tools also covered.
-
-**Addresses (features):** Module 2 (extraction), Module 3 (reduction), Module 8 (PDF ingestion), Module 9 (benefits fetch — polls up to 10 min), Module 11 (azure mirror audit and trigger), Module 12 (IVT ingestion audit).
-
-**Avoids (pitfall 7):** Benefits fetch polls for up to 10 minutes. Verify SuperBot's `run_agent_with_timeout` accommodates this duration before declaring this phase complete.
-
-### Phase 4: Subprocess-Based Mutating Tools
-
-**Rationale:** Posting prep and autopost tools run local Python subprocesses that interact with Revolution EMR and modify GCS/Google Drive state. The `dry_run=True` defaults provide a safety net, but these require the most deliberate testing. Autopost is the highest-value and highest-risk capability in the entire tool suite.
-
-**Delivers:** Nicole can trigger posting prep (GDrive upload, task sheet generation) and eventually run autoposts from Slack. Full operational automation pipeline achievable without opening a laptop.
-
-**Addresses (features):** Module 4 posting prep (3 tools), `vsp_autopost`, `eyemed_autopost`, `clear_pipeline`.
-
-**Avoids (pitfall 3 and 10):** Audit subprocess calls in posting tools for `os.chdir()` usage; verify tools use unique temp paths per invocation to avoid session collision. Require explicit "live run" instruction before any `dry_run=False` autopost test.
+### Phase 5: Pipeline Status Fast-Path
+**Rationale:** Straightforward extension of `prefect_api.py` with a new `list_recent_flow_runs()` endpoint. Naturally follows Phase 3 (both touch `prefect_api.py`). Existing agent-based pipeline investigation already works; this adds the fast-path summary layer for the common "how are the crawls doing?" query.
+**Delivers:** `pipeline_ops.py` with 24h flow run summary; `prefect_api.list_recent_flow_runs()` endpoint
+**Uses:** Existing `httpx.AsyncClient` Prefect auth pattern
+**Avoids:** Prefect API pagination bug on large flow run history; tight-loop polling (cache results 30-60 seconds)
 
 ### Phase Ordering Rationale
 
-- Phase 1 before everything: systemd environment propagation must be verified before feature testing begins; a broken env silently breaks 80% of tools and is harder to diagnose once feature testing has started
-- Read-only (Phase 2) before write (Phases 3-4): validates all four credential pathways with zero blast radius; failing writes are harder to diagnose than failing reads
-- API-mediated writes (Phase 3) before subprocess writes (Phase 4): production API provides input validation and error reporting that local subprocesses do not
-- `remit_crawler` deferred beyond Phase 4: headless Chrome on GCP VM is an unknown; do not block v1.2 on this; interim path is SSH to production server
+- **Phase 1 before Phase 2:** Rollback uses the same deploy engine. Building deploy first gives rollback a working foundation to reuse, and the self-deploy architectural decisions made in Phase 1 apply directly to rollback of `super_bot`.
+- **Phase 3 parallel with Phase 2:** Log access has no dependency on rollback. Both can be planned concurrently; log access is independently testable and ships visible value immediately.
+- **Phases 4-5 last:** Both are incremental additions to working functionality. The existing `_handle_bot_status()` covers the critical health question until Phase 4 ships. Phase 5 complements Phase 3's Prefect log access.
+- **Ops command routing fix must happen in Phase 1:** The `is_action_request()` bypass affects all subsequent phases. Fix it once in Phase 1 and all later fast-path additions benefit automatically.
 
 ### Research Flags
 
-Phases needing deeper research during planning:
-- **Phase 3 (Benefits fetch timeout):** The 10-minute Prefect polling in benefits fetch tools needs explicit verification against SuperBot's session timeout configuration. The `run_agent_with_timeout` default may need adjustment.
-- **Phase 4 (Revolution EMR subprocess in dry_run):** The behavior of `run_revolution_poster.py` in dry_run mode should be manually tested on the VM before wiring to Slack to understand its output and failure modes.
+Phases likely needing deeper research during planning:
+- **Phase 1 (Deploy):** Self-deploy post-restart confirmation mechanism needs detailed design — deploy-state file format, startup hook location in `app.py`, failure path when new code crashes on startup. Also verify sudo permissions and service names on the production VM before coding begins.
+- **Phase 2 (Rollback):** Auto-roll-forward logic needs careful sequencing. Verify `pip install` downgrade behavior for rollback across a major dependency change.
 
-Phases with standard patterns (can skip deeper research):
-- **Phase 1 (VM wiring):** All patterns are well-documented in the research files; `mcp[cli]` install is a single command; systemd env validation is standard.
-- **Phase 2 (Read-only tools):** All 20+ tools have been fully analyzed from source; credential paths are documented in FEATURES.md and ARCHITECTURE.md.
+Phases with standard patterns (skip research-phase):
+- **Phase 3 (Logs):** `journalctl` subprocess and structlog JSON parsing are well-understood. Output truncation pattern already exists in `formatter.py`. No novel integration surface.
+- **Phase 4 (Health):** Entirely within existing module boundaries. `resource.getrusage()` is stdlib and well-documented. `task_state` and `queue_manager` APIs are already used.
+- **Phase 5 (Pipeline):** `prefect_api.py` extension follows the established httpx pattern already in production. No new authentication or integration surface.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | `McpStdioServerConfig` fields verified directly from installed `claude_agent_sdk/types.py`; version compatibility verified from installed packages; import path for FastMCP confirmed from mic-transformer server.py source |
-| Features | HIGH | All 35+ tools analyzed from direct source code inspection of mic-transformer MCP server modules; no assumptions; credential dependencies mapped per-tool |
-| Architecture | HIGH | Execution chain verified from SDK `subprocess_cli.py` source; `os.chdir()` subprocess isolation is OS-level guarantee; credential loading via YAML config files verified from tool source code |
-| Pitfalls | HIGH | Critical pitfalls backed by official SDK GitHub issues (#573), official FastMCP GitHub issues (#399, #1311), MCP Python SDK issues (#671), and systemd documentation; not community speculation |
+| Stack | HIGH | Directly verified against existing production codebase. No new deps means no version compatibility uncertainty. |
+| Features | HIGH | Derived from direct codebase analysis and PROJECT.md design decisions. Feature scope is well-bounded for a 2-person team. |
+| Architecture | HIGH | Component boundaries mirror existing fast-path patterns. All integration points verified in running production code. |
+| Pitfalls | HIGH | Based on codebase analysis of actual failure modes, systemd SIGTERM behavior, Slack API constraints, and Prefect API documented limits. |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **Chrome/Chromium on GCP VM for remit_crawler:** Unknown whether headless browser is installed or reliably usable on the VM. Check during Phase 1 VM audit; if not present, keep deferred and document SSH workaround.
-- **Prefect API credentials (`shen:tofu` basic auth):** Hardcoded in MCP tools. Verify this account remains active and is reachable from the GCP VM's network before Phase 3.
-- **Revolution EMR credentials on VM:** `vsp_autopost` and `eyemed_autopost` require Revolution EMR credentials in mic_transformer config. Verify these are present in the VM's mic_transformer clone before beginning Phase 4 testing.
-- **VM compute sizing:** PITFALLS.md flags e2-small/medium as potentially insufficient for MCP startup under memory pressure. If the Phase 1 cold-start benchmark exceeds 30 seconds, upgrade proactively to e2-medium before lazy-import optimization.
-- **`prod-ivt` DB access from VM:** `ivt_ingestion_audit` (Module 12) accesses the production `prod-ivt` database. Confirm the GCP VM has network access to `34.136.128.245` and that the `ivt_app_user` credentials are in the mic_transformer clone. Given the global CLAUDE.md warning about this database, document that this tool is read-only before enabling it.
+- **`mic_transformer` systemd service status:** STACK.md shows `service: None` for mic_transformer but FEATURES.md references it as an "API server." Verify whether mic_transformer runs as a systemd service before Phase 1 coding. If it does have a service, the health check and restart steps in deploy are needed; if not, deploy is git pull + pip install only.
+- **Sudoers state on production VM:** Research assumes passwordless sudo for `systemctl` and `journalctl` can be added. Verify the VM's current sudoers configuration before Phase 1 to avoid a blocker during implementation.
+- **`oso-fe-gsnap` and `irismed-service` deploy paths:** Both repos are in the proposed config registry with `service: None` and unknown deploy workflows. Treat as deferred. Do not block v1.8 on defining these.
+- **Startup hook for post-restart deploy confirmation:** The deploy-state file check needs a hook in `app.py` startup sequence. The exact insertion point needs verification during Phase 1 planning (before Socket Mode connect? after? in a startup task?).
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- Installed `claude_agent_sdk` package source (`types.py`, `subprocess_cli.py`) — `McpStdioServerConfig` definition and CLI spawning behavior
-- mic-transformer MCP server source (`.claude/mcp/mic-transformer/server.py`, all 13 tool modules, `common.py`) — complete feature inventory and credential patterns
-- [Claude Agent SDK MCP documentation](https://platform.claude.com/docs/en/agent-sdk/mcp) — 60-second connection timeout, env field behavior
-- [Claude Agent SDK Python GitHub Issue #573](https://github.com/anthropics/claude-agent-sdk-python/issues/573) — confirms subprocess environment inheritance behavior
-- [MCP Python SDK GitHub](https://github.com/modelcontextprotocol/python-sdk) — FastMCP 1.0 bundled in `mcp` package history
-- [FastMCP GitHub Issue #399](https://github.com/jlowin/fastmcp/issues/399) — stdio initialize succeeds, subsequent requests crash (known issue)
-- [FastMCP GitHub Issue #1311](https://github.com/jlowin/fastmcp/issues/1311) — subprocess cleanup issues in stdio mode
-- [MCP Python SDK Issue #671](https://github.com/modelcontextprotocol/python-sdk/issues/671) — stdio tool execution hangs in external scripts
+- `bot/fast_commands.py` — fast-path command pattern, `is_action_request()`, `_run_script` timeout, existing command registry
+- `bot/prefect_api.py` — existing httpx Prefect API client and auth pattern
+- `bot/background_monitor.py` — background task pattern, progress update approach for deploy
+- `bot/task_state.py` — uptime, recent task tracking for health dashboard extension
+- `bot/handlers.py` — event routing, dedup, access control, command dispatch flow
+- `bot/queue_manager.py` — serial queue, current task state, `get_current_task()` for deploy guard
+- `scripts/deploy.sh` — reference deploy sequence (push, pull, deps, restart, health check)
+- `scripts/restart_superbot.sh` — manual restart pattern for recovery reference
 
 ### Secondary (MEDIUM confidence)
-- [Baeldung: systemd environment variables](https://www.baeldung.com/linux/systemd-services-environment-variables) — EnvironmentFile syntax restrictions; corroborated by systemd man page
-- [Claude Code in Slack official docs](https://code.claude.com/docs/en/slack) — competitor feature comparison baseline
-- [GitHub Copilot coding agent in Slack](https://docs.github.com/en/copilot/how-tos/use-copilot-agents/coding-agent/integrate-coding-agent-with-slack) — competitor feature comparison baseline
-- [Anthropic long-running agent harnesses](https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents) — patterns for production agent deployments
-
-### Tertiary (informational only)
-- [FastMCP PyPI page](https://pypi.org/project/fastmcp/) — confirms standalone fastmcp is a separate project from `mcp.server.fastmcp`
-- [Kilo for Slack feature page](https://kilo.ai/features/slack) — competitor feature comparison
+- Prefect REST API `/logs/filter` and `/flow_runs/filter` endpoints — verified from existing `prefect_api.py` usage patterns; full API reference at https://docs.prefect.io/latest/api-ref/rest-api-reference/
+- Slack message size limits (~4000 chars) and `files_upload_v2` requirement — established Slack platform constraints (deprecated `files.upload` since 2024)
+- systemd SIGTERM behavior on `systemctl restart` — standard Linux behavior; confirmed by existing `restart_superbot.sh` manual restart pattern
 
 ---
-*Research completed: 2026-03-23*
+*Research completed: 2026-03-25*
 *Ready for roadmap: yes*

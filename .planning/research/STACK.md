@@ -1,166 +1,275 @@
 # Technology Stack
 
-**Project:** SuperBot v1.2 MCP Parity
-**Researched:** 2026-03-23
-**Scope:** Additions needed to wire mic-transformer MCP server into SuperBot's Claude Agent SDK sessions
+**Project:** SuperBot v1.8 Production Ops
+**Researched:** 2026-03-25
+**Confidence:** HIGH
 
 ---
 
 ## Existing Stack (NOT re-researched)
 
-Already validated and running in production (v1.0/v1.1):
+Already validated and running in production:
 
 | Technology | Version | Purpose |
 |------------|---------|---------|
-| `claude-agent-sdk` | 0.1.49 | Claude Code agent engine with `mcp_servers` support |
-| `slack-bolt` | 1.27.0 | Slack event handling (Socket Mode) |
-| `mcp` (Python SDK) | 1.26.0 | MCP protocol (dependency of claude-agent-sdk in super_bot venv) |
-| Python | 3.10+ | Runtime on VM |
-| systemd | OS-provided | Process management |
-| Linear MCP, Sentry MCP | via npx | Already configured in `_build_mcp_servers()` |
+| `claude-agent-sdk` | 0.1.49 | Claude Code agent engine |
+| `slack-bolt` | 1.27.0 | Slack event handling (Socket Mode, lazy listener) |
+| `httpx` | (installed) | Async HTTP client for Prefect API |
+| `structlog` | >=24.0 | Structured logging |
+| `asyncio.create_subprocess_exec` | stdlib | Shell command execution (git, scripts) |
+| `asyncpg` | >=0.29 | PostgreSQL session/message logging |
+| `cachetools` | >=5.0 | Event deduplication TTL cache |
+| `aiohttp` | >=3.9 | Slack SDK transport layer |
+| Python | 3.10 | Runtime on VM |
+| systemd / journald | OS-provided | Process management and logging |
+| `gcloud compute ssh` | installed | SSH to VM (used by deploy.sh) |
 
 ---
 
-## New Stack for v1.2
+## New Stack for v1.8: Nothing
 
-### mic-transformer MCP Server Dependencies
+**No new Python packages are needed.** Every v1.8 feature can be built with the existing stack.
 
-These go in **mic_transformer's .venv** (NOT super_bot's venv). The server subprocess runs with mic_transformer's Python interpreter.
-
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| `mcp[cli]` | >=1.0.0, pin to ~=1.26.0 | MCP Python SDK with FastMCP bundled | The server imports `from mcp.server.fastmcp import FastMCP`. FastMCP 1.0 is bundled inside the `mcp` package (not the standalone `fastmcp` PyPI package). The `[cli]` extra adds the `mcp` CLI entry point used by `server.run()`. Pin to 1.26.x for compatibility with the claude-agent-sdk 0.1.49 that SuperBot runs. |
-
-**Do NOT install the standalone `fastmcp` package** (PyPI: `fastmcp>=2.0`). That is a separate project by Prefect/jlowin. The mic-transformer server uses `from mcp.server.fastmcp import FastMCP` which is the version bundled in the official `mcp` SDK package. Installing standalone `fastmcp` would be unused and could cause import confusion.
-
-### No Changes to SuperBot's Own Stack
-
-SuperBot already has `mcp==1.26.0` as a dependency of `claude-agent-sdk`. No new packages needed in super_bot's venv. The MCP server runs as a separate subprocess using mic_transformer's Python.
+This is because:
+1. **Deploy from Slack** -- The bot runs ON the GCP VM. Deploy = `git pull` + `pip install` + `systemctl restart`. All executable via `asyncio.create_subprocess_exec` (already used in `fast_commands.py`, `worktree.py`, `digest_changelog.py`, `git_activity.py`).
+2. **Git-based rollback** -- `git log`, `git checkout`, `git reset` via subprocess. Same pattern as existing git operations in `worktree.py` and `git_activity.py`.
+3. **Journald log access** -- `journalctl -u <service> -n <lines> --no-pager` via subprocess. No Python wrapper needed.
+4. **Prefect flow logs** -- `POST /api/logs/filter` with `flow_run_id` filter. Already using `httpx.AsyncClient` in `prefect_api.py`.
+5. **App log access** -- `tail -n <lines> <logfile>` via subprocess, or read file directly.
+6. **Bot health dashboard** -- Already has `task_state.py` with uptime, current task, recent tasks, queue state. Extend in-memory state, no new deps.
+7. **Pipeline status** -- Prefect API flow run filtering already implemented. Extend `prefect_api.py`.
 
 ---
 
-## ClaudeAgentOptions.mcp_servers Config Format
+## Integration Points for New Features
 
-### Type Definition (from claude-agent-sdk 0.1.49)
+### Deploy from Slack (All 4 Repos)
+
+**Pattern:** New fast-path commands using `asyncio.create_subprocess_exec`.
+
+Each repo deploy follows the same steps, all executable locally on the VM:
 
 ```python
-class McpStdioServerConfig(TypedDict):
-    """MCP stdio server configuration."""
-    type: NotRequired[Literal["stdio"]]  # Optional for backwards compatibility
-    command: str
-    args: NotRequired[list[str]]
-    env: NotRequired[dict[str, str]]
-    # NOTE: No `cwd` field exists. The server must handle its own working directory.
+# Step 1: git pull (already have this pattern in git_activity.py)
+proc = await asyncio.create_subprocess_exec(
+    "git", "pull", "origin", branch,
+    cwd=repo_path,
+    stdout=asyncio.subprocess.PIPE,
+    stderr=asyncio.subprocess.PIPE,
+)
+
+# Step 2: pip install (same pattern)
+proc = await asyncio.create_subprocess_exec(
+    f"{repo_path}/.venv/bin/pip", "install", "-r", "requirements.txt",
+    cwd=repo_path, ...
+)
+
+# Step 3: systemctl restart (requires sudo)
+proc = await asyncio.create_subprocess_exec(
+    "sudo", "systemctl", "restart", service_name, ...
+)
+
+# Step 4: health check (systemctl is-active)
+proc = await asyncio.create_subprocess_exec(
+    "sudo", "systemctl", "is-active", service_name, ...
+)
 ```
 
-The `mcp_servers` parameter on `ClaudeAgentOptions` accepts `dict[str, McpServerConfig]` where keys are server names and values are config dicts.
-
-### Current Config in agent.py (Already Correct)
+**Repo config needed** (add to `config.py`):
 
 ```python
-servers["mic-transformer"] = {
-    "command": mcp_python,       # /home/bot/mic_transformer/.venv/bin/python
-    "args": [mcp_server_script], # /home/bot/mic_transformer/.claude/mcp/mic-transformer/server.py
+# v1.8: Deploy targets -- repo name -> (path, service_name, branch)
+DEPLOY_TARGETS: dict[str, dict] = {
+    "super_bot": {
+        "path": "/home/bot/super_bot",
+        "service": "superbot",
+        "branch": "main",
+        "python": "/home/bot/super_bot/.venv/bin/python",
+    },
+    "mic_transformer": {
+        "path": "/home/bot/mic_transformer",
+        "service": "mic-transformer",  # or None if no systemd service
+        "branch": "develop",
+        "python": "/home/bot/mic_transformer/.venv/bin/python",
+    },
+    "irismed_service": {
+        "path": "/home/bot/irismed-service",
+        "service": "irismed",
+        "branch": "develop",
+        "python": "/home/bot/irismed-service/.venv/bin/python",
+    },
+    "oso_fe_gsnap": {
+        "path": "/home/bot/oso-fe-gsnap",
+        "service": "oso-fe",
+        "branch": "develop",
+        "python": "/home/bot/oso-fe-gsnap/.venv/bin/python",
+    },
 }
 ```
 
-This is already wired in `_build_mcp_servers()` at `bot/agent.py:43-56`. The config:
-- Uses mic_transformer's venv Python as the command
-- Passes the server.py path as the sole arg
-- Does NOT need `cwd` because server.py calls `os.chdir(PROJECT_ROOT)` internally
-- Does NOT need `env` because the tools use hardcoded API URLs and SSH for Prefect
+**Sudo access:** The `bot` user needs passwordless sudo for `systemctl restart/status/is-active <service>`. Add to `/etc/sudoers.d/bot`:
+```
+bot ALL=(root) NOPASSWD: /usr/bin/systemctl restart superbot, /usr/bin/systemctl restart mic-transformer, ...
+bot ALL=(root) NOPASSWD: /usr/bin/systemctl status superbot, /usr/bin/systemctl status mic-transformer, ...
+bot ALL=(root) NOPASSWD: /usr/bin/systemctl is-active superbot, /usr/bin/systemctl is-active mic-transformer, ...
+bot ALL=(root) NOPASSWD: /usr/bin/journalctl -u *
+```
 
-### How the SDK Passes Config to Claude CLI
+### Journald Log Access
 
-The SDK serializes the dict to JSON and passes it as `--mcp-config '{"mcpServers": {...}}'` to the underlying Claude CLI process. For stdio servers, Claude CLI spawns the subprocess directly. The server communicates via stdin/stdout using the MCP stdio protocol.
-
-### Optional: Adding env for MIC_TRANSFORMER_API_URL
-
-If the API URL needs to differ on the VM (unlikely since tools hardcode `136.111.85.127:8080`):
+**Pattern:** subprocess call to `journalctl`.
 
 ```python
-servers["mic-transformer"] = {
-    "command": mcp_python,
-    "args": [mcp_server_script],
-    "env": {"MIC_TRANSFORMER_API_URL": "http://136.111.85.127:8080"},
-}
+# Tail last N lines for a service
+proc = await asyncio.create_subprocess_exec(
+    "sudo", "journalctl", "-u", service, "-n", str(lines), "--no-pager",
+    stdout=asyncio.subprocess.PIPE,
+    stderr=asyncio.subprocess.PIPE,
+)
+
+# Filter by time range
+proc = await asyncio.create_subprocess_exec(
+    "sudo", "journalctl", "-u", service,
+    "--since", since_str,  # e.g. "1 hour ago", "2026-03-25 10:00"
+    "--no-pager",
+    stdout=asyncio.subprocess.PIPE,
+    stderr=asyncio.subprocess.PIPE,
+)
+
+# Grep for pattern
+proc = await asyncio.create_subprocess_exec(
+    "sudo", "journalctl", "-u", service, "--no-pager", "-g", pattern,
+    stdout=asyncio.subprocess.PIPE,
+    stderr=asyncio.subprocess.PIPE,
+)
 ```
 
-The `env` dict in `McpStdioServerConfig` is passed to the subprocess environment. Use this only if you need to override the default API URL.
+**Sudo access:** journalctl needs root to read other services' logs. Add to sudoers (see above).
 
----
+### Prefect Flow Run Logs
 
-## What mic-transformer's .venv Needs on the VM
+**Pattern:** Extend existing `prefect_api.py` with new method using existing `httpx.AsyncClient`.
 
-### Required Python Packages
-
-The MCP server subprocess needs these in `/home/bot/mic_transformer/.venv`:
-
-| Package | Why Needed |
-|---------|-----------|
-| `mcp[cli]~=1.26.0` | Core MCP server framework (`from mcp.server.fastmcp import FastMCP`, `server.run()`) |
-| `requests` | HTTP calls to mic-transformer API, Prefect API, Google Drive |
-| All existing mic_transformer deps | Storage tools import `from lib.models.S3Remits import S3Remits` etc. |
-
-The server.py adds `PROJECT_ROOT` and `PROJECT_ROOT/lib` to `sys.path`, so the full mic_transformer project dependencies must be installed.
-
-### Installation on VM
-
-```bash
-# Activate mic_transformer's venv (NOT super_bot's)
-source /home/bot/mic_transformer/.venv/bin/activate
-
-# Install MCP SDK (the only NEW dependency)
-pip install "mcp[cli]~=1.26.0"
-
-# Verify
-python -c "from mcp.server.fastmcp import FastMCP; print('OK')"
+```python
+async def get_flow_run_logs(
+    flow_run_id: str, limit: int = 100, level_ge: int = 0
+) -> list[dict]:
+    """Fetch logs for a specific flow run from Prefect API."""
+    async with httpx.AsyncClient(auth=PREFECT_AUTH, timeout=TIMEOUT) as client:
+        resp = await client.post(
+            f"{PREFECT_API}/logs/filter",
+            json={
+                "logs": {
+                    "flow_run_id": {"any_": [flow_run_id]},
+                    "level": {"ge_": level_ge},
+                },
+                "sort": "TIMESTAMP_ASC",
+                "limit": min(limit, 100),  # Prefect enforces max 100
+            },
+        )
+        resp.raise_for_status()
+        return resp.json()
 ```
 
-### Credentials Already on VM (No New Config)
+### Bot Health Dashboard
 
-The MCP tools use these credentials, which should already be available on the VM:
+**Pattern:** Extend existing `task_state.py` and add new fast-path command.
 
-| Credential | How Used | How Available |
-|------------|----------|---------------|
-| AWS credentials | S3 storage access (`S3Remits` model) | `~/.aws/credentials` or instance profile |
-| GCS service account | Google Cloud Storage access | `GOOGLE_APPLICATION_CREDENTIALS` env var |
-| SSH key for Prefect host | `ssh ansible@136.111.85.127` for journalctl | `~/.ssh/` key |
-| Google Drive service account | Drive folder audit | Service account JSON in mic_transformer config |
+New data points to track (all in-memory, no new deps):
+- Error count since boot (increment in exception handlers)
+- Last error timestamp and message
+- Last successful task timestamp
+- Memory usage (`os.getpid()` + read `/proc/self/status` or `resource.getrusage`)
+- Active background monitors (already tracked in `background_monitor.py`)
 
----
+```python
+import resource
+import os
 
-## Subprocess Lifecycle
+def get_memory_mb() -> float:
+    """RSS in MB via stdlib resource module."""
+    return resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024  # Linux: KB -> MB
+```
 
-### How Claude CLI Manages MCP Server Subprocesses
+### Pipeline Status
 
-1. SuperBot calls `claude_agent_sdk.query()` with `mcp_servers={"mic-transformer": {...}}`
-2. SDK spawns Claude CLI with `--mcp-config '{"mcpServers": {"mic-transformer": {"command": "...", "args": [...]}}}'`
-3. Claude CLI spawns the MCP server as a stdio subprocess at session start
-4. Claude calls MCP tools via stdin/stdout JSON-RPC during the session
-5. Claude CLI kills the MCP subprocess when the session ends
+**Pattern:** Extend `prefect_api.py` to query recent flow runs.
 
-The MCP server lives for the duration of a single `query()` call (one Slack message processing). It is spawned fresh each time. There is no persistent MCP server process.
-
-### Implications
-
-- **No long-running process management needed** -- Claude CLI handles subprocess lifecycle
-- **Cold start per message** -- server.py imports and `os.chdir()` on every invocation. With mic_transformer's large dependency tree, this may add 2-5 seconds of startup. Acceptable for a Slack bot (users expect some latency).
-- **Crash isolation** -- if the MCP server crashes, it only affects the current session. Next message spawns a fresh one.
+```python
+async def get_recent_flow_runs(
+    hours_back: int = 24, limit: int = 20
+) -> list[dict]:
+    """Get recent flow runs across all deployments."""
+    from datetime import datetime, timedelta, timezone
+    since = (datetime.now(timezone.utc) - timedelta(hours=hours_back)).isoformat()
+    async with httpx.AsyncClient(auth=PREFECT_AUTH, timeout=TIMEOUT) as client:
+        resp = await client.post(
+            f"{PREFECT_API}/flow_runs/filter",
+            json={
+                "flow_runs": {
+                    "start_time": {"after_": since},
+                },
+                "sort": "START_TIME_DESC",
+                "limit": limit,
+            },
+        )
+        resp.raise_for_status()
+        return resp.json()
+```
 
 ---
 
 ## What NOT to Add
 
-| Avoid | Why |
-|-------|-----|
-| Standalone `fastmcp` PyPI package | Different project from `mcp.server.fastmcp`. Would be unused, wastes space, risks import shadowing. |
-| `mcp` package in super_bot's venv | Already there as a dependency of `claude-agent-sdk`. No action needed. |
-| Custom subprocess management for MCP server | Claude CLI handles spawning/killing. Do not wrap in your own `Popen`. |
-| `cwd` in mcp_servers config | `McpStdioServerConfig` does not have a `cwd` field. The server handles this internally via `os.chdir(PROJECT_ROOT)`. |
-| HTTP/SSE transport for mic-transformer MCP | stdio is simpler, lower latency, no port management. HTTP/SSE only needed for remote MCP servers. |
-| Environment variable passthrough for most tools | Tools hardcode API URLs and credentials paths. Only `MIC_TRANSFORMER_API_URL` is configurable via env, and the default is correct. |
-| New config.py variables | The current `_build_mcp_servers()` already reads `MIC_TRANSFORMER_CWD` from env to find the server script. No new config needed. |
+| Avoid | Why | Use Instead |
+|-------|-----|-------------|
+| `paramiko` or `fabric` for SSH | Bot runs on the same VM as the repos. No SSH needed for deploy. | `asyncio.create_subprocess_exec` with local commands |
+| `psutil` for process monitoring | Heavyweight dependency for simple health checks | `resource.getrusage()` (stdlib) + `/proc/self/status` reads |
+| `systemd-python` or `pystemd` bindings | Adds native compilation dependency, harder to install | Shell out to `systemctl` / `journalctl` via subprocess |
+| `python-prefect` client library | Massive dependency tree, overkill for 3-4 REST API calls | `httpx` (already installed) with direct API calls |
+| New database tables for deploy history | Over-engineering for a 2-person team | In-memory list of recent deploys (same pattern as `task_state._recent_tasks`) |
+| Web dashboard framework (Flask, FastAPI) | Out of scope -- Slack is the interface | Fast-path commands returning formatted Slack messages |
+| `asyncssh` for remote operations | No remote operations needed -- bot is local | Direct subprocess execution |
+| Log aggregation service (Loki, CloudWatch) | Over-engineering for single-VM setup | `journalctl` subprocess + Prefect API |
+
+---
+
+## Config Additions Required
+
+### config.py Changes
+
+```python
+# v1.8: Deploy targets (env var or hardcoded)
+# Format: repo_name:path:service:branch (comma-separated entries)
+DEPLOY_TARGETS_RAW: str = os.environ.get(
+    "DEPLOY_TARGETS",
+    "super_bot:/home/bot/super_bot:superbot:main,"
+    "mic_transformer:/home/bot/mic_transformer:mic-transformer:develop,"
+    "irismed_service:/home/bot/irismed-service:irismed:develop,"
+    "oso_fe_gsnap:/home/bot/oso-fe-gsnap:oso-fe:develop"
+)
+```
+
+### VM Sudoers Changes
+
+The `bot` user needs passwordless sudo for exactly these commands:
+- `systemctl restart|status|is-active <service>` for each deploy target
+- `journalctl -u <service>` for log access
+
+This is a one-time manual setup on the VM, not a code change.
+
+---
+
+## Existing Patterns to Reuse
+
+| Pattern | Where Used Today | Reuse For |
+|---------|------------------|-----------|
+| `asyncio.create_subprocess_exec` + timeout | `fast_commands._run_script()` | Deploy commands, journalctl, git operations |
+| Fast-path regex + handler | `fast_commands.FAST_COMMANDS` list | Deploy, logs, health, pipeline status commands |
+| `httpx.AsyncClient` with Prefect auth | `prefect_api.py` | Flow run logs, pipeline status queries |
+| In-memory state with recent history | `task_state.py` | Deploy history, error tracking |
+| Background task with progress updates | `background_monitor.py` | Deploy progress (pull/install/restart phases) |
+| Slack message formatting | `formatter.py` | Deploy results, log output, health dashboard |
 
 ---
 
@@ -168,37 +277,53 @@ The MCP server lives for the duration of a single `query()` call (one Slack mess
 
 | Category | Recommended | Alternative | Why Not Alternative |
 |----------|-------------|-------------|---------------------|
-| MCP package | `mcp[cli]~=1.26.0` | Standalone `fastmcp>=3.0` | The server already uses `from mcp.server.fastmcp import FastMCP` (bundled FastMCP 1.0 in `mcp` package). Switching to standalone FastMCP 3.x would require rewriting all tool registrations. |
-| Transport | stdio (current) | HTTP/SSE server | Adds port management, health checks, firewall rules. stdio is local-only, zero config, managed by Claude CLI. |
-| MCP version pinning | `~=1.26.0` (compatible release) | `>=1.0.0` (loose) | Loose pinning risks breaking changes. The `mcp` package has had breaking API changes between major versions. Pin to what super_bot's claude-agent-sdk depends on. |
-| Server process model | Per-session (Claude CLI manages) | Long-running daemon | Would need systemd unit, health checks, restart logic. Per-session is simpler, crash-isolated, and adequate for Slack bot latency. |
+| Deploy mechanism | Local subprocess (git/pip/systemctl) | Ansible/Terraform | Bot is ON the VM. Running local commands is simpler, faster, zero additional deps. |
+| Log access | journalctl subprocess | Structured log files + Python file I/O | journalctl already aggregates all systemd services, supports filtering, time ranges, grep. Reimplementing in Python adds no value. |
+| Process health | `resource.getrusage()` + systemctl | `psutil` | Avoids adding a compiled dependency. getrusage covers RSS; systemctl covers service state. |
+| Prefect API client | Direct `httpx` calls | `prefect` Python SDK | The SDK pulls in 100+ transitive dependencies. We need 3-4 endpoints. httpx is already working. |
+| Deploy history storage | In-memory list | PostgreSQL table | 2-person team, deploys are infrequent. In-memory with last-5 is sufficient. If the bot restarts, deploy history loss is acceptable. |
+| Self-deploy (super_bot) | Sequential: pull, install, restart (self-kill) | Blue-green or rolling | Single-instance bot. Self-restart via systemctl is fine -- systemd will restart the new version. 2-3 second downtime is acceptable for an internal tool. |
 
 ---
 
-## Version Compatibility Matrix
+## Version Compatibility
 
-| Component | Version | Constraint Source |
-|-----------|---------|-------------------|
-| `claude-agent-sdk` (super_bot) | 0.1.49 | Depends on `mcp` -- drives version alignment |
-| `mcp` (super_bot, transitive) | 1.26.0 | Installed by claude-agent-sdk |
-| `mcp[cli]` (mic_transformer) | ~=1.26.0 | Must be compatible with CLI that claude-agent-sdk bundles |
-| Python (mic_transformer) | 3.10 | Existing venv on VM |
-| Python (super_bot) | 3.10 | Existing venv on VM |
-| `server.py` import | `from mcp.server.fastmcp import FastMCP` | Requires `mcp>=1.0.0` (FastMCP 1.0 bundled) |
-| `server.run()` | stdio transport | Default for `FastMCP.run()` when invoked as subprocess |
+No new packages, so no new compatibility concerns. Existing stack remains pinned:
+
+| Package | Version | Constraint |
+|---------|---------|------------|
+| `slack-bolt` | 1.27.0 | Pinned in requirements.txt |
+| `claude-agent-sdk` | 0.1.49 | Pinned in requirements.txt |
+| `httpx` | (transitive) | Via aiohttp/claude-agent-sdk |
+| `structlog` | >=24.0,<25.0 | Range-pinned in requirements.txt |
+| `asyncpg` | >=0.29,<1.0 | Range-pinned in requirements.txt |
+
+---
+
+## Self-Deploy Consideration
+
+When SuperBot deploys itself (`super_bot` repo), the process is:
+1. `git pull origin main` -- updates code on disk
+2. `pip install -r requirements.txt` -- updates deps if changed
+3. `sudo systemctl restart superbot` -- kills current process, systemd starts new one
+
+Step 3 kills the running bot mid-response. The Slack message confirming success will never be sent. Mitigations:
+- Post "Restarting now..." message BEFORE issuing `systemctl restart`
+- After restart, the new bot process could check for a "pending deploy confirmation" marker file and post success
+- Or simply: the user sees the bot go offline briefly, then come back. Acceptable UX for internal tool.
 
 ---
 
 ## Sources
 
-- `mcp` PyPI package -- version 1.26.0, includes `mcp.server.fastmcp`: https://pypi.org/project/mcp/
-- `fastmcp` PyPI package (standalone, NOT used) -- version 3.1.1: https://pypi.org/project/fastmcp/
-- `claude-agent-sdk` PyPI -- version 0.1.49: https://pypi.org/project/claude-agent-sdk/
-- `McpStdioServerConfig` type definition: verified from `claude_agent_sdk/types.py` line 498-504 in installed package
-- `_build_mcp_servers()` implementation: verified from `bot/agent.py` lines 43-78
-- mic-transformer MCP server: verified from `.claude/mcp/mic-transformer/server.py` and `requirements.txt`
-- MCP Python SDK GitHub: https://github.com/modelcontextprotocol/python-sdk
+- Prefect REST API `/logs/filter` endpoint: [Prefect REST API Reference](https://docs.prefect.io/latest/api-ref/rest-api-reference/)
+- Existing `prefect_api.py` implementation: verified from `bot/prefect_api.py` (httpx + basic auth pattern)
+- Existing subprocess pattern: verified from `bot/fast_commands.py:54-73`, `bot/worktree.py:48-73`, `bot/git_activity.py:107-148`
+- Existing deploy script: verified from `scripts/deploy.sh` (gcloud SSH + git pull + pip + systemctl + health check)
+- Python `resource` module: [Python stdlib docs](https://docs.python.org/3/library/resource.html) -- `getrusage(RUSAGE_SELF).ru_maxrss`
+- Existing config pattern: verified from `config.py` (env var with parsing)
+- Existing fast-path pattern: verified from `bot/fast_commands.py` (regex + async handler registry)
 
 ---
-*Stack research for: SuperBot v1.2 MCP Parity -- mic-transformer MCP integration*
-*Researched: 2026-03-23*
+*Stack research for: SuperBot v1.8 Production Ops -- deploy, rollback, logs, health, pipeline status*
+*Researched: 2026-03-25*

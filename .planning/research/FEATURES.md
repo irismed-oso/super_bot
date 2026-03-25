@@ -1,422 +1,276 @@
 # Feature Landscape
 
-**Domain:** Slack-integrated autonomous coding agent (GCP VM + Claude Code CLI)
-**Researched:** 2026-03-23 (v1.2 MCP Parity update, appended to 2026-03-18 baseline)
-**Confidence:** HIGH -- all v1.2 findings derived from direct source code analysis of mic-transformer MCP server
+**Domain:** Slack-integrated production ops (deploy, rollback, logs, health, pipeline monitoring)
+**Researched:** 2026-03-25 (v1.8 Production Ops milestone)
+**Confidence:** HIGH -- derived from direct codebase analysis of existing bot, deploy scripts, and infrastructure
 
 ---
 
-## Feature Landscape (v1.0/v1.1 Baseline)
+## Existing Infrastructure (What v1.8 Builds On)
 
-### Table Stakes (Users Expect These)
+Before defining new features, these are the existing capabilities that v1.8 extends:
 
-Features users assume exist. Missing these = product feels incomplete.
-
-| Feature | Why Expected | Complexity | Notes |
-|---------|--------------|------------|-------|
-| @mention trigger in Slack channel | Every Slack bot works this way; it's the entry point | LOW | Must work in channel (not DM). Claude Code in Slack official docs confirm channel-only pattern. |
-| Thread-scoped context | Users expect the bot to read the thread before acting, not just the @mention message | LOW | All major agents (Kilo, Copilot, Claude) pull full thread history. Critical for multi-turn tasks. |
-| Streamed / incremental progress updates | Long-running tasks feel like a black box without updates; users assume the bot checks in | MEDIUM | Post "working on it" or step-by-step updates as Claude Code runs. Prevents users from retrying. |
-| Completion notification with summary | Users expect to be @mentioned when the task is done with what happened | LOW | Standard pattern across Devin, Kilo, Copilot, Claude Code in Slack. |
-| Git operations: branch, commit, push | This is a coding agent -- version control is assumed | LOW | Claude Code CLI natively supports git. |
-| PR creation from Slack | Users treat "do X and open a PR" as a single natural command | MEDIUM | All major agents (Kilo, Copilot, Claude Code in Slack) support this. |
-| Code reading and Q&A about the repo | "What does X function do?" is the most common first use case | LOW | Claude Code CLI reads files natively; no extra work needed. |
-| Script and command execution | Running Prefect flows, tests, operational scripts is core to this project's value | MEDIUM | VM shell access; Claude Code CLI handles subprocess execution. |
-| Error reporting back to Slack | If the bot fails, the channel needs to see why -- silently broken is worse than broken | LOW | Post error messages and stack traces as Slack replies. |
-| Named-user access control | Small team means only Nicole/Han/named users should trigger the bot | LOW | Allowlist by Slack user ID checked before processing any message. |
-
-### Differentiators (Competitive Advantage)
-
-Features that set the product apart. Not required, but valued.
-
-| Feature | Value Proposition | Complexity | Notes |
-|---------|-------------------|------------|-------|
-| Persistent project memory (CLAUDE.md + git history) | Bot builds accumulated awareness of mic_transformer instead of starting cold each time | MEDIUM | Claude Code memory system + project CLAUDE.md. Far better than stateless agents. Devin Wiki is the commercial equivalent. |
-| Mic_transformer-specific operational commands | "Run the VSP reconciliation flow" works without explaining what that means | LOW | Achieved naturally via Claude Code reading the codebase and CLAUDE.md. No extra code. |
-| Isolated task workspaces per job | Each Slack task runs in its own git worktree so concurrent tasks don't stomp each other | HIGH | Sleepless-agent pattern. Requires task queue + workspace manager on the VM. Significant reliability win. |
-| Task queue with status slash commands | `/status`, `/cancel` for in-flight tasks -- know what's running without asking | MEDIUM | SQLite-backed queue. Sleepless-agent implements this. Prevents duplicate work. |
-| Daily digest / activity report | "Here's what I did today" posted to channel on a schedule | LOW | Cron job reading git log + task history. Trust-building for autonomous agent. |
-| Automatic test running after code changes | Bot runs tests before reporting done, surfaces failures in Slack | MEDIUM | Claude Code can invoke pytest; pass/fail posted to thread. Reduces review burden. |
-| Deployment from Slack | "Deploy to staging" triggers actual deploy workflow from the VM | HIGH | Requires deploy scripts already in mic_transformer. High value but high blast radius. |
-
-### Anti-Features (Commonly Requested, Often Problematic)
-
-Features that seem good but create problems.
-
-| Feature | Why Requested | Why Problematic | Alternative |
-|---------|---------------|-----------------|-------------|
-| Approval gates for every destructive action | "Safety first" -- humans want to confirm before the bot does anything risky | PROJECT.md explicitly rules this out; approval gates defeat the value of full autonomy for a trusted small team; adds latency and friction to every task | Trust the team + channel visibility. Everyone sees what was asked and done. Use git history as the audit trail. |
-| DM-based interaction | Users may want private tasks | DMs hide what the bot is doing from teammates; kills team awareness, which is a core design goal | Channel mentions only. If privacy is needed, use a private channel. |
-| Web UI / dashboard | Nice to visualize agent activity | Duplicates Slack; adds a whole new surface to build and maintain | Slack is the dashboard. Post status, results, and daily digests there. |
-| Multi-repo support | Teams often work across repos | Dramatically increases complexity of repo selection, context, and security surface | mic_transformer only for v1. Pin scope. |
-| Per-user sandboxed environments | Enterprise agents give each user their own environment | Unnecessary overhead for a 2-person team; one shared VM and repo is simpler and sufficient | Single shared VM with git worktrees for task isolation. |
-| Real-time token-by-token streaming to Slack | "Show me Claude thinking live" | Slack rate limits will get the bot banned (60 messages/min per channel); streaming at token level is unusable in practice | Post milestone updates (started, tool calls, done). Update a single message via edit rather than spamming new messages. |
-| Webhook-based retry loops | Automatically retry every failed task | Retries on bad prompts waste Claude tokens; retries on broken environments loop indefinitely | Report failures clearly. Let humans decide to retry or rephrase. |
-| Full chat assistant mode (non-coding Q&A) | "Ask the bot anything" | Dilutes the product; users start treating it as a general chatbot instead of a coding agent; hard to distinguish from Slack's built-in Claude app | Scope to coding and operational tasks on mic_transformer. |
+| Existing Feature | Module | Relevance to v1.8 |
+|-----------------|--------|-------------------|
+| Fast-path command system | `bot/fast_commands.py` | Deploy, health, pipeline commands will be fast-path |
+| Background task monitor | `bot/background_monitor.py` | Deploy progress tracking reuses this pattern |
+| Prefect API client | `bot/prefect_api.py` | Pipeline status queries |
+| Bot status fast-path | `_handle_bot_status()` | Health dashboard extends this |
+| Deploy script (local) | `scripts/deploy.sh` | Template for Slack-triggered deploy |
+| Restart script | `scripts/restart_superbot.sh` | Already does SSH + systemctl |
+| Task state tracking | `bot/task_state.py` | Uptime, recent tasks for health dashboard |
+| Queue manager | `bot/queue_manager.py` | Current task, queue depth for health |
+| MCP `deploy_version` tool | mic-transformer MCP | Already checks production API version |
 
 ---
 
-## v1.2 MCP Parity: mic-transformer MCP Tool Inventory
+## Table Stakes
 
-### Complete Tool Catalog (35+ tools across 13 modules)
+Features the team will expect from a "production ops from Slack" milestone. Missing any of these and the milestone feels incomplete.
 
-Source: Direct code analysis of `/mic_transformer/.claude/mcp/mic-transformer/` (all 13 tool modules).
+| Feature | Why Expected | Complexity | Dependencies | Notes |
+|---------|--------------|------------|--------------|-------|
+| **Deploy super_bot from Slack** | "deploy" is literally the milestone name; self-deploy is the first test | Medium | SSH to VM, systemctl access | Adapts existing `scripts/deploy.sh` logic into a fast-path handler. Git pull + restart + health check. |
+| **Deploy mic_transformer from Slack** | Primary managed repo; most frequent deploy target | Medium | SSH to VM, production API health endpoint | Similar to super_bot deploy but targets mic_transformer dir. Must handle deps install. |
+| **Deploy status (what's running)** | Before deploying, "what version is running?" is always the first question | Low | `git rev-parse HEAD` on VM, systemctl status | Show current commit hash, branch, last deploy time, changes since last deploy. |
+| **Git-based rollback** | Every deploy system needs an undo; "that broke things, go back" | Medium | Git history on VM, deploy mechanism | `git checkout <previous-commit>` + restart. Must track what was deployed. |
+| **Journald log tail** | "What's in the logs?" is the universal first debug step | Low | `journalctl -u superbot` via SSH or local | Tail last N lines with optional grep filter. Output truncation for Slack's 4000-char limit. |
+| **Bot health summary** | "Is the bot healthy?" needs more than current idle/busy status | Low | Extends existing `_handle_bot_status()` | Uptime, error count, last restart, memory, queue depth, recent task success rate. |
+| **Pipeline status (fast-path)** | "How are the crawls doing?" is asked daily | Medium | Prefect API queries | Summary of recent Prefect flow runs: completed, failed, running counts. |
 
-#### Module 1: Status (11 tools) -- READ-ONLY
+## Differentiators
 
-| Tool | Purpose | Complexity | Credentials Required |
-|------|---------|------------|---------------------|
-| `vsp_status` | VSP processing status across all locations for a date | High | GCS, S3, GDrive, DB |
-| `eyemed_status` | EyeMed processing status across all locations for a date | High | GCS, S3, GDrive, DB |
-| `check_prefect_flow_status` | Check Prefect flow runs via SSH + journalctl parsing | Med | SSH to production (ansible@136.111.85.127) |
-| `pipeline_audit` | Query vsp_processing_audit_logs for flow run history | Med | DB (IrisMedAppDB) |
-| `pipeline_stage_view` | Stage-by-stage pipeline progress for one location/date | High | GCS, S3, GDrive, DB |
-| `get_prefect_logs` | Fetch Prefect flow run logs for debugging | Med | Prefect API (HTTP auth) + DB |
-| `eyemed_crawler_audit` | Audit EyeMed crawler S3 output + audit logs | High | S3, DB |
-| `eyemed_crawler_detail` | Detailed per-location crawler result view | Med | DB |
-| `eyemed_status_range` | EyeMed status grid across a date range | High | GCS, GDrive, DB |
-| `eyemed_scan_results` | Query eyemed_crawler_scan_results table | Med | DB |
-| `for_eyes_autopost_analysis` | Analyze For Eyes posting results with ZER detection | High | GCS, DB |
+Features that go beyond basic expectations and make the ops experience genuinely better than SSH-ing into the VM manually.
 
-#### Module 2: Extraction (3 tools) -- WRITE/MUTATING
+| Feature | Value Proposition | Complexity | Dependencies | Notes |
+|---------|-------------------|------------|--------------|-------|
+| **Deploy with automatic health verification** | Deploy + wait + verify + report pass/fail in one command, no manual checking | Medium | Health check endpoint or journald error scan | Existing `deploy.sh` already does this; wrap it for Slack with structured output. |
+| **Rollback with reason tracking** | "Why did we roll back?" captured in Slack thread for team awareness | Low | Deploy history | Append reason to rollback message. Thread becomes audit trail. |
+| **Prefect flow log access** | "Show me the logs for that failed crawl" without opening Prefect UI | Medium | Prefect API `get_prefect_logs` MCP tool | Already exists as MCP tool; expose as fast-path for common queries. |
+| **Application log access** | Tail app-level logs (Flask, Celery worker output) in addition to journald | Medium | Log file paths on VM, SSH access | mic_transformer may log to files or just stdout captured by systemd. |
+| **Deploy diff preview** | "What would be deployed?" shows commits between current and latest | Low | `git log` between HEAD and origin/main on VM | Prevents surprise deploys. |
+| **Multi-repo deploy from one command** | "deploy mic_transformer" vs "deploy super_bot" -- repo is a parameter | Low | Repo config map with paths, services, health checks | Unified interface instead of separate scripts per repo. |
+| **Pipeline status with date filter** | "pipeline status for 03.20" shows that day's crawl/extraction/posting results | Medium | Existing MCP status tools | Leverages existing `vsp_status`/`eyemed_status` MCP tools. |
+| **Error rate tracking** | "How many errors in the last hour?" from journald or app logs | Medium | Log parsing, counters | Useful for post-deploy monitoring. |
 
-| Tool | Purpose | Complexity | Credentials Required |
-|------|---------|------------|---------------------|
-| `vsp_extract` | Trigger VSP Gemini AI extraction via production API | Med | Production API (HTTP to 136.111.85.127:8080) |
-| `eyemed_extract` | Trigger EyeMed Gemini AI extraction via production API | Med | Production API |
-| `requeue_missing_pages` | Requeue incomplete extractions via production API | Med | Production API |
+## Anti-Features
 
-These make HTTP POST requests to the production Flask API which dispatches to Celery workers.
-
-#### Module 3: Reduction (2 tools) -- WRITE/MUTATING
-
-| Tool | Purpose | Complexity | Credentials Required |
-|------|---------|------------|---------------------|
-| `reduce_aiout` | Reduce JSON files to AIOUT for one location | Med | GCS (pre-check), Production API |
-| `reduce_all_vsp` | Reduce all VSP locations with complete extraction | Med | Production API |
-
-Pre-checks GCS for json_files completeness before triggering API. Longer timeouts (5-10 min).
-
-#### Module 4: Posting (5 tools) -- WRITE/MUTATING (HIGHEST RISK)
-
-| Tool | Purpose | Complexity | Credentials Required |
-|------|---------|------------|---------------------|
-| `vsp_autopost` | Post VSP payments to Revolution EMR | High | GCS, Revolution EMR credentials (subprocess) |
-| `eyemed_autopost` | Post EyeMed payments to Revolution EMR | High | GCS, Revolution EMR credentials (subprocess) |
-| `posting_prep` | Upload remits to GDrive, generate task sheets | High | GCS, S3, GDrive |
-| `eyemed_posting_prep` | EyeMed posting prep for one location over date range | High | GCS, GDrive, DB |
-| `eyemed_posting_prep_all` | Batch EyeMed posting prep for ALL locations | High | GCS, GDrive, DB |
-
-Autopost tools default to `dry_run=True` for safety. They run subprocess calls to `run_revolution_poster.py`.
-
-#### Module 5: Storage (6 tools) -- MIXED (mostly READ, one WRITE)
-
-| Tool | Purpose | Read/Write | Credentials Required |
-|------|---------|------------|---------------------|
-| `list_s3_remits` | List remittance PDFs in S3 | READ | S3 (AWS) |
-| `list_gcs_aiout` | List AIOUT files in GCS | READ | GCS |
-| `check_pipeline_status` | Full 4-stage pipeline status with color coding | READ | S3, GCS, GDrive |
-| `gcs_inventory` | All files in GCS for a location across date range | READ | GCS |
-| `list_recent_uploads` | Recently uploaded AIOUT files | READ | GCS |
-| `clear_pipeline` | Delete pipeline artifacts for re-processing | WRITE (DESTRUCTIVE) | GCS, GDrive, DB, subprocess |
-
-`clear_pipeline` defaults to `dry_run=True` and calls `scripts/reset_pipeline.py`.
-
-#### Module 6: Crawler (2 tools) -- WRITE/MUTATING
-
-| Tool | Purpose | Complexity | Credentials Required |
-|------|---------|------------|---------------------|
-| `remit_crawler` | Trigger insurance portal PDF download | High | Insurance portal credentials, S3, GCS, GDrive, browser |
-| `list_crawler_locations` | List available crawler locations | Low | None |
-
-Crawler runs subprocess (`vsp_1_crawler.py` or `eyemed_crawler.py`). Needs Chrome/Chromium for headless mode.
-
-#### Module 7: Google Drive (1 tool) -- READ-ONLY
-
-| Tool | Purpose | Complexity | Credentials Required |
-|------|---------|------------|---------------------|
-| `gdrive_audit` | Audit GDrive folders for remit file completeness | High | GDrive API (service account), GCS |
-
-#### Module 8: Ingestion (1 tool) -- WRITE/MUTATING
-
-| Tool | Purpose | Complexity | Credentials Required |
-|------|---------|------------|---------------------|
-| `ingest_pdf` | Upload manually-obtained PDF into pipeline | Med | Production API |
-
-#### Module 9: Benefits (3 tools) -- WRITE/MUTATING
-
-| Tool | Purpose | Complexity | Credentials Required |
-|------|---------|------------|---------------------|
-| `vision_benefits_fetch` | Fetch VSP benefits via Prefect deployment | High | Prefect API (HTTP auth shen:tofu) |
-| `eyemed_benefits_fetch` | Fetch EyeMed benefits via Prefect deployment | High | Prefect API |
-| `medical_benefits_fetch` | Fetch Availity medical benefits via Prefect | High | Prefect API |
-
-All three trigger Prefect deployments and poll until completion (up to 10 min).
-
-#### Module 10: Deploy (1 tool) -- READ-ONLY
-
-| Tool | Purpose | Complexity | Credentials Required |
-|------|---------|------------|---------------------|
-| `deploy_version` | Check production deploy version via healthcheck | Low | Production API (HTTP GET) |
-
-#### Module 11: Azure Mirror (3 tools) -- MIXED
-
-| Tool | Purpose | Read/Write | Credentials Required |
-|------|---------|------------|---------------------|
-| `azure_mirror_audit` | Check CrystalPM mirror DB freshness (24 locations) | READ | PostgreSQL (crystalpm-mirror DB via psycopg2) |
-| `azure_mirror_trigger` | Trigger Hop 1 sync via Prefect | WRITE | SSH + Prefect API (via SSH tunnel) |
-| `azure_mirror_run_status` | Check recent mirror flow run statuses | READ | SSH + Prefect API |
-
-#### Module 12: IVT Ingestion (1 tool) -- READ-ONLY
-
-| Tool | Purpose | Complexity | Credentials Required |
-|------|---------|------------|---------------------|
-| `ivt_ingestion_audit` | Audit IVT data ingestion health (Prefect + prod-ivt DB) | High | SSH + Prefect API, PostgreSQL (prod-ivt DB) |
-
-#### Module 13: Analytics (1 tool) -- READ-ONLY
-
-| Tool | Purpose | Complexity | Credentials Required |
-|------|---------|------------|---------------------|
-| `provider_revenue` | Provider-level revenue from AIOUT remittance data | Med | DB (IrisMedAppDB via SQLAlchemy) |
-
-#### Module 14: Monitoring (1 tool) -- READ (unless dry_run=False)
-
-| Tool | Purpose | Complexity | Credentials Required |
-|------|---------|------------|---------------------|
-| `ocea_health_check` | OCEA daily health check for expected Prefect flows | Med | DB (prefect_log_jobs) |
-
----
-
-## v1.2 MCP Feature Classification
-
-### Table Stakes for MCP Parity
-
-Features SuperBot MUST expose to achieve parity with local Claude Code MCP usage.
-
-| Feature | Why Expected | Complexity | Notes |
-|---------|--------------|------------|-------|
-| All status/audit tools (11+ read-only) | Nicole's primary workflow starts with "what's the status?" | Med | Needs GCS, S3, GDrive, DB credentials on VM |
-| Extraction triggers (vsp_extract, eyemed_extract, requeue) | Daily workflow: check status then trigger extraction | Med | Just HTTP POST to production API |
-| Reduction triggers (reduce_aiout, reduce_all_vsp) | Daily workflow: reduce after extraction completes | Med | GCS pre-check + HTTP POST |
-| Posting prep (posting_prep, eyemed_posting_prep, eyemed_posting_prep_all) | Daily workflow: prepare files for manual posting team | High | GCS, GDrive, subprocess |
-| Storage browsing (list_s3_remits, list_gcs_aiout, gcs_inventory) | Debugging: "did the PDF arrive?", "is the AIOUT there?" | Med | S3, GCS |
-| Pipeline status (check_pipeline_status, pipeline_stage_view) | Quick health check for specific location/date | Med | S3, GCS, GDrive |
-| Deploy version check | Basic operational awareness | Low | HTTP GET only |
-| Prefect flow status (check_prefect_flow_status, get_prefect_logs) | Diagnosing why things are not processing | Med | SSH to production |
-
-### Differentiators for MCP Parity
-
-Features that make SuperBot MORE valuable than local Claude Code for ops.
-
-| Feature | Value Proposition | Complexity | Notes |
-|---------|-------------------|------------|-------|
-| Autopost tools (vsp_autopost, eyemed_autopost) | Post payments without opening laptop; dry_run=True default | High | Revolution EMR subprocess; test dry_run thoroughly first |
-| Benefits fetch (3 tools) | Trigger long-running Prefect jobs from Slack, wait up to 10 min | High | Polls Prefect API; long timeouts may need special handling |
-| Azure mirror audit + trigger | Monitor 24-location CrystalPM sync from Slack | High | SSH + direct Cloud SQL access |
-| IVT ingestion audit | Cross-system health (Prefect + prod-ivt DB) from Slack | High | SSH + DB |
-| Provider revenue analytics | Business intelligence query from Slack | Med | DB only |
-| EyeMed status range | Multi-day processing status grid | High | GCS + GDrive + DB |
-| OCEA health check | Production monitoring from Slack | Med | DB |
-| PDF ingestion (ingest_pdf) | Handle manual PDFs when crawlers fail | Med | Production API |
-
-### Anti-Features for MCP Parity
+Features that seem useful but should be explicitly avoided.
 
 | Anti-Feature | Why Avoid | What to Do Instead |
 |--------------|-----------|-------------------|
-| Custom wrappers around MCP tools | MCP tools already have clean interfaces; wrapping adds maintenance burden | Wire the MCP server directly as stdio subprocess -- all tools auto-available |
-| Credential management UI | Small team, static credentials; over-engineering | Store credentials as env vars / config files on VM |
-| Tool-level access control | Only 2-3 trusted users; channel-based visibility sufficient | Rely on existing Slack access control from v1.0 |
-| Re-implementing tool logic | Tools are well-structured; they delegate to production API or run subprocesses | Use existing MCP server as-is |
-| Approval gates on mutating tools | PROJECT.md explicitly scopes this out; full autonomy by design | Trust dry_run defaults + team visibility in channel |
+| **Approval gates for deploy** | PROJECT.md explicitly rules out approval gates; full autonomy is a design decision for this 2-person team. Adding "are you sure?" dialogs defeats the speed advantage. | Trust the team. Everything happens in a visible channel. Use rollback if something goes wrong. |
+| **Blue-green or canary deploys** | Over-engineering for a single-VM, internal-only tool. No traffic splitting infrastructure exists. | Simple restart deploy. If it breaks, rollback immediately. Downtime is measured in seconds. |
+| **Deploy queue/scheduling** | "Deploy at 2am" adds scheduling complexity for zero value -- the team deploys when they want to. | Deploy immediately when asked. |
+| **Log streaming (continuous)** | Continuous log streaming to Slack will hit rate limits (1 msg/sec) and flood the channel. | Tail last N lines on demand. Post a snapshot, not a stream. |
+| **Alerting/pagerduty integration** | The bot itself IS the alerting mechanism. Adding PagerDuty for a 2-person team adds noise without value. | Daily digest already covers health. Bot status command for on-demand checks. |
+| **Deploy to all 4 repos at once** | oso-fe-gsnap and oso-desktop have different deploy targets (not the superbot VM). Deploying them requires different infrastructure. | Support mic_transformer and super_bot first (both on the same VM). Add others only when actual deploy paths exist. |
+| **Web-based log viewer** | Slack is the only UI. Building a log viewer is scope creep. | Journald tail via Slack is sufficient. Link to GCP Console for deep dives. |
+| **Persistent deploy history database** | SQLite deploy tracking adds maintenance burden for minimal value when git log IS the deploy history. | Use git reflog or a simple JSON file for last-N deploys. Git log shows what was deployed when. |
 
 ---
 
-## Credential Dependency Map (v1.2)
+## Feature Details
 
-Every tool module needs specific credentials available in the VM environment.
+### Deploy from Slack
 
-| Credential | Tools That Need It | How Stored in mic_transformer | Priority |
-|------------|-------------------|-------------------------------|----------|
-| GCS service account | Status, reduction, storage, posting, gdrive, crawler | `config/gcs_utils_config.yml` (embedded JSON key) | CRITICAL |
-| AWS S3 access | Status, storage (list_s3_remits), crawler | AWS env vars or `~/.aws/credentials` | CRITICAL |
-| Google Drive service account | Status, posting_prep, gdrive_audit, crawler | Service account via `get_drive_service()` | CRITICAL |
-| Production API URL | Extraction, reduction, ingestion, deploy | `MIC_TRANSFORMER_API_URL` env var (default: hardcoded) | CRITICAL |
-| Prefect API auth | Benefits fetch, check_prefect_flow_status | Hardcoded `shen:tofu` basic auth at 136.111.85.127:4200 | HIGH |
-| SSH to production | Prefect flow status, azure_mirror, ivt_ingestion | SSH key for `ansible@136.111.85.127` | HIGH |
-| PostgreSQL (IrisMedAppDB) | pipeline_audit, analytics, crawler_audit, posting_prep | `config/db_config.yml` or env vars | HIGH |
-| PostgreSQL (crystalpm-mirror) | azure_mirror_audit | Hardcoded: `cpmm_dataloader@34.136.128.245` | MEDIUM |
-| PostgreSQL (prod-ivt) | ivt_ingestion_audit | Hardcoded: `ivt_app_user@34.136.128.245` | MEDIUM |
-| Revolution EMR | vsp_autopost, eyemed_autopost | Credentials in mic_transformer config | MEDIUM |
-| Insurance portals | remit_crawler | Portal credentials in config files + Chrome/Chromium | LOW (defer) |
-
----
-
-## Read vs Write Classification Summary
-
-| Category | Count | Risk Level | Tools |
-|----------|-------|------------|-------|
-| **READ-ONLY** | ~20 | None | All status/audit, list_*, deploy_version, list_crawler_locations, provider_revenue, gcs_inventory |
-| **WRITE via HTTP API** | ~7 | Low (production API validates) | vsp_extract, eyemed_extract, requeue_missing_pages, reduce_aiout, reduce_all_vsp, ingest_pdf |
-| **WRITE via Prefect trigger** | ~5 | Med (triggers production jobs) | vision/eyemed/medical_benefits_fetch, azure_mirror_trigger, (benefits poll for 10 min) |
-| **WRITE via subprocess** | ~5 | High (local execution) | vsp/eyemed_autopost, posting_prep, remit_crawler, clear_pipeline |
-| **WRITE via SSH** | ~2 | Med (remote execution) | azure_mirror_trigger, check_prefect_flow_status |
-
----
-
-## Integration Pattern Analysis
-
-| Pattern | Tools Using It | What VM Needs | Complexity |
-|---------|---------------|---------------|------------|
-| **HTTP to production API** | extraction, reduction, ingestion, deploy | Network route to 136.111.85.127:8080 | Low |
-| **Direct GCS access** | status, storage, reduction pre-check, posting, gdrive | GCS service account JSON in `config/` | Med |
-| **Direct S3 access** | status, storage | AWS credentials (`~/.aws/credentials` or env vars) | Med |
-| **SSH to production** | prefect flow status, azure mirror, ivt ingestion | SSH key for `ansible@136.111.85.127` | Med |
-| **Direct DB access** | analytics, pipeline_audit, eyemed_crawler_audit | DB connection config in `config/` | Med |
-| **Subprocess execution** | posting (autoposter), crawler, clear_pipeline, ocea_health_check | Full mic_transformer repo + activated venv | High |
-| **GDrive API** | gdrive_audit, check_pipeline_status, posting_prep | GDrive service account credentials | Med |
-
----
-
-## Pipeline Workflow Dependencies
-
+**Expected behavior:**
 ```
--- Core Pipeline Workflow (sequential dependency chain) --
-remit_crawler -> vsp/eyemed_extract -> reduce_aiout -> posting_prep -> vsp/eyemed_autopost
-      |                    |                 |               |                  |
-      v                    v                 v               v                  v
-  S3 + GCS           Prod API            Prod API      GCS + GDrive     Revolution EMR
-  (portal creds)     (Celery workers)    (Celery)      (subprocess)      (subprocess)
-
--- Status tools observe every stage --
-vsp_status / eyemed_status -> reads from: S3, GCS, GDrive, DB (aggregates all stages)
-
--- Independent operational tools (no pipeline dependency) --
-check_prefect_flow_status  -- SSH to production, journalctl parsing
-azure_mirror_audit/trigger -- SSH + DB (separate CrystalPM system)
-ivt_ingestion_audit        -- SSH + DB (separate IVT system)
-vision_benefits_fetch      -- Prefect API (separate benefits system)
-provider_revenue           -- DB query only
-deploy_version             -- HTTP GET only
-ocea_health_check          -- DB query only
+User: "deploy super_bot"
+Bot:  "Deploying super_bot (branch: main)..."
+      "Step 1/4: Pulling latest code... done"
+      "Step 2/4: Installing dependencies... done"
+      "Step 3/4: Restarting service... done"
+      "Step 4/4: Health check... PASS"
+      "Deploy complete. Running commit abc1234 (main)"
 ```
 
+**What it does under the hood:**
+1. SSH to VM (or run locally for super_bot since bot IS on the VM)
+2. `git pull origin <branch>`
+3. `pip install -r requirements.txt` (unless `--skip-deps`)
+4. `systemctl restart <service>`
+5. Wait 3-5 seconds, check `systemctl is-active`
+6. Scan last 20 journald lines for ERROR/Traceback
+7. Report pass/fail
+
+**For super_bot specifically:** The bot is deploying itself. After restart, the current process dies. The NEW process picks up the Slack connection via Socket Mode reconnect. The deploy confirmation message must be sent BEFORE restart, or use a fire-and-forget approach where the restarted bot posts "I'm back" on startup.
+
+**Repo config map:**
+| Repo | VM Path | Service Name | Health Check |
+|------|---------|-------------|-------------|
+| super_bot | `/home/bot/super_bot` | `superbot` | systemctl + journald |
+| mic_transformer | `/home/bot/mic_transformer` | N/A (API server) | HTTP GET healthcheck |
+| irismed-service | TBD | TBD | TBD |
+| oso-fe-gsnap | TBD | TBD | TBD |
+
+**Start with super_bot and mic_transformer only** -- the other two repos are on different infrastructure.
+
+### Rollback
+
+**Expected behavior:**
+```
+User: "rollback super_bot"
+Bot:  "Current version: abc1234 (deployed 2h ago)"
+      "Rolling back to previous: def5678"
+      "Restarting service... done"
+      "Health check... PASS"
+      "Rolled back to def5678. Previous: abc1234"
+```
+
+**Implementation:** `git log --oneline -5` to find previous commits. `git checkout <commit>` (detached HEAD) or `git reset --hard <commit>`. Then restart service. Track last-known-good commit.
+
+**Edge case:** Rolling back super_bot kills the running bot process. Same self-deploy challenge.
+
+### Log Access
+
+**Expected behavior:**
+```
+User: "logs superbot"         -> last 30 lines of journald
+User: "logs superbot errors"  -> last 30 lines filtered for ERROR
+User: "logs superbot 100"     -> last 100 lines
+User: "prefect logs <run-id>" -> Prefect flow run logs
+```
+
+**Output truncation:** Slack messages max at ~4000 chars. For longer output, truncate with "... (showing last 30 of 247 lines). Use `logs superbot 50` for more."
+
+**Log sources:**
+| Source | Command | Use Case |
+|--------|---------|----------|
+| SuperBot journald | `journalctl -u superbot -n 30 --no-pager` | Bot crashes, startup errors |
+| mic_transformer API | `journalctl -u mic-transformer-api -n 30` (if systemd) or log file tail | API errors |
+| Prefect flow logs | Prefect API `get_prefect_logs` | Crawl/extraction failures |
+| Application logs | Tail specific log files if they exist | App-level debugging |
+
+### Bot Health Dashboard
+
+**Expected behavior:**
+```
+User: "health" or "bot health"
+Bot:  "SuperBot Health
+       Uptime: 4h 23m
+       Status: Idle
+       Queue: 0 waiting
+       Last restart: 2026-03-25 10:15 UTC
+       Recent tasks: 12 completed, 1 failed (last 24h)
+       Memory: 245 MB RSS
+       Disk: 42% used (/home/bot)
+       Active monitors: 1 (batch crawl 03.25)"
+```
+
+**Extends existing `_handle_bot_status()`** which already shows idle/running/background status. Add:
+- Error count from recent tasks
+- Memory usage (`psutil` or `/proc/self/status`)
+- Disk usage
+- Last restart time (from systemd or process start time)
+- Recent task success/fail counts
+
+### Pipeline Status
+
+**Expected behavior:**
+```
+User: "pipeline status"
+Bot:  "Pipeline Status (last 24h):
+       Crawls: 23 completed, 0 failed
+       Extractions: 18 completed, 2 running, 3 pending
+       Reductions: 15 completed
+       Posting prep: 12 completed
+
+       Failed runs:
+       - eyemed-crawler-ECLANT: CRASHED (timeout after 30m)"
+```
+
+**Two tiers:**
+1. **Fast-path** (new): Quick Prefect API summary of recent flow run states. No agent needed.
+2. **Agent deep-dive** (existing): Full investigation using MCP status tools. Already works via agent pipeline.
+
 ---
 
-## MVP Recommendation for v1.2
+## Feature Dependencies
 
-### Phase 1: Wire MCP server + read-only tools
-1. All status/audit tools -- Nicole's most frequent ask is "what's the status?"
-2. Storage browsing tools -- "Did the PDF arrive? Is the AIOUT there?"
-3. Deploy version check -- simple validation that MCP server works
-4. Pipeline status tools -- single-location diagnostics
+```
+[Deploy from Slack]
+    +--requires--> [SSH access to VM (already exists)]
+    +--requires--> [Git pull capability]
+    +--requires--> [systemctl restart access]
+    +--requires--> [Health check mechanism]
+    +--enables---> [Rollback]
+    +--enables---> [Deploy status]
 
-**Needs:** GCS, S3, GDrive, DB credentials configured on VM. MCP server running as stdio subprocess.
+[Rollback]
+    +--requires--> [Deploy from Slack (same mechanism)]
+    +--requires--> [Deploy history tracking (git log)]
 
-### Phase 2: API-triggered mutating tools
-5. Extraction triggers (vsp/eyemed_extract, requeue_missing_pages) -- daily workflow
-6. Reduction triggers (reduce_aiout, reduce_all_vsp) -- daily workflow
-7. PDF ingestion (ingest_pdf) -- fallback for crawler failures
+[Log Access]
+    +--requires--> [journalctl access (already exists)]
+    +--requires--> [Prefect API (already exists)]
+    +--requires--> [Output truncation for Slack]
 
-**Needs:** Network access to production API at 136.111.85.127:8080
+[Bot Health Dashboard]
+    +--extends---> [Existing _handle_bot_status()]
+    +--requires--> [task_state module (already exists)]
+    +--requires--> [psutil or /proc for memory/disk]
 
-### Phase 3: Prefect + SSH tools
-8. Prefect flow status (check_prefect_flow_status, get_prefect_logs)
-9. Benefits fetch (vision/eyemed/medical_benefits_fetch)
-10. Azure mirror tools
-11. IVT ingestion audit
+[Pipeline Status (fast-path)]
+    +--requires--> [Prefect API (already exists)]
+    +--requires--> [Fast-path command infrastructure (already exists)]
+```
 
-**Needs:** SSH key for ansible@production, Prefect API auth
+---
 
-### Phase 4: Subprocess-based mutating tools
-12. Posting prep (posting_prep, eyemed_posting_prep, eyemed_posting_prep_all)
-13. Autopost (vsp/eyemed_autopost) -- test dry_run thoroughly before live use
-14. clear_pipeline -- test dry_run thoroughly
+## MVP Recommendation
 
-**Needs:** Full mic_transformer venv with all dependencies, Revolution EMR credentials
+### Priority 1: Deploy + Rollback (highest value, enables everything else)
+1. Deploy super_bot from Slack (self-deploy with restart handling)
+2. Deploy mic_transformer from Slack
+3. Deploy status (what commit is running)
+4. Git-based rollback
+
+**Rationale:** Deployment is the single highest-friction operation today. It requires SSH, manual commands, and waiting. Making it a one-liner in Slack saves minutes per deploy and encourages more frequent, smaller deploys.
+
+### Priority 2: Log Access (most requested debug tool)
+5. Journald tail (last N lines, with optional filter)
+6. Prefect flow log access via fast-path
+
+**Rationale:** After deploy, "why is it broken?" is the next question. Log access via Slack eliminates the SSH round-trip for the most common debugging workflow.
+
+### Priority 3: Health + Pipeline Status (observability)
+7. Enhanced bot health dashboard
+8. Pipeline status fast-path summary
+
+**Rationale:** These are incremental improvements to existing bot status. Lower urgency because the team can already ask the bot "are you broken?" and get a useful answer.
 
 ### Defer
-- **remit_crawler**: Needs Chrome/Chromium browser on VM + insurance portal credentials. Consider whether headless mode is viable on the GCP VM.
-- Crawler can be triggered manually on production server via SSH if needed as interim.
+- **irismed-service and oso-fe-gsnap deploy**: Different infrastructure, unknown deploy paths. Add when those repos' deploy workflows are defined.
+- **Application log file tailing**: Only if journald doesn't capture what's needed. Check first.
+- **Error rate tracking**: Nice-to-have after core features ship.
 
 ---
 
-## Feature Dependencies (v1.0/v1.1 Baseline)
+## Complexity Assessment
 
-```
-[Slack @mention listener]
-    +--requires--> [Allowlist user check]
-                       +--requires--> [Claude Code session launch]
-                                          +--requires--> [VM shell + Claude Code CLI installed]
+| Feature | Complexity | Estimate | Risk |
+|---------|------------|----------|------|
+| Deploy super_bot | Medium | 1-2 phases | Self-restart is tricky; bot dies mid-deploy |
+| Deploy mic_transformer | Medium | 1 phase | Straightforward SSH + restart |
+| Deploy status | Low | 0.5 phase | Git commands on VM |
+| Rollback | Medium | 1 phase | Same self-restart challenge for super_bot |
+| Journald log tail | Low | 0.5 phase | Subprocess + output truncation |
+| Prefect log fast-path | Medium | 1 phase | Need flow run ID resolution |
+| Bot health dashboard | Low | 0.5 phase | Extends existing handler |
+| Pipeline status fast-path | Medium | 1 phase | Prefect API aggregation queries |
 
-[Claude Code session launch]
-    +--requires--> [mic_transformer repo cloned on VM]
-    +--requires--> [CLAUDE.md + project memory configured]
-
-[Progress updates to Slack]
-    +--requires--> [Claude Code session launch]
-    +--requires--> [Slack bot write permissions in channel]
-
-[PR creation]
-    +--requires--> [Git operations working]
-    +--requires--> [GitLab credentials on VM]
-    +--requires--> [Claude Code session launch]
-
-[Script execution (Prefect flows)]
-    +--requires--> [VM Python environment + mic_transformer deps installed]
-    +--requires--> [Claude Code session launch]
-
-[Isolated task workspaces]
-    +--requires--> [Task queue]
-    +--requires--> [Git worktree management]
-    +--enhances--> [Claude Code session launch]
-
-[Task queue + /status command]
-    +--requires--> [SQLite or equivalent on VM]
-    +--enhances--> [Isolated task workspaces]
-
-[Automatic test running]
-    +--requires--> [Script execution working]
-    +--enhances--> [PR creation]
-
-[Daily digest]
-    +--requires--> [Task history stored]
-    +--requires--> [Slack bot write permissions]
-
-[Deployment from Slack]
-    +--requires--> [Script execution working]
-    +--requires--> [Deploy scripts in mic_transformer]
-```
-
----
-
-## Competitor Feature Analysis
-
-| Feature | Claude Code in Slack (official) | Kilo for Slack | GitHub Copilot in Slack | Our Approach |
-|---------|--------------------------------|----------------|-------------------------|--------------|
-| @mention trigger | Yes, channel only | Yes | Yes (@GitHub) | Yes, channel only per PROJECT.md |
-| Thread context reading | Yes | Yes, full thread | Yes, full thread | Yes |
-| PR creation | Yes (one PR per session) | Yes | Yes | Yes |
-| Progress updates | Yes, status updates in thread | Not described | Reply when PR ready | Yes |
-| Multi-repo support | Yes (auto-selects) | Yes | Yes | No -- mic_transformer only |
-| Q&A about codebase | Yes | Yes | Yes | Yes (natural via Claude Code) |
-| Script execution | Yes (via Claude Code CLI) | Not described | Limited | Yes (core use case) |
-| User access control | Workspace admin + channel invite | Not described | GitHub Copilot plan | Named allowlist |
-| Persistent memory | Yes (CLAUDE.md) | Not described | Not described | Yes (CLAUDE.md + git) |
-| Full autonomy (no approval gates) | No -- web UI oversight | No | No -- opens draft PR for review | Yes -- by design |
-| Domain-specific MCP tools | No | No | No | Yes -- 35+ mic-transformer tools |
-
-**Key insight:** No commercial product ships with 35+ domain-specific operational tools. SuperBot's MCP integration makes it an operational platform, not just a coding agent.
+**Total estimated effort:** 6-8 phases
 
 ---
 
 ## Sources
 
-- Direct source code analysis: `mic_transformer/.claude/mcp/mic-transformer/` (all 13 tool modules, server.py, common.py) -- HIGH confidence
-- Claude Code in Slack official docs: https://code.claude.com/docs/en/slack -- HIGH confidence
-- Kilo for Slack feature page: https://kilo.ai/features/slack -- MEDIUM confidence
-- GitHub Copilot coding agent in Slack: https://docs.github.com/en/copilot/how-tos/use-copilot-agents/coding-agent/integrate-coding-agent-with-slack -- HIGH confidence
-- Anthropic long-running agent harnesses: https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents -- HIGH confidence
+- Direct source code analysis: `bot/fast_commands.py`, `bot/handlers.py`, `bot/prefect_api.py`, `bot/background_monitor.py`, `bot/task_state.py`, `scripts/deploy.sh`, `scripts/restart_superbot.sh` -- HIGH confidence
+- `.planning/PROJECT.md` for constraints and design decisions -- HIGH confidence
+- Existing deploy patterns from `scripts/deploy.sh` (push, pull, deps, restart, health check) -- HIGH confidence
+- systemd/journald behavior from GCP VM setup (already validated in v1.0-v1.7) -- HIGH confidence
 
 ---
-*Feature research for: Slack-integrated autonomous coding agent (Super Bot)*
-*Last updated: 2026-03-23 (v1.2 MCP Parity milestone)*
+*Feature research for: v1.8 Production Ops (deploy, rollback, logs, health, pipeline monitoring)*
+*Last updated: 2026-03-25*
