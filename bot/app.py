@@ -34,20 +34,29 @@ async def _check_deploy_recovery(client) -> None:
     stdout, _ = await proc.communicate()
     current_sha = stdout.decode().strip()
 
-    # Record deploy timestamp
+    # Record deploy/rollback timestamp
     from bot.deploy_state import record_deploy
-    record_deploy("super_bot", current_sha)
+    action = state.get("action", "deploy")
+    pre_sha = state.get("pre_sha")
+    record_deploy("super_bot", current_sha, pre_sha=pre_sha)
+
+    # Choose message based on action
+    if action == "rollback":
+        message = f"Rollback complete. Now on commit `{current_sha}`."
+    else:
+        message = f"I'm back, running commit `{current_sha}`."
 
     try:
         await client.chat_postMessage(
             channel=state["channel"],
             thread_ts=state["thread_ts"],
-            text=f"I'm back, running commit `{current_sha}`.",
+            text=message,
         )
         _log.info(
             "deploy_recovery.posted",
             channel=state["channel"],
-            pre_sha=state.get("pre_sha"),
+            action=action,
+            pre_sha=pre_sha,
             current_sha=current_sha,
         )
     except Exception:

@@ -374,6 +374,39 @@ async def _handle_deploy_guard(text: str, **kwargs) -> str | None:
 
 
 # ---------------------------------------------------------------------------
+# Rollback guard: "rollback superbot" or "rollback force superbot"
+# Blocks if an agent task is running (unless "force" is present).
+# Returns None to fall through to agent pipeline when rollback should proceed.
+# ---------------------------------------------------------------------------
+
+_ROLLBACK_GUARD_RE = re.compile(
+    r"rollback\s+(?:force\s+)?(\S+)(?:\s+([a-f0-9]{4,40}))?\s*$",
+    re.IGNORECASE,
+)
+
+
+async def _handle_rollback_guard(text: str, **kwargs) -> str | None:
+    """Check whether to block a rollback command.
+
+    Returns a warning string if blocked, or None to let the message
+    fall through to the agent pipeline for actual rollback execution.
+    """
+    current_task = queue_manager.get_current_task()
+    if current_task is not None and "force" not in text.lower():
+        task_label = (
+            current_task.clean_text[:80]
+            if current_task.clean_text
+            else current_task.prompt[:80]
+        )
+        return (
+            f"An agent task is currently running: _{task_label}_\n"
+            "Use `rollback force <repo>` to proceed anyway."
+        )
+    # Fall through to agent pipeline
+    return None
+
+
+# ---------------------------------------------------------------------------
 # Batch EyeMed crawl (must be checked BEFORE single-location crawl)
 # ---------------------------------------------------------------------------
 
@@ -662,6 +695,8 @@ FAST_COMMANDS = [
     (_DEPLOY_STATUS_RE, _handle_deploy_status),
     (_DEPLOY_PREVIEW_RE, _handle_deploy_preview),
     (_DEPLOY_GUARD_RE, _handle_deploy_guard),
+    # Rollback guard
+    (_ROLLBACK_GUARD_RE, _handle_rollback_guard),
     # Crawl commands
     (_BATCH_CRAWL_RE, _handle_batch_crawl),
     (_EYEMED_CRAWL_RE, _handle_eyemed_crawl),

@@ -9,6 +9,7 @@ from bot.heartbeat import Heartbeat
 from bot.queue_manager import QueuedTask, enqueue, queue_depth
 from bot.deploy_state import resolve_repo
 from bot.deploy import handle_deploy
+from bot.rollback import handle_rollback
 from bot.fast_commands import try_fast_command
 from bot import memory_recall
 from bot import thread_scanner
@@ -16,6 +17,11 @@ from config import BOT_USER_ID
 
 _DEPLOY_CMD_RE = re.compile(
     r"deploy\s+(?:force\s+)?(\S+)\s*$",
+    re.IGNORECASE,
+)
+
+_ROLLBACK_CMD_RE = re.compile(
+    r"rollback\s+(?:force\s+)?(\S+)(?:\s+([a-f0-9]{4,40}))?\s*$",
     re.IGNORECASE,
 )
 
@@ -103,6 +109,25 @@ def register(app: AsyncApp) -> None:
             await handle_deploy(
                 repo_name, repo_config, client, channel,
                 thread_ts, user_id, ack_ts=ack_ts,
+            )
+            return
+
+        # Rollback command routing -- handled outside the agent queue
+        rollback_match = _ROLLBACK_CMD_RE.search(clean_text)
+        if rollback_match:
+            sha_match = rollback_match.group(2)  # optional target SHA
+            resolved = resolve_repo(clean_text)
+            if resolved is None:
+                msg = "Unknown repo. Available: super_bot, mic_transformer"
+                if ack_ts:
+                    await client.chat_update(channel=channel, ts=ack_ts, text=msg)
+                else:
+                    await client.chat_postMessage(channel=channel, thread_ts=thread_ts, text=msg)
+                return
+            repo_name, repo_config = resolved
+            await handle_rollback(
+                repo_name, repo_config, client, channel,
+                thread_ts, user_id, ack_ts=ack_ts, target_sha=sha_match,
             )
             return
 
