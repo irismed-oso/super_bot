@@ -148,9 +148,9 @@ Requirements for Production Ops milestone.
 
 - [ ] **SDPL-01**: User can deploy super_bot from Slack with self-restart handling and post-restart "I'm back" confirmation
 - [ ] **SDPL-02**: User can deploy mic_transformer from Slack with git pull, deps install, and health check
-- [ ] **SDPL-03**: User can check deploy status showing current commit, branch, last deploy time, and pending changes count
-- [ ] **SDPL-04**: User can preview what would be deployed (commits between current and latest)
-- [ ] **SDPL-05**: Deploy blocks with a warning if an agent task is currently running (force override available)
+- [x] **SDPL-03**: User can check deploy status showing current commit, branch, last deploy time, and pending changes count
+- [x] **SDPL-04**: User can preview what would be deployed (commits between current and latest)
+- [x] **SDPL-05**: Deploy blocks with a warning if an agent task is currently running (force override available)
 
 ### Rollback (RLBK)
 
@@ -379,9 +379,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | VRFY-04 | Phase 17 | Pending |
 | SDPL-01 | Phase 17 | Pending |
 | SDPL-02 | Phase 17 | Pending |
-| SDPL-03 | Phase 17 | Pending |
-| SDPL-04 | Phase 17 | Pending |
-| SDPL-05 | Phase 17 | Pending |
+| SDPL-03 | Phase 17 | Complete |
+| SDPL-04 | Phase 17 | Complete |
+| SDPL-05 | Phase 17 | Complete |
 | RLBK-01 | Phase 18 | Pending |
 | RLBK-02 | Phase 18 | Pending |
 | LOGS-01 | Phase 19 | Pending |

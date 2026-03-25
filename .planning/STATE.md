@@ -9,15 +9,15 @@ See: .planning/PROJECT.md (updated 2026-03-25)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-03-25 - Completed quick task 3: fast path is buggy. remove it
+Phase: 17-deploy-foundation
+Plan: 01 of 03 complete
+Status: Executing phase 17
+Last activity: 2026-03-25 - Completed 17-01: deploy foundation infrastructure
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 26
+- Total plans completed: 27
 - Average duration: --
 - Total execution time: --
 
@@ -37,6 +37,8 @@ Last activity: 2026-03-25 - Completed quick task 3: fast path is buggy. remove i
 - v1.8: No new Python dependencies -- asyncio subprocess, httpx, resource module only
 - v1.8: Self-deploy uses deploy-state file for post-restart confirmation
 - v1.8: VRFY-01-04 folded into Phase 17 (verified during deploy workflow)
+- v1.8: Recreated fast_commands.py with only deploy handlers after buggy version was removed
+- v1.8: Deploy guard returns None to fall through to agent pipeline for actual deploys
 
 ### Pending Todos
 
@@ -57,5 +59,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-25
-Stopped at: Milestone v1.9 started — defining requirements
+Stopped at: Completed 17-01-PLAN.md (deploy foundation infrastructure)
 Resume file: None
