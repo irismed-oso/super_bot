@@ -27,7 +27,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 13: Error UX** - Timeout and error messages give Nicole enough context to know what happened and what to do next, including live status queries (completed 2026-03-24)
 - [x] **Phase 14: Progress Heartbeat** - Bot edits a single progress message every 5 minutes during long agent sessions showing last activity, turn count, and elapsed time (completed 2026-03-24)
 - [x] **Phase 15: Deploy Script** - Reusable deploy script that pushes code, installs deps, restarts service, and verifies health on the production VM (completed 2026-03-25)
-- [ ] **Phase 16: Live Verification** - All v1.4-v1.6 features smoke-tested on the production VM -- digest changelog, fast-path commands, background tasks, heartbeat
+- [x] **Phase 16: Live Verification** - All v1.4-v1.6 features smoke-tested on the production VM -- digest changelog, fast-path commands, background tasks, heartbeat (completed 2026-03-25)
 
 ## Phase Details
 
@@ -344,4 +344,4 @@ Phases execute in order: 1 -> 2 -> 3 -> 4 -> v1.1 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 13. Error UX | v1.5 | 1/1 | Complete | 2026-03-24 |
 | 14. Progress Heartbeat | v1.6 | Complete    | 2026-03-25 | 2026-03-24 |
 | 15. Deploy Script | 1/1 | Complete    | 2026-03-25 | - |
-| 16. Live Verification | v1.7 | 0/1 | Not started | - |
+| 16. Live Verification | 1/1 | Complete    | 2026-03-25 | - |
