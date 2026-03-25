@@ -5,21 +5,21 @@
 See: .planning/PROJECT.md (updated 2026-03-25)
 
 **Core value:** Nicole can ask the bot to do anything on mic_transformer through Slack and it just does it -- writes code, runs scripts, debugs issues, deploys -- with full autonomy and persistent awareness.
-**Current focus:** Phase 22: SQLite Foundation and Memory Commands (v1.9)
+**Current focus:** Phase 23: Auto-Recall Injection (v1.9)
 
 ## Current Position
 
-Phase: 22-sqlite-foundation-and-memory-commands
-Plan: 02 of 02 complete
-Status: Phase 22 complete
-Last activity: 2026-03-25 - Completed 22-02: Memory commands
+Phase: 23-auto-recall-injection
+Plan: 01 of 01 complete
+Status: Phase 23 complete
+Last activity: 2026-03-25 - Completed 23-01: Auto-recall injection
 
-Progress: [==================..] 88% (phases 1-21 scoped, 16 complete; phase 22 complete)
+Progress: [==================..] 90% (phases 1-21 scoped, 16 complete; phases 22-23 complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 30
+- Total plans completed: 31
 - Average duration: --
 - Total execution time: --
 
@@ -34,6 +34,8 @@ Progress: [==================..] 88% (phases 1-21 scoped, 16 complete; phase 22 
 - v1.9: Memory commands as fast-path (before existing patterns to avoid regex collisions)
 - v1.9: Forget command uses search-then-confirm for multiple matches, direct delete for single/numeric ID
 - v1.9: Auto-recall capped at 5-8 memories with rules always included
+- v1.9: Recall block positioned between user text and AGENT_RULES in prompt hierarchy
+- v1.9: Rules exempt from token budget truncation; extras truncated first
 - v1.9: Thread scanning as asyncio.create_task (does not block queue)
 - v1.9: Conservative extraction only (explicit directives, not speculative statements)
 - v1.8: Deploy commands handled outside agent queue (super_bot dies, mic_transformer polls directly)
@@ -58,5 +60,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-25
-Stopped at: Completed 22-02-PLAN.md (Memory commands)
+Stopped at: Completed 17-03-PLAN.md (VM deploy + live verification of deploy commands and v1.4-v1.6 features)
 Resume file: None

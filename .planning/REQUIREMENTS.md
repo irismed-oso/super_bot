@@ -190,10 +190,10 @@ Requirements for Persistent Memory milestone.
 
 ### Auto-Recall
 
-- [ ] **RECALL-01**: Bot automatically retrieves and injects top 5-8 relevant memories into every agent session prompt
-- [ ] **RECALL-02**: Rules/procedures are always included in recall; remaining slots filled by FTS5 relevance
-- [ ] **RECALL-03**: Bot shows a brief citation line when using a recalled memory (e.g., "Remembered: always dry_run first")
-- [ ] **RECALL-04**: Auto-recall does not run for fast-path commands (no latency regression)
+- [x] **RECALL-01**: Bot automatically retrieves and injects top 5-8 relevant memories into every agent session prompt
+- [x] **RECALL-02**: Rules/procedures are always included in recall; remaining slots filled by FTS5 relevance
+- [x] **RECALL-03**: Bot shows a brief citation line when using a recalled memory (e.g., "Remembered: always dry_run first")
+- [x] **RECALL-04**: Auto-recall does not run for fast-path commands (no latency regression)
 
 ### Thread Scanning
 
@@ -399,10 +399,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CMD-03 | Phase 22 | Complete |
 | CMD-04 | Phase 22 | Complete |
 | CMD-05 | Phase 22 | Complete |
-| RECALL-01 | Phase 23 | Pending |
-| RECALL-02 | Phase 23 | Pending |
-| RECALL-03 | Phase 23 | Pending |
-| RECALL-04 | Phase 23 | Pending |
+| RECALL-01 | Phase 23 | Complete |
+| RECALL-02 | Phase 23 | Complete |
+| RECALL-03 | Phase 23 | Complete |
+| RECALL-04 | Phase 23 | Complete |
 | SCAN-01 | Phase 24 | Pending |
 | SCAN-02 | Phase 24 | Pending |
 | SCAN-03 | Phase 24 | Pending |
