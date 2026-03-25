@@ -10,6 +10,17 @@ from bot.queue_manager import QueuedTask, enqueue, queue_depth
 from config import BOT_USER_ID
 
 
+_AGENT_RULES = """
+RULES (apply to every task):
+- When asked to change output, behavior, or add/remove fields: modify the FUNCTIONAL CODE
+  that produces the output, NOT just docstrings, comments, or type hints.
+- Verify your change works by tracing the code path from input to output.
+- If the user says "I don't see X" or "X is missing", that means the runtime output is wrong.
+  Find the code that generates that output and fix it there.
+- Never update only documentation/docstrings when the user is reporting a functional gap.
+""".strip()
+
+
 def _build_prompt(
     user_text: str,
     worktree_path: str | None,
@@ -19,7 +30,7 @@ def _build_prompt(
     """Construct the agent prompt with operational context injected."""
     ts_nodot = thread_ts.replace(".", "")
     slack_link = f"https://slack.com/archives/{channel}/p{ts_nodot}"
-    lines = [user_text]
+    lines = [user_text, "", _AGENT_RULES]
     if worktree_path:
         lines += [
             "",

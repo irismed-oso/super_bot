@@ -23,15 +23,16 @@ log = structlog.get_logger(__name__)
 # Action-request detection — skip fast commands when user wants a code change
 # ---------------------------------------------------------------------------
 
-_ACTION_VERBS = [
-    "improve", "fix", "change", "update", "modify", "add", "implement",
-    "create", "refactor", "remove", "delete", "make", "enhance", "rewrite",
-    "build", "write", "edit", "patch", "redesign", "rework", "replace",
-    "migrate", "upgrade", "extend", "integrate",
+_ACTION_STEMS = [
+    "improv", "fix", "chang", "updat", "modif", "implement",
+    "creat", "refactor", "remov", "delet", "mak", "enhanc", "rewrit",
+    "build", "writ", "edit", "patch", "redesign", "rework", "replac",
+    "migrat", "upgrad", "extend", "integrat", "includ",
 ]
 
+# "add" needs exact word match to avoid "address", "additional", etc.
 _ACTION_RE = re.compile(
-    r"\b(" + "|".join(_ACTION_VERBS) + r")\b",
+    r"\b(?:(" + "|".join(_ACTION_STEMS) + r")\w*|add(ing|ed|s)?)\b",
     re.IGNORECASE,
 )
 
@@ -124,19 +125,22 @@ _LOCATION_EXTRACT_RE = re.compile(
 # ---------------------------------------------------------------------------
 
 _BATCH_CRAWL_RE = re.compile(
-    r"crawl\s+(?:all\s+(?:sites|locations)?|everything)(?:\s+(?:for\s+)?(.+))?",
+    # "crawl all ...", "crawl eyemed all ...", "crawl for eyemed, all ..."
+    r"crawl\s+(?:(?:for\s+)?eyemed\s*,?\s*)?(?:all\b|everything\b)"
+    # "crawl eyemed" alone (not followed by a location name)
+    r"|crawl\s+(?:for\s+)?eyemed\b(?!\s+[a-zA-Z])",
     re.IGNORECASE,
 )
 
 
 async def _handle_batch_crawl(text: str, slack_context: dict | None = None, **kwargs) -> str:
     """Trigger EyeMed crawl deployments for all 23 locations in parallel."""
-    # Parse date
+    # Parse date — default to today if none specified
     date_match = _DATE_RE.search(text)
-    if not date_match:
-        return "Please specify a date, e.g., 'crawl all sites for 03.20'"
-
-    date_str = _normalize_date(date_match.group(1).replace("/", "."))
+    if date_match:
+        date_str = _normalize_date(date_match.group(1).replace("/", "."))
+    else:
+        date_str = _today_mmddyy()
 
     # Build list of unique canonical locations
     canonical_locations = sorted(set(LOCATION_ALIASES.values()))
