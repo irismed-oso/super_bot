@@ -284,6 +284,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | HRTB-02 | Phase 14 | Complete |
 | HRTB-03 | Phase 14 | Complete |
 | HRTB-04 | Phase 14 | Complete |
+| DPLY-01 | Phase 15 | Pending |
+| DPLY-02 | Phase 15 | Pending |
+| VRFY-01 | Phase 16 | Pending |
+| VRFY-02 | Phase 16 | Pending |
+| VRFY-03 | Phase 16 | Pending |
+| VRFY-04 | Phase 16 | Pending |
 
 **Coverage:**
 - v1.0 requirements: 32 total (all complete)
@@ -292,10 +298,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 - v1.3 requirements: 2 total (all complete)
 - v1.4 requirements: 6 total (all complete)
 - v1.5 requirements: 11 total (all complete)
-- v1.6 requirements: 4 total (all pending)
-- Mapped to phases: 4/4
-- Unmapped: 0
+- v1.6 requirements: 4 total (all complete)
+- v1.7 requirements: 6 total (all pending)
+- Mapped to phases: 6/6
 
 ---
 *Requirements defined: 2026-03-18*
-*Last updated: 2026-03-24 after v1.6 roadmap created*
+*Last updated: 2026-03-25 after v1.7 roadmap created*

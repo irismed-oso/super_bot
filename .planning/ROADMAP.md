@@ -26,6 +26,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 12: Background Tasks and Batch Crawl** - Nicole can trigger a full batch crawl across all sites and get progress updates without blocking the agent queue or hitting timeouts (completed 2026-03-24)
 - [x] **Phase 13: Error UX** - Timeout and error messages give Nicole enough context to know what happened and what to do next, including live status queries (completed 2026-03-24)
 - [x] **Phase 14: Progress Heartbeat** - Bot edits a single progress message every 5 minutes during long agent sessions showing last activity, turn count, and elapsed time (completed 2026-03-24)
+- [ ] **Phase 15: Deploy Script** - Reusable deploy script that pushes code, installs deps, restarts service, and verifies health on the production VM
+- [ ] **Phase 16: Live Verification** - All v1.4-v1.6 features smoke-tested on the production VM -- digest changelog, fast-path commands, background tasks, heartbeat
 
 ## Phase Details
 
@@ -286,10 +288,43 @@ Plans:
 
 ---
 
+
+## v1.7: Deploy & Verify
+
+**Milestone Goal:** Get v1.4-v1.6 features deployed and verified on the production VM with a reusable deploy script.
+
+### Phase 15: Deploy Script
+**Goal**: A single reusable script deploys any future milestone to the production VM -- push, pull, deps, restart, health check -- so deployments are repeatable and not manual SSH sessions
+**Depends on**: Phase 14
+**Requirements**: DPLY-01, DPLY-02
+**Success Criteria** (what must be TRUE):
+  1. Running the deploy script from a local machine pushes the current branch, SSHs to the VM, pulls code, installs any new Python dependencies, restarts the systemd service, and confirms the service is healthy -- all in one command
+  2. The deploy script exits with a clear success/failure status and prints the service health (systemd active, no crash loops in recent journal logs)
+  3. The same deploy script can be reused for the next milestone without modification (no hardcoded version numbers or one-shot logic)
+  4. After the deploy script completes, the bot responds to a Slack @mention within 30 seconds, confirming it is live and functional
+**Plans**: TBD
+
+Plans:
+- [ ] 15-01: Deploy script and VM deployment
+
+### Phase 16: Live Verification
+**Goal**: Every feature shipped in v1.4-v1.6 is smoke-tested on the production VM -- the team confirms the bot works end-to-end in its real environment, not just locally
+**Depends on**: Phase 15
+**Requirements**: VRFY-01, VRFY-02, VRFY-03, VRFY-04
+**Success Criteria** (what must be TRUE):
+  1. The daily digest fires on the VM and includes a changelog section with any git activity from the day (or shows "No changes" cleanly when there is none) -- verifying VRFY-01
+  2. Nicole can type "crawl eyemed DME [date]" and "status on DME eyemed [date range]" in the production Slack channel and receive fast-path responses edited in-place within seconds -- verifying VRFY-02
+  3. Nicole can trigger a batch crawl ("crawl all sites for [date]") and observe background progress updates posting to the thread every 2-3 minutes without blocking other bot tasks -- verifying VRFY-03
+  4. When a long agent session runs on the VM, the progress message is edited with heartbeat updates (last activity, turn count, elapsed time), and on completion the message shows "Completed in Xm Ys" -- verifying VRFY-04
+**Plans**: TBD
+
+Plans:
+- [ ] 16-01: Live smoke tests for all v1.4-v1.6 features
+
 ## Progress
 
 **Execution Order:**
-Phases execute in order: 1 -> 2 -> 3 -> 4 -> v1.1 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10 -> 11 -> 12 -> 13 -> 14
+Phases execute in order: 1 -> 2 -> 3 -> 4 -> v1.1 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10 -> 11 -> 12 -> 13 -> 14 -> 15 -> 16
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -308,3 +343,5 @@ Phases execute in order: 1 -> 2 -> 3 -> 4 -> v1.1 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 12. Background Tasks and Batch Crawl | v1.5 | 1/1 | Complete | 2026-03-24 |
 | 13. Error UX | v1.5 | 1/1 | Complete | 2026-03-24 |
 | 14. Progress Heartbeat | v1.6 | Complete    | 2026-03-25 | 2026-03-24 |
+| 15. Deploy Script | v1.7 | 0/1 | Not started | - |
+| 16. Live Verification | v1.7 | 0/1 | Not started | - |
