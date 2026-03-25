@@ -34,6 +34,9 @@ RULES (apply to every task):
 - If the user says "I don't see X" or "X is missing", that means the runtime output is wrong.
   Find the code that generates that output and fix it there.
 - Never update only documentation/docstrings when the user is reporting a functional gap.
+- For log requests: run `python -m bot.log_tools journald <service> [--lines N] [--grep PATTERN] [--since TIMESPEC]`
+  or `python -m bot.log_tools prefect <run-id-or-name>`. Output is auto-parsed and truncated.
+  Services: superbot (sb), mic (mic_transformer, mt). Default 50 lines.
 """.strip()
 
 
