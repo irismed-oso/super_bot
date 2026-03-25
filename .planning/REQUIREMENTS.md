@@ -169,7 +169,55 @@ Requirements for Production Ops milestone.
 - [ ] **HLTH-01**: User can view bot health dashboard showing uptime, queue depth, error count, memory, version, and last restart
 - [ ] **HLTH-02**: User can view pipeline status fast-path summary (completed/failed/running flow runs in last 24h)
 
+## v1.9 Requirements
+
+Requirements for Persistent Memory milestone.
+
+### Storage
+
+- [ ] **STOR-01**: Bot initializes SQLite database with FTS5 at startup with WAL mode and single shared connection
+- [ ] **STOR-02**: Memories are stored with category (rule/fact/history/preference), content, source user, source channel, and timestamp
+- [ ] **STOR-03**: Memory search uses FTS5 BM25 ranking for relevance-ordered results
+- [ ] **STOR-04**: Database file lives in a persistent path on the VM (survives restarts)
+
+### Commands
+
+- [ ] **CMD-01**: User can store a memory via "remember [text]" and bot auto-categorizes it
+- [ ] **CMD-02**: User can search memories via "recall [query]" or "what do you know about [query]"
+- [ ] **CMD-03**: User can delete a memory via "forget [query]" with confirmation when multiple matches
+- [ ] **CMD-04**: User can list all memories via "list memories" with optional category filter
+- [ ] **CMD-05**: Memory commands are fast-path (no agent session) and placed before existing patterns to avoid regex collisions
+
+### Auto-Recall
+
+- [ ] **RECALL-01**: Bot automatically retrieves and injects top 5-8 relevant memories into every agent session prompt
+- [ ] **RECALL-02**: Rules/procedures are always included in recall; remaining slots filled by FTS5 relevance
+- [ ] **RECALL-03**: Bot shows a brief citation line when using a recalled memory (e.g., "Remembered: always dry_run first")
+- [ ] **RECALL-04**: Auto-recall does not run for fast-path commands (no latency regression)
+
+### Thread Scanning
+
+- [ ] **SCAN-01**: After each agent session, bot automatically scans the thread and extracts memorable information via a lightweight Claude call
+- [ ] **SCAN-02**: Thread scanning runs as a background task (does not block the queue)
+- [ ] **SCAN-03**: Extraction is conservative -- only explicit directives and facts, not speculative statements
+- [ ] **SCAN-04**: Bot does not extract from its own messages (prevents echo loops)
+- [ ] **SCAN-05**: Task history is auto-captured as a one-line session summary
+
 ## Future Requirements
+
+### Memory Hygiene (v2.0)
+
+- **HYG-01**: Task history entries auto-expire after 90 days
+- **HYG-02**: Near-duplicate detection on memory insert via FTS5
+- **HYG-03**: Periodic VACUUM via daily digest loop
+- **HYG-04**: Database file size monitoring with warning threshold
+- **HYG-05**: Startup integrity check and daily backup
+
+### Advanced Recall (v2.0)
+
+- **ADV-01**: Embedding-based semantic search (if FTS5 quality insufficient)
+- **ADV-02**: Memory consolidation for large stores (500+ entries)
+- **ADV-03**: Cross-repo memory sharing
 
 ### Crawler
 
@@ -230,6 +278,11 @@ Requirements for Production Ops milestone.
 | Blue-green / canary deploys | Over-engineering for single-VM internal tool |
 | Continuous log streaming | Slack rate limits make streaming an anti-feature — use tail snapshots |
 | Deploy history database | Git log IS the deploy history — no separate DB needed |
+| Vector database (Chroma, LanceDB) | VM has 2 GB RAM; FTS5 sufficient at expected scale |
+| Embedding models (sentence-transformers) | RAM constraint; adds 500MB+ dependency |
+| Per-user memory isolation | 2-4 person team; shared knowledge is the goal |
+| Memory approval gates | Full autonomy by design |
+| Graph-based knowledge store | Over-engineering for expected scale |
 
 ## Traceability
 
@@ -348,8 +401,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 - v1.6 requirements: 4 total (all complete)
 - v1.7 requirements: 6 total (2 complete, 4 moved to Phase 17)
 - v1.8 requirements: 14 total (all pending, mapped to Phases 17-21)
-- Total mapped: 17/17 v1.7+v1.8 pending requirements
+- v1.9 requirements: 18 total (all pending, unmapped)
 
 ---
 *Requirements defined: 2026-03-18*
-*Last updated: 2026-03-25 after v1.8 roadmap created*
+*Last updated: 2026-03-25 after v1.9 requirements defined*
