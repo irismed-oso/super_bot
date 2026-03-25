@@ -197,11 +197,11 @@ Requirements for Persistent Memory milestone.
 
 ### Thread Scanning
 
-- [ ] **SCAN-01**: After each agent session, bot automatically scans the thread and extracts memorable information via a lightweight Claude call
-- [ ] **SCAN-02**: Thread scanning runs as a background task (does not block the queue)
-- [ ] **SCAN-03**: Extraction is conservative -- only explicit directives and facts, not speculative statements
-- [ ] **SCAN-04**: Bot does not extract from its own messages (prevents echo loops)
-- [ ] **SCAN-05**: Task history is auto-captured as a one-line session summary
+- [x] **SCAN-01**: After each agent session, bot automatically scans the thread and extracts memorable information via a lightweight Claude call
+- [x] **SCAN-02**: Thread scanning runs as a background task (does not block the queue)
+- [x] **SCAN-03**: Extraction is conservative -- only explicit directives and facts, not speculative statements
+- [x] **SCAN-04**: Bot does not extract from its own messages (prevents echo loops)
+- [x] **SCAN-05**: Task history is auto-captured as a one-line session summary
 
 ## Future Requirements
 
@@ -403,11 +403,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | RECALL-02 | Phase 23 | Complete |
 | RECALL-03 | Phase 23 | Complete |
 | RECALL-04 | Phase 23 | Complete |
-| SCAN-01 | Phase 24 | Pending |
-| SCAN-02 | Phase 24 | Pending |
-| SCAN-03 | Phase 24 | Pending |
-| SCAN-04 | Phase 24 | Pending |
-| SCAN-05 | Phase 24 | Pending |
+| SCAN-01 | Phase 24 | Complete |
+| SCAN-02 | Phase 24 | Complete |
+| SCAN-03 | Phase 24 | Complete |
+| SCAN-04 | Phase 24 | Complete |
+| SCAN-05 | Phase 24 | Complete |
 
 **Coverage:**
 - v1.0 requirements: 32 total (all complete)
