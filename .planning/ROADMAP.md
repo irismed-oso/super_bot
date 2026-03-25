@@ -408,7 +408,11 @@ Plans:
   3. Nicole types "forget dry_run" and if multiple memories match, the bot lists them with IDs and asks which to delete -- a single match is deleted with confirmation
   4. Nicole types "list memories" and sees all stored memories grouped by category (rules, facts, history, preferences), with optional category filter ("list memories rules")
   5. All memory commands respond in under 2 seconds as fast-path commands -- they never spawn an agent session and do not collide with existing fast-path patterns like "crawl" or "status"
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 22-01-PLAN.md — SQLite memory store module with FTS5 schema and async CRUD
+- [ ] 22-02-PLAN.md — Memory fast-path commands (remember/recall/forget/list)
 
 ### Phase 23: Auto-Recall Injection
 **Goal**: Every agent session is automatically enriched with relevant memories from the store -- the bot applies institutional knowledge without anyone having to re-explain rules or context
