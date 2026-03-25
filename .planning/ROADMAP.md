@@ -342,8 +342,12 @@ Plans:
   3. Nicole types "deploy status" and sees the current commit, branch, last deploy time, and count of pending changes for each configured repo
   4. Nicole types "deploy preview super_bot" and sees the list of commits that would be deployed (between current HEAD and origin/main)
   5. If Nicole types "deploy super_bot" while an agent task is running, the bot warns about the active task and requires "deploy force super_bot" to proceed
-**Plans**: TBD
+**Plans**: 3 plans
 
+Plans:
+- [ ] 17-01-PLAN.md — Deploy-state persistence, repo config, and fast-path deploy status/preview commands
+- [ ] 17-02-PLAN.md — Deploy execution via Prefect (self-deploy + mic_transformer polling) + app.py startup recovery
+- [ ] 17-03-PLAN.md — VM deployment + live verification of deploy commands and v1.4-v1.6 features
 ### Phase 18: Rollback
 **Goal**: The team can undo a bad deploy by rolling back to the previous commit and redeploying, with automatic recovery if the rollback itself fails
 **Depends on**: Phase 17
@@ -409,7 +413,7 @@ Phases execute in order: 1 -> 2 -> 3 -> 4 -> v1.1 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 14. Progress Heartbeat | v1.6 | 1/1 | Complete | 2026-03-24 |
 | 15. Deploy Script | v1.7 | 1/1 | Complete | 2026-03-25 |
 | 16. Live Verification | v1.7 | 1/1 | Complete | 2026-03-25 |
-| 17. Deploy Foundation | v1.8 | 0/TBD | Not started | - |
+| 17. Deploy Foundation | v1.8 | 0/3 | Not started | - |
 | 18. Rollback | v1.8 | 0/TBD | Not started | - |
 | 19. Log Access | v1.8 | 0/TBD | Not started | - |
 | 20. Health Dashboard | v1.8 | 0/TBD | Not started | - |
