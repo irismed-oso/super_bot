@@ -199,12 +199,6 @@ def _timeout_suggestion(task_text: str) -> str:
     """Build a next-action suggestion for timeout messages."""
     if not task_text:
         return "Check `/sb-status` for current state."
-    # Import here to avoid circular import at module level
-    from bot.fast_commands import LOCATION_ALIASES
-    text_lower = task_text.lower()
-    for alias, canonical in LOCATION_ALIASES.items():
-        if alias in text_lower:
-            return f"Try checking the result: `status on {canonical} eyemed today`"
     return "Check `/sb-status` for current state."
 
 
