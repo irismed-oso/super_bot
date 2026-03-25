@@ -19,6 +19,28 @@ from bot import prefect_api, queue_manager, background_monitor, task_state
 
 log = structlog.get_logger(__name__)
 
+# ---------------------------------------------------------------------------
+# Action-request detection — skip fast commands when user wants a code change
+# ---------------------------------------------------------------------------
+
+_ACTION_VERBS = [
+    "improve", "fix", "change", "update", "modify", "add", "implement",
+    "create", "refactor", "remove", "delete", "make", "enhance", "rewrite",
+    "build", "write", "edit", "patch", "redesign", "rework", "replace",
+    "migrate", "upgrade", "extend", "integrate",
+]
+
+_ACTION_RE = re.compile(
+    r"\b(" + "|".join(_ACTION_VERBS) + r")\b",
+    re.IGNORECASE,
+)
+
+
+def is_action_request(text: str) -> bool:
+    """Return True if the message requests a code/system change rather than a query."""
+    return bool(_ACTION_RE.search(text))
+
+
 MIC_TRANSFORMER_DIR = os.path.realpath(
     os.environ.get("MIC_TRANSFORMER_CWD", "/home/bot/mic_transformer")
 )
@@ -392,6 +414,10 @@ async def try_fast_command(text: str, slack_context: dict | None = None) -> str 
     and ``thread_ts`` keys so handlers can spawn background tasks that post
     progress updates (e.g. batch crawl monitor).
     """
+    if is_action_request(text):
+        log.info("fast_command.skipped_action_request", text=text[:80])
+        return None
+
     for pattern, handler in FAST_COMMANDS:
         if pattern.search(text):
             try:
