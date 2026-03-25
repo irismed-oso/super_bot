@@ -72,7 +72,7 @@ def register(app: AsyncApp) -> None:
         await db.log_message(db_session_fk, "user_input", clean_text, slack_ts=event["ts"])
 
         # Fast-path commands (deploy status, preview, guard, eyemed status/crawl)
-        slack_context = {"client": client, "channel": channel, "thread_ts": thread_ts}
+        slack_context = {"client": client, "channel": channel, "thread_ts": thread_ts, "user_id": user_id}
         fast_result = await try_fast_command(clean_text, slack_context=slack_context)
         if fast_result is not None:
             ts_to_edit = ack_ts or thread_ts
