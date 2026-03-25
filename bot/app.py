@@ -34,6 +34,10 @@ async def _check_deploy_recovery(client) -> None:
     stdout, _ = await proc.communicate()
     current_sha = stdout.decode().strip()
 
+    # Record deploy timestamp
+    from bot.deploy_state import record_deploy
+    record_deploy("super_bot", current_sha)
+
     try:
         await client.chat_postMessage(
             channel=state["channel"],

@@ -20,6 +20,7 @@ from bot import memory_store, prefect_api, queue_manager, background_monitor, ta
 from bot.deploy_state import (
     REPO_CONFIG,
     get_deploy_preview,
+    get_last_deploy,
     get_repo_status,
     resolve_repo,
 )
@@ -305,6 +306,11 @@ async def _handle_deploy_status(text: str, **kwargs) -> str:
             detail = "  Up to date"
         if status["dirty"]:
             detail += " (uncommitted changes)"
+        last = get_last_deploy(repo_name)
+        if last:
+            from datetime import datetime, timezone
+            dt = datetime.fromtimestamp(last["deployed_at"], tz=timezone.utc)
+            detail += f"\n  Last deployed: {dt.strftime('%Y-%m-%d %H:%M UTC')} (`{last['sha']}`)"
         lines.append(f"{header}\n{detail}")
 
     return "\n\n".join(lines)

@@ -69,6 +69,34 @@ DEPLOY_STATE_PATH = "/home/bot/.deploy-state.json"
 
 _STALE_SECONDS = 300  # 5 minutes
 
+DEPLOY_HISTORY_PATH = "/home/bot/.deploy-history.json"
+
+
+def record_deploy(repo_name: str, sha: str) -> None:
+    """Record a successful deploy timestamp for a repo."""
+    history = {}
+    if os.path.isfile(DEPLOY_HISTORY_PATH):
+        try:
+            with open(DEPLOY_HISTORY_PATH) as f:
+                history = json.load(f)
+        except (json.JSONDecodeError, OSError):
+            pass
+    history[repo_name] = {"sha": sha, "deployed_at": time.time()}
+    with open(DEPLOY_HISTORY_PATH, "w") as f:
+        json.dump(history, f)
+
+
+def get_last_deploy(repo_name: str) -> dict | None:
+    """Return last deploy info for a repo, or None if never deployed via Slack."""
+    if not os.path.isfile(DEPLOY_HISTORY_PATH):
+        return None
+    try:
+        with open(DEPLOY_HISTORY_PATH) as f:
+            history = json.load(f)
+        return history.get(repo_name)
+    except (json.JSONDecodeError, OSError):
+        return None
+
 
 def write_deploy_state(
     channel: str, thread_ts: str, pre_sha: str, user_id: str

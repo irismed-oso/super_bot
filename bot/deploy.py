@@ -15,6 +15,7 @@ from bot import prefect_api
 from bot.deploy_state import (
     get_deploy_preview,
     get_repo_status,
+    record_deploy,
     write_deploy_state,
 )
 
@@ -274,6 +275,13 @@ async def _external_deploy(
 
         if current_status in TERMINAL_STATES:
             if current_status == "COMPLETED":
+                # Record deploy timestamp
+                try:
+                    from bot.deploy_state import _git
+                    new_sha = await _git(repo_config["dir"], "rev-parse", "--short", "HEAD")
+                    record_deploy(repo_name, new_sha)
+                except Exception:
+                    pass
                 await _edit_progress(
                     client, channel, msg_ts,
                     f"Deploy {repo_name} complete. "
