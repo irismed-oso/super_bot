@@ -139,6 +139,60 @@ gcloud compute ssh bot@superbot-vm --zone=us-west1-a -- "
 
 Expected: No authentication errors, Socket Mode connection established. Press Ctrl+C to stop tailing.
 
+## Deploying Updates (Any Milestone)
+
+Use this section for all subsequent deployments after the initial Phase 1 setup. The deploy script handles code deployment -- push, pull, restart, and health check -- in one command.
+
+**When to use:** After any code changes are committed and ready to deploy to the VM.
+
+### Quick Deploy
+
+```bash
+bash scripts/deploy.sh
+```
+
+This pushes the current branch to origin, SSHs to the VM, pulls the latest code, installs Python dependencies, restarts the service, and verifies health.
+
+### Options
+
+| Flag | Description |
+|------|-------------|
+| `--branch BRANCH` | Deploy a specific branch (default: pushes and deploys current branch) |
+| `--skip-push` | Skip git push (if already pushed) |
+| `--skip-deps` | Skip pip install (for code-only changes with no new dependencies) |
+
+### Examples
+
+```bash
+# Full deploy (push + deps + restart)
+bash scripts/deploy.sh
+
+# Code-only deploy (no pip install)
+bash scripts/deploy.sh --skip-deps
+
+# Already pushed, just deploy
+bash scripts/deploy.sh --skip-push
+
+# Deploy a specific branch
+bash scripts/deploy.sh --branch feature-x
+```
+
+### What It Does
+
+1. Pushes current branch to origin (unless `--skip-push`)
+2. SSHs to VM, pulls latest code
+3. Installs Python dependencies via `uv pip install` (unless `--skip-deps`)
+4. Restarts the `superbot` systemd service
+5. Runs health check (service status + crash detection in logs)
+
+### Post-Deploy Verification
+
+Send `@SuperBot hello` in the Slack channel. Expected: response within 30 seconds.
+
+### Note
+
+For milestone-specific setup (new env vars, new repos, new services), see the version-specific sections below. The deploy script only handles code deployment.
+
 ## Verification Tests
 
 After Step 9 shows clean startup, run these 8 tests in sequence.
