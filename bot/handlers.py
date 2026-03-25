@@ -4,7 +4,6 @@ from slack_bolt.app.async_app import AsyncApp
 from bot.access_control import is_allowed, is_allowed_channel, is_bot_message
 from bot.deduplication import is_seen, mark_seen
 from bot import task_state, formatter, worktree, progress, session_map, activity_log, git_activity, db
-from bot.fast_commands import try_fast_command
 from bot.heartbeat import Heartbeat
 from bot.queue_manager import QueuedTask, enqueue, queue_depth
 from config import BOT_USER_ID
@@ -63,40 +62,6 @@ def register(app: AsyncApp) -> None:
         # DB: upsert session and log user input
         db_session_fk = await db.upsert_session(channel, thread_ts, user_id)
         await db.log_message(db_session_fk, "user_input", clean_text, slack_ts=event["ts"])
-
-        # Fast-path: handle common queries directly without the agent pipeline
-        fast_result = await try_fast_command(clean_text, slack_context={
-            "client": client,
-            "channel": channel,
-            "thread_ts": thread_ts,
-        })
-        if fast_result is not None:
-            await db.log_message(db_session_fk, "bot_output", fast_result)
-            await db.log_execution(db_session_fk, prompt=clean_text, subtype="fast_path")
-            msg = formatter.markdown_to_mrkdwn(fast_result)
-            chunks = formatter.split_long_message(msg)
-            # Edit the "Working on it." ack message in-place with the first chunk
-            if ack_ts and chunks:
-                try:
-                    await client.chat_update(
-                        channel=channel, ts=ack_ts, text=chunks[0],
-                    )
-                except Exception:
-                    log.warning("fast_path.edit_ack_failed", channel=channel)
-                    await client.chat_postMessage(
-                        channel=channel, thread_ts=thread_ts, text=chunks[0],
-                    )
-                # Post remaining chunks as new messages (rare -- only for very long output)
-                for chunk in chunks[1:]:
-                    await client.chat_postMessage(
-                        channel=channel, thread_ts=thread_ts, text=chunk,
-                    )
-            else:
-                for chunk in chunks:
-                    await client.chat_postMessage(
-                        channel=channel, thread_ts=thread_ts, text=chunk,
-                    )
-            return
 
         session_id = session_map.get(channel, thread_ts)
         is_code_task_flag = worktree.is_code_task(clean_text)
