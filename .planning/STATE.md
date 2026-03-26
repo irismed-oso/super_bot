@@ -5,21 +5,21 @@
 See: .planning/PROJECT.md (updated 2026-03-25)
 
 **Core value:** Nicole can ask the bot to do anything on mic_transformer through Slack and it just does it -- writes code, runs scripts, debugs issues, deploys -- with full autonomy and persistent awareness.
-**Current focus:** Phase 20: Health Dashboard (v1.4)
+**Current focus:** Phase 21: Pipeline Status (v1.4)
 
 ## Current Position
 
-Phase: 20-health-dashboard
+Phase: 21-pipeline-status
 Plan: 01 of 01 complete
-Status: Phase 20 complete
-Last activity: 2026-03-25 - Completed 20-01: Health dashboard fast-path command
+Status: Phase 21 complete
+Last activity: 2026-03-26 - Completed 21-01: Pipeline status CLI and agent rule
 
-Progress: [==================..] 95% (phases 1-21 scoped, 18 complete; phases 22-24, 20 complete)
+Progress: [===================.] 96% (phases 1-21 scoped, 19 complete; phases 22-24, 20 complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 35
+- Total plans completed: 36
 - Average duration: --
 - Total execution time: --
 
@@ -49,6 +49,8 @@ Progress: [==================..] 95% (phases 1-21 scoped, 18 complete; phases 22
 - v1.8: Health check: systemctl + journal scan for services; Prefect COMPLETED suffices for service-less repos
 - v1.8: Deploy commands handled outside agent queue (super_bot dies, mic_transformer polls directly)
 - v1.8: Fast-path commands integrated into handlers.py _run_agent_real before agent queue dispatch
+- v1.4: Agent pipeline (not fast-path) for pipeline status -- agent handles natural language time windows
+- v1.4: Pipeline status groups FAILED/CRASHED first, then RUNNING, then COMPLETED with 2500 char cap
 
 ### Pending Todos
 
@@ -67,9 +69,10 @@ None yet.
 | 3 | fast path is buggy. remove it | 2026-03-25 | d5fa074 | [3-fast-path-is-buggy-remove-it](./quick/3-fast-path-is-buggy-remove-it/) |
 | 4 | strip fast-path to memory + guards only | 2026-03-25 | a8b27e1 | [4-1-remove-fast-path-2-handle-autopost](./quick/4-1-remove-fast-path-2-handle-autopost/) |
 | Phase 20-health-dashboard P01 | 1min | 1 tasks | 1 files |
+| Phase 21-pipeline-status P01 | 2min | 2 tasks | 2 files |
 
 ## Session Continuity
 
-Last session: 2026-03-25
-Stopped at: Completed 19-01-PLAN.md (log access)
+Last session: 2026-03-26
+Stopped at: Completed 21-01-PLAN.md (pipeline status)
 Resume file: None

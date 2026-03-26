@@ -167,7 +167,7 @@ Requirements for Production Ops milestone.
 ### Health & Monitoring (HLTH)
 
 - [ ] **HLTH-01**: User can view bot health dashboard showing uptime, queue depth, error count, memory, version, and last restart
-- [ ] **HLTH-02**: User can view pipeline status summary via agent (completed/failed/running flow runs with natural language time windows)
+- [x] **HLTH-02**: User can view pipeline status summary via agent (completed/failed/running flow runs with natural language time windows)
 
 ## v1.9 Requirements
 
@@ -389,7 +389,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | LOGS-03 | Phase 19 | Complete |
 | LOGS-04 | Phase 19 | Complete |
 | HLTH-01 | Phase 20 | Pending |
-| HLTH-02 | Phase 21 | Pending |
+| HLTH-02 | Phase 21 | Complete |
 | STOR-01 | Phase 22 | Complete |
 | STOR-02 | Phase 22 | Complete |
 | STOR-03 | Phase 22 | Complete |

@@ -32,7 +32,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 18: Rollback** - Git-based rollback to previous commit with health check and automatic roll-forward on failure (completed 2026-03-25)
 - [x] **Phase 19: Log Access** - Tail and filter journald logs, view Prefect flow logs, with structlog parsing and Slack-safe truncation (completed 2026-03-25)
 - [x] **Phase 20: Health Dashboard** - Fast-path bot health overview showing uptime, queue depth, errors, memory, version, and last restart (completed 2026-03-26)
-- [ ] **Phase 21: Pipeline Status** - Fast-path Prefect pipeline summary showing completed, failed, and running flow runs in the last 24 hours
+- [x] **Phase 21: Pipeline Status** - Fast-path Prefect pipeline summary showing completed, failed, and running flow runs in the last 24 hours (completed 2026-03-26)
 - [x] **Phase 22: SQLite Foundation and Memory Commands** - SQLite database with FTS5 search, memory CRUD module, and fast-path remember/recall/forget/list commands (completed 2026-03-25)
 - [x] **Phase 23: Auto-Recall Injection** - Relevant memories automatically retrieved and injected into every agent session prompt with brief citation (completed 2026-03-25)
 - [x] **Phase 24: Post-Session Thread Scanning** - Automatic extraction of memorable information from completed threads with task history auto-capture (completed 2026-03-25)
@@ -485,7 +485,7 @@ Phases execute in order: 1 -> 2 -> 3 -> 4 -> v1.1 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 18. Rollback | 1/1 | Complete    | 2026-03-25 | - |
 | 19. Log Access | 1/1 | Complete    | 2026-03-25 | - |
 | 20. Health Dashboard | v1.8 | Complete    | 2026-03-26 | - |
-| 21. Pipeline Status | v1.8 | 0/TBD | Not started | - |
+| 21. Pipeline Status | 1/1 | Complete   | 2026-03-26 | - |
 | 22. SQLite Foundation and Memory Commands | 2/2 | Complete    | 2026-03-25 | - |
 | 23. Auto-Recall Injection | 1/1 | Complete    | 2026-03-25 | - |
 | 24. Post-Session Thread Scanning | 1/1 | Complete    | 2026-03-25 | - |
