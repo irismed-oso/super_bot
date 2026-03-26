@@ -126,3 +126,23 @@
 
 ---
 
+
+## v1.9 -- Persistent Memory (Phases 22-24, shipped 2026-03-25)
+
+**Goal:** The bot remembers rules, facts, history, and preferences across sessions using a local SQLite database, auto-recalls relevant memories during tasks, and automatically extracts knowledge from Slack threads.
+
+**Shipped:**
+- SQLite memory store with FTS5 full-text search, WAL mode, graceful degradation (bot/memory_store.py)
+- Four fast-path memory commands: remember (auto-categorize), recall (FTS5 search), forget (multi-match confirm), list (category filter)
+- Auto-recall injection: rules always included + FTS5-ranked context prepended to every agent prompt with "(Remembered: N memories applied)" citation
+- Post-session thread scanning: Claude-powered extraction of directives/facts from completed threads, fire-and-forget via asyncio
+- Task history auto-capture: one-line session summary stored after every agent session
+
+**Stats:** 3 phases, 4 plans, 529 LOC Python (memory_store + memory_recall + thread_scanner)
+
+**Known issues:**
+- memory_store.close() not called on shutdown -- WAL checkpoint may not flush cleanly
+- Extraction model ID (claude-sonnet-4-20250514) may need updating if API rejects it
+
+---
+

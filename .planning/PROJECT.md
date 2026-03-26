@@ -45,27 +45,15 @@ Nicole can ask the bot to do anything on mic_transformer through Slack and it ju
 - Completion edit ("Completed in Xm Ys") before result posts -- v1.6
 - Reusable deploy script (scripts/deploy.sh) with push/pull/deps/restart/health-check -- v1.7
 - All v1.4-v1.6 features verified working on production VM -- v1.7
+- SQLite memory store with FTS5 full-text search, WAL mode, graceful degradation -- v1.9
+- Fast-path memory commands: remember, recall, forget, list with auto-categorization -- v1.9
+- Auto-recall: rules + FTS5-ranked memories injected into every agent prompt with citation -- v1.9
+- Post-session thread scanning: Claude-powered extraction of directives/facts, fire-and-forget -- v1.9
+- Task history auto-capture after every agent session -- v1.9
 
 ### Active
 
-- [ ] SQL-backed persistent memory system (local SQLite)
-- [ ] 4 memory types: rules/procedures, facts/context, task history, user preferences
-- [ ] Auto-recall: relevant memories injected into every agent session with brief citation
-- [ ] Automatic thread scanning: extract memorable info from threads bot participates in
-- [ ] Memory management commands: remember, recall, forget, list
-- [ ] All allowed users can add, edit, delete memories
-
-## Current Milestone: v1.9 Persistent Memory
-
-**Goal:** The bot remembers rules, facts, history, and preferences across sessions using a local SQL database, auto-recalls relevant memories during tasks, and automatically extracts knowledge from Slack threads.
-
-**Target features:**
-- SQLite database for persistent memory storage and retrieval
-- Four memory categories: rules/procedures, facts/context, task history, user preferences
-- Auto-recall injects relevant memories into agent sessions with brief citation
-- Automatic extraction of memorable info from every thread the bot participates in
-- Explicit commands: "remember X", "what do you know about Y", "forget X"
-- All allowed users can manage memories
+(None yet -- planning next milestone)
 
 ### Out of Scope
 
@@ -111,6 +99,11 @@ Nicole can ask the bot to do anything on mic_transformer through Slack and it ju
 | httpx.AsyncClient for Prefect API | Native async, no thread wrapping needed | Good |
 | asyncio timer heartbeat (not tool-use driven) | Fires during silent thinking phases | Good |
 | finish() vs stop() for heartbeat | Completion gets final edit, cancel/error doesn't | Good |
+| FTS5 over vector search for memory | 2GB VM RAM constraint; FTS5 sufficient at <1K memories | Good |
+| aiosqlite single shared connection | Prevents SQLite locking in asyncio; matches db.py pattern | Good |
+| Conservative extraction prompt | Only explicit directives/facts; prevents noise in memory store | -- Pending |
+| Anthropic SDK for thread extraction | Lightweight Claude call; better than NLP libraries for quality | Good |
+| Memory commands before deploy in FAST_COMMANDS | Prevents regex collision with existing patterns | Good |
 
 ---
-*Last updated: 2026-03-25 after milestone v1.9 started*
+*Last updated: 2026-03-25 after v1.9 milestone*
