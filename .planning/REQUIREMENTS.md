@@ -167,7 +167,7 @@ Requirements for Production Ops milestone.
 ### Health & Monitoring (HLTH)
 
 - [ ] **HLTH-01**: User can view bot health dashboard showing uptime, queue depth, error count, memory, version, and last restart
-- [ ] **HLTH-02**: User can view pipeline status fast-path summary (completed/failed/running flow runs in last 24h)
+- [ ] **HLTH-02**: User can view pipeline status summary via agent (completed/failed/running flow runs with natural language time windows)
 
 ## v1.9 Requirements
 

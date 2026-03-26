@@ -394,13 +394,13 @@ Plans:
 - [ ] 20-01-PLAN.md — Health dashboard fast-path handler with system metrics
 
 ### Phase 21: Pipeline Status
-**Goal**: The team can see a summary of Prefect pipeline activity via a fast-path command -- how many flows completed, failed, or are running in the last 24 hours
+**Goal**: The team can see a summary of Prefect pipeline activity via the agent pipeline -- how many flows completed, failed, or are running, with natural language time windows
 **Depends on**: Phase 19
 **Requirements**: HLTH-02
 **Success Criteria** (what must be TRUE):
-  1. Nicole types "pipeline status" and sees a compact summary of Prefect flow runs in the last 24 hours, grouped by status (completed, failed, running)
-  2. The summary includes flow names and timestamps, not just counts, so Nicole can identify which specific runs succeeded or failed
-  3. The pipeline status responds in under 5 seconds as a fast-path command (no agent session)
+  1. Nicole types "pipeline status" and sees a compact summary of Prefect flow runs in the last 24 hours, grouped by status (failed first, then running, then completed)
+  2. The summary includes flow names, timestamps, and run IDs so Nicole can follow up with "prefect logs [id]"
+  3. Nicole can specify time windows naturally ("pipeline status today", "pipeline status this week") and the agent interprets them
 **Plans**: 1 plan
 
 Plans:
