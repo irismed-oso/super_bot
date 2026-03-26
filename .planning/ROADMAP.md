@@ -362,7 +362,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 18-01-PLAN.md — Rollback execution with health check, auto-roll-forward, and self-rollback recovery
+- [ ] 20-01-PLAN.md — Health dashboard fast-path handler with system metrics
 
 ### Phase 19: Log Access
 **Goal**: The team can read service logs and Prefect flow logs from Slack without SSHing to the VM -- with output parsed and truncated to fit Slack messages
@@ -391,7 +391,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 18-01-PLAN.md — Rollback execution with health check, auto-roll-forward, and self-rollback recovery
+- [ ] 20-01-PLAN.md — Health dashboard fast-path handler with system metrics
 
 ### Phase 21: Pipeline Status
 **Goal**: The team can see a summary of Prefect pipeline activity via a fast-path command -- how many flows completed, failed, or are running in the last 24 hours
@@ -404,7 +404,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 18-01-PLAN.md — Rollback execution with health check, auto-roll-forward, and self-rollback recovery
+- [ ] 21-01-PLAN.md — Pipeline status fast-path with Prefect flow summary
 
 ---
 
