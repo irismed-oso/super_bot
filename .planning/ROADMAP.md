@@ -404,7 +404,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 21-01-PLAN.md — Pipeline status fast-path with Prefect flow summary
+- [ ] 21-01-PLAN.md — Pipeline status CLI tool and agent rules for Prefect flow summary
 
 ---
 
