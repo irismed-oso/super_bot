@@ -1,20 +1,27 @@
 """
-Fast-path handlers for memory commands and deploy/rollback guards.
+Fast-path handlers for memory commands, health dashboard, and deploy/rollback guards.
 
 Memory commands (remember, recall, forget, list memories) get instant
-responses without queueing.  Deploy and rollback guards block when an
-agent task is running unless "force" is specified; otherwise they return
-None to let the message fall through to the agent pipeline.
+responses without queueing.  The health dashboard ("bot health", "bot status",
+"are you broken?", etc.) shows a compact system snapshot.  Deploy and rollback
+guards block when an agent task is running unless "force" is specified;
+otherwise they return None to let the message fall through to the agent
+pipeline.
 
-All other commands (crawl, deploy status, bot status, etc.) flow through
-to the agent pipeline for full handling.
+All other commands (crawl, deploy status, etc.) flow through to the agent
+pipeline for full handling.
 """
 
 import re
+import resource
+import shutil
+import subprocess
+import sys
+from datetime import datetime
 
 import structlog
 
-from bot import memory_store, queue_manager
+from bot import background_monitor, memory_store, queue_manager, task_state
 
 log = structlog.get_logger(__name__)
 
@@ -161,6 +168,123 @@ async def _handle_list_memories(text: str, **kwargs) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Health dashboard (v1.4)
+# ---------------------------------------------------------------------------
+
+_BOT_HEALTH_RE = re.compile(
+    r"^\s*(?:bot\s+(?:health|status)|are\s+you\s+(?:broken|still\s+going|ok)|health\s+check)\s*\??$",
+    re.IGNORECASE,
+)
+
+
+async def _handle_bot_health(text: str, **kwargs) -> str:
+    """Return a compact health dashboard with system metrics."""
+    # Status
+    state = queue_manager.get_state()
+    current = state["current"]
+    if current is not None:
+        task_label = (
+            current.clean_text[:60] if current.clean_text else current.prompt[:60]
+        )
+        status_line = f":large_orange_circle: *Status:* Running: _{task_label}_"
+    else:
+        status_line = ":large_green_circle: *Status:* Idle"
+
+    # Uptime
+    uptime = task_state.get_uptime()
+    uptime_line = f":clock1: *Uptime:* {uptime}"
+
+    # Queue depth
+    q_depth = state["queue_depth"]
+    queue_line = f":inbox_tray: *Queue:* {q_depth} task{'s' if q_depth != 1 else ''} waiting"
+
+    # Git version
+    try:
+        sha = subprocess.check_output(
+            ["git", "rev-parse", "--short", "HEAD"], text=True, timeout=5,
+            stderr=subprocess.DEVNULL,
+        ).strip()
+    except Exception:
+        sha = "unknown"
+    version_line = f":label: *Version:* `{sha}`"
+
+    # Memory (RSS in MB)
+    try:
+        usage = resource.getrusage(resource.RUSAGE_SELF)
+        if sys.platform == "darwin":
+            rss_mb = usage.ru_maxrss / (1024 * 1024)  # bytes -> MB
+        else:
+            rss_mb = usage.ru_maxrss / 1024  # KB -> MB
+        memory_line = f":brain: *Memory:* {rss_mb:.0f} MB RSS"
+    except Exception:
+        memory_line = ":brain: *Memory:* unavailable"
+
+    # Disk
+    try:
+        disk = shutil.disk_usage("/")
+        used_gb = disk.used / (1024 ** 3)
+        total_gb = disk.total / (1024 ** 3)
+        disk_line = f":floppy_disk: *Disk:* {used_gb:.1f} / {total_gb:.1f} GB used"
+    except Exception:
+        disk_line = ":floppy_disk: *Disk:* unavailable"
+
+    # Recent tasks
+    recent = task_state.get_recent(5)
+    tasks_line = f":white_check_mark: *Recent tasks:* {len(recent)} completed"
+
+    # Active monitors
+    monitors = background_monitor.get_active_monitors()
+    if monitors:
+        labels = ", ".join(m["date_str"] for m in monitors)
+        monitors_line = f":satellite: *Active monitors:* {len(monitors)} ({labels})"
+    else:
+        monitors_line = ":satellite: *Active monitors:* 0"
+
+    # Errors (24h) -- journalctl, only works on Linux with systemd
+    try:
+        err_output = subprocess.check_output(
+            [
+                "journalctl", "-u", "superbot",
+                "--since", "24 hours ago",
+                "-p", "err", "--no-pager", "-q",
+            ],
+            text=True, timeout=5, stderr=subprocess.DEVNULL,
+        )
+        err_count = len([line for line in err_output.strip().split("\n") if line.strip()])
+        if err_count > 0:
+            errors_line = f":rotating_light: *Errors (24h):* {err_count}"
+        else:
+            errors_line = ":warning: *Errors (24h):* 0"
+    except Exception:
+        errors_line = ":warning: *Errors (24h):* unavailable"
+
+    # Last restart
+    try:
+        restart_dt = datetime.fromtimestamp(task_state._start_time)
+        restart_str = restart_dt.strftime("%Y-%m-%d %H:%M:%S")
+        restart_line = f":arrows_counterclockwise: *Last restart:* {restart_str}"
+    except Exception:
+        restart_line = ":arrows_counterclockwise: *Last restart:* unknown"
+
+    lines = [
+        "*Bot Health Dashboard*",
+        "",
+        status_line,
+        uptime_line,
+        queue_line,
+        version_line,
+        memory_line,
+        disk_line,
+        tasks_line,
+        monitors_line,
+        errors_line,
+        restart_line,
+    ]
+
+    return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
 # Deploy guard: "deploy superbot" or "deploy force superbot"
 # Blocks if an agent task is running (unless "force" is present).
 # Returns None to fall through to agent pipeline when deploy should proceed.
@@ -237,6 +361,8 @@ FAST_COMMANDS = [
     (_RECALL_RE, _handle_recall),
     (_FORGET_RE, _handle_forget),
     (_LIST_MEMORIES_RE, _handle_list_memories),
+    # Health dashboard (v1.4)
+    (_BOT_HEALTH_RE, _handle_bot_health),
     # Deploy guard
     (_DEPLOY_GUARD_RE, _handle_deploy_guard),
     # Rollback guard
