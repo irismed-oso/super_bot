@@ -45,6 +45,12 @@ Nicole can ask the bot to do anything on mic_transformer through Slack and it ju
 - Completion edit ("Completed in Xm Ys") before result posts -- v1.6
 - Reusable deploy script (scripts/deploy.sh) with push/pull/deps/restart/health-check -- v1.7
 - All v1.4-v1.6 features verified working on production VM -- v1.7
+- Deploy super_bot and mic_transformer from Slack via Prefect with self-restart handling -- v1.8
+- Deploy status, preview, and active-task guard as fast-path commands -- v1.8
+- Git-based rollback with auto-roll-forward on health check failure -- v1.8
+- Journald + Prefect log access with structlog parsing and secret scrubbing -- v1.8
+- Bot health dashboard (10 metrics, emoji-prefixed compact list) -- v1.8
+- Pipeline status summary via agent with natural language time windows -- v1.8
 - SQLite memory store with FTS5 full-text search, WAL mode, graceful degradation -- v1.9
 - Fast-path memory commands: remember, recall, forget, list with auto-categorization -- v1.9
 - Auto-recall: rules + FTS5-ranked memories injected into every agent prompt with citation -- v1.9
@@ -106,4 +112,4 @@ Nicole can ask the bot to do anything on mic_transformer through Slack and it ju
 | Memory commands before deploy in FAST_COMMANDS | Prevents regex collision with existing patterns | Good |
 
 ---
-*Last updated: 2026-03-25 after v1.9 milestone*
+*Last updated: 2026-03-26 after v1.8 + v1.9 milestones*

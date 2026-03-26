@@ -146,3 +146,13 @@
 
 ---
 
+
+## v1.8 Production Ops (Shipped: 2026-03-26)
+
+**Phases completed:** 20 phases, 34 plans, 0 tasks
+
+**Key accomplishments:**
+- (none recorded)
+
+---
+
