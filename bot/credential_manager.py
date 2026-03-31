@@ -74,7 +74,8 @@ def update_credentials(payer: str, location: str, username: str, password: str) 
             request={"parent": secret_path, "payload": {"data": payload}}
         )
     except Exception as exc:
-        if "NOT_FOUND" in str(exc):
+        exc_str = str(exc)
+        if "NOT_FOUND" in exc_str or "not found" in exc_str.lower():
             log.info("credential_manager.creating_secret", secret_id=secret_id)
             client.create_secret(
                 request={
