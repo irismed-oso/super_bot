@@ -298,7 +298,7 @@ _UPDATE_CREDS_RE = re.compile(
     r"(eyemed|vsp)\s+"
     r"(\S+)\s+"
     r"(\S+)\s+"
-    r"(\S+)\s*$",
+    r"(\S+)",
     re.IGNORECASE,
 )
 
