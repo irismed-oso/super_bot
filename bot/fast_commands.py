@@ -1,12 +1,14 @@
 """
-Fast-path handlers for memory commands, health dashboard, and deploy/rollback guards.
+Fast-path handlers for memory commands, health dashboard, credential updates,
+and deploy/rollback guards.
 
 Memory commands (remember, recall, forget, list memories) get instant
 responses without queueing.  The health dashboard ("bot health", "bot status",
-"are you broken?", etc.) shows a compact system snapshot.  Deploy and rollback
-guards block when an agent task is running unless "force" is specified;
-otherwise they return None to let the message fall through to the agent
-pipeline.
+"are you broken?", etc.) shows a compact system snapshot.  Credential update
+commands write payer portal credentials to GCP Secret Manager.  Deploy and
+rollback guards block when an agent task is running unless "force" is
+specified; otherwise they return None to let the message fall through to the
+agent pipeline.
 
 All other commands (crawl, deploy status, etc.) flow through to the agent
 pipeline for full handling.
@@ -21,7 +23,7 @@ from datetime import datetime
 
 import structlog
 
-from bot import background_monitor, memory_store, queue_manager, task_state
+from bot import background_monitor, credential_manager, memory_store, queue_manager, task_state
 
 log = structlog.get_logger(__name__)
 
@@ -285,6 +287,66 @@ async def _handle_bot_health(text: str, **kwargs) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Credential update commands
+# ---------------------------------------------------------------------------
+
+# Flexible pattern: "update creds <payer> <location> <username> <password>"
+# Also matches: "update credentials", "set creds", "set credentials"
+_UPDATE_CREDS_RE = re.compile(
+    r"^\s*(?:update|set)\s+cred(?:ential)?s?\s+"
+    r"(eyemed|vsp)\s+"
+    r"(\S+)\s+"
+    r"(\S+)\s+"
+    r"(\S+)\s*$",
+    re.IGNORECASE,
+)
+
+
+async def _handle_update_creds(text: str, **kwargs) -> str:
+    """Update payer portal credentials in GCP Secret Manager."""
+    match = _UPDATE_CREDS_RE.search(text)
+    if not match:
+        return (
+            "Usage: `update creds <eyemed|vsp> <location> <username> <password>`\n"
+            "Example: `update creds eyemed peg jsmith newpass123`"
+        )
+
+    payer = match.group(1).lower()
+    location_raw = match.group(2)
+    username = match.group(3)
+    password = match.group(4)
+
+    # Normalize location using mic_transformer's canonical list
+    try:
+        import sys
+        sys.path.insert(0, "/home/bot/mic_transformer")
+        from scripts.slack_bot.locations import normalize_location, get_all_locations
+        location = normalize_location(location_raw)
+        all_locations = get_all_locations()
+    except ImportError:
+        # Fallback: use raw input as-is (dev environment without mic_transformer)
+        location = location_raw
+        all_locations = None
+
+    # Warn if location didn't resolve to a known canonical name
+    if all_locations and location not in all_locations and location == location_raw:
+        return (
+            f"Unknown location `{location_raw}`. Known locations:\n"
+            + ", ".join(f"`{loc}`" for loc in all_locations)
+        )
+
+    try:
+        secret_id = credential_manager.update_credentials(payer, location, username, password)
+        return (
+            f"Updated *{payer.upper()}* credentials for *{location}*\n"
+            f"Secret: `{secret_id}` | User: `{username}`"
+        )
+    except Exception as exc:
+        log.error("credential_update.failed", payer=payer, location=location, error=str(exc))
+        return f"Failed to update credentials: {exc}"
+
+
+# ---------------------------------------------------------------------------
 # Deploy guard: "deploy superbot" or "deploy force superbot"
 # Blocks if an agent task is running (unless "force" is present).
 # Returns None to fall through to agent pipeline when deploy should proceed.
@@ -363,6 +425,8 @@ FAST_COMMANDS = [
     (_LIST_MEMORIES_RE, _handle_list_memories),
     # Health dashboard (v1.4)
     (_BOT_HEALTH_RE, _handle_bot_health),
+    # Credential update
+    (_UPDATE_CREDS_RE, _handle_update_creds),
     # Deploy guard
     (_DEPLOY_GUARD_RE, _handle_deploy_guard),
     # Rollback guard

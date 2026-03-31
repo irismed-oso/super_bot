@@ -38,6 +38,9 @@ RULES (apply to every task):
   or `python -m bot.log_tools prefect <run-id-or-name>`. Output is auto-parsed and truncated.
   Services: superbot (sb), mic (mic_transformer, mt). Default 50 lines.
 - When the user asks about "pipeline status", "flow runs", or "what ran today": run `python -m bot.pipeline_status` with appropriate flags. Use --hours N for relative windows or --since YYYY-MM-DD for specific dates. Default (no flags) shows last 24 hours.
+- When the user wants to update portal credentials for a location, tell them to use:
+  `update creds <eyemed|vsp> <location> <username> <password>`
+  This is a fast-path command that writes directly to GCP Secret Manager.
 """.strip()
 
 
