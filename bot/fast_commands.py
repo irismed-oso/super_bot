@@ -14,6 +14,7 @@ All other commands (crawl, deploy status, etc.) flow through to the agent
 pipeline for full handling.
 """
 
+import random
 import re
 import resource
 import shutil
@@ -412,12 +413,178 @@ async def _handle_rollback_guard(text: str, **kwargs) -> str | None:
 
 
 # ---------------------------------------------------------------------------
+# Pet the bot (fun interactions)
+# ---------------------------------------------------------------------------
+
+_PET_RE = re.compile(
+    r"(?:pets|pats|scratches|boops|hugs|cuddles|snuggles|belly\s*rubs?|"
+    r"feeds|gives\s+treats?\s+to|tosses?\s+(?:a\s+)?treat|throws?\s+(?:a\s+)?ball|"
+    r"rubs|strokes|tickles|nuzzles|squishes|brushes|grooms)"
+    r"\s+(?:the\s+)?(?:bot|super\s*bot|you)",
+    re.IGNORECASE,
+)
+
+_PET_REACTIONS = [
+    # Dogs
+    ":dog2: *wags tail furiously* BEST. DAY. EVER.",
+    ":dog2: *rolls over for belly rubs* ...don't stop.",
+    ":dog2: *happy tippy taps* More pets please!",
+    ":dog2: *licks your hand* You taste like keyboard.",
+    ":dog2: *does a full body wiggle* I LOVE YOU I LOVE YOU I LOVE YOU",
+    ":dog2: *brings you a slipper* Here! I found this! For you!",
+    ":dog2: *spins in circles* IS IT WALK TIME?! IT'S WALK TIME RIGHT?!",
+    ":dog2: *puts head on your lap* ...I'll just stay here forever.",
+    ":dog2: *play bows* Let's go let's go let's go!!!",
+    ":dog2: *happy panting* My tail is a blur right now.",
+    ":dog2: *zooms around the office* ZOOMIES ACTIVATED",
+    ":dog2: *drops a tennis ball at your feet* ...throw it? THROW IT.",
+    ":dog2: *sneezes from excitement* Too much happy!",
+    ":dog2: *army crawls toward you* Stealth mode: engaged. Target: more pets.",
+    # Cats
+    ":cat2: *purrs aggressively* ...don't read into this.",
+    ":cat2: *slow blinks* That's cat for 'I love you.' You're welcome.",
+    ":cat2: *knocks your coffee off the desk* Oops. Anyway, more pets.",
+    ":cat2: *makes biscuits on your keyboard* ksjdhfkajhsd",
+    ":cat2: *headbutts your hand* I have claimed you. You are mine now.",
+    ":cat2: *rolls over, shows belly* ...it's a TRAP. Or is it?",
+    ":cat2: *chirps at a bird outside the window* Sorry, got distracted.",
+    ":cat2: *curls up in your lap* I'm not moving. Cancel your meetings.",
+    ":cat2: *flicks tail contentedly* I suppose you may continue.",
+    ":cat2: *presents butt for scratches* This is an honor, you know.",
+    ":cat2: *stretches luxuriously* I guess you're adequate.",
+    ":cat2: *kneads the air while being held* This is fine. Everything is fine.",
+    ":cat2: *purrs so loud the desk vibrates* ...I can't help it.",
+    ":cat2: *does the cat loaf position* Maximum comfort achieved.",
+    # Birds
+    ":parrot: *head bob dance* PRETTY BIRD! PRETTY BIRD!",
+    ":parrot: *steps up onto your finger* Up! Up! Give seed!",
+    ":parrot: *wolf whistles* Who's a good bot? I'M a good bot!",
+    ":parrot: *fluffs up feathers* I am BIG. I am MIGHTY. Pet me more.",
+    ":parrot: *mimics your ringtone* brrring brrring! ...got you.",
+    ":parrot: *does a little dance* Left foot, right foot, LEFT FOOT!",
+    ":parrot: *nuzzles your ear* Shh, I'm telling you a secret: MORE SEEDS.",
+    ":parrot: *screams at exactly the wrong moment* WHAT? I'M HAPPY!",
+    ":parrot: *hangs upside down* Look! No hands! Well... no feet? You get it.",
+    ":parrot: *preens your hair* Hold still, you have a thing. There. Perfect.",
+    # Rabbits
+    ":rabbit2: *does a binky* BOING! That's rabbit for 'pure joy.'",
+    ":rabbit2: *flops over dramatically* Dead. Dead from happiness. ...jk more pets.",
+    ":rabbit2: *thumps foot* Excuse me, the petting stopped. Unacceptable.",
+    ":rabbit2: *nose wiggles intensify* Something smells like... treats?",
+    ":rabbit2: *nudges your hand* Hey. HEY. The hand stopped moving.",
+    ":rabbit2: *zooms in a figure eight* Bunny zoomies are the best zoomies.",
+    ":rabbit2: *grinds teeth softly* That's purring. Rabbit purring. I'm happy.",
+    ":rabbit2: *licks your hand* Salty. I approve.",
+    # Hamsters
+    ":hamster: *stuffs cheeks with love* Can't talk. Cheeks full.",
+    ":hamster: *runs on wheel at 300 RPM* I'M SO EXCITED AAAAAAA",
+    ":hamster: *buries self in bedding* *muffled happy noises*",
+    ":hamster: *stands on hind legs* I am TALL. Fear me. Also, pet me.",
+    ":hamster: *power naps for 3 seconds* Ok I'm back. More pets.",
+    ":hamster: *vibrates with happiness* Is this an earthquake? No. Just me.",
+    # Foxes
+    ":fox_face: *does the fox laugh* hehehehehehe",
+    ":fox_face: *pounces on your shoelace* GOT IT! ...what is it?",
+    ":fox_face: *curls into a fluffy ball* I am a loaf of fox.",
+    ":fox_face: *chatters excitedly* GEKKERING INTENSIFIES",
+    ":fox_face: *wags tail but acts aloof* I don't care. ...ok I care a little.",
+    ":fox_face: *steals your pen* Mine now. This is the fox tax.",
+    ":fox_face: *screams at 3am* Oh wait, wrong time. *ahem* ...purrs?",
+    # Bears
+    ":bear: *happy bear rumble* That's the spot. RIGHT THERE.",
+    ":bear: *catches a salmon* Want some? No? More for me then.",
+    ":bear: *sits on your foot* I'm not heavy, I'm fluffy.",
+    ":bear: *does the head tilt thing* ...more?",
+    ":bear: *gentle bear hug* Don't worry, I'm being careful.",
+    # Penguins
+    ":penguin: *waddles in circles* I'm so happy I forgot how to walk!",
+    ":penguin: *presents you a pebble* This means we're best friends now.",
+    ":penguin: *slides on belly toward you* WHEEEEE-- oof.",
+    ":penguin: *happy flappy flippers* These aren't wings but LOOK AT EM GO",
+    ":penguin: *huddles against you* You are warm. I am staying.",
+    # Pandas
+    ":panda_face: *rolls down a hill* I meant to do that.",
+    ":panda_face: *eats bamboo while being petted* Multitasking.",
+    ":panda_face: *falls off a log* ...10/10 dismount.",
+    ":panda_face: *sneezes and scares self* WHAT WAS THAT oh it was me.",
+    ":panda_face: *sits in a pile of bamboo* This is my throne.",
+    # Hedgehogs
+    ":hedgehog: *uncurls for you* Special access granted. VIP petter.",
+    ":hedgehog: *tiny snoot wiggles* Sniff sniff... you smell trustworthy.",
+    ":hedgehog: *rolls into a happy ball* This is my safe space. With you.",
+    ":hedgehog: *does a little anointing dance* I'm putting my scent on you. Normal hedgehog stuff.",
+    # Owls
+    ":owl: *rotates head 180 degrees* I can see you petting me from ALL angles.",
+    ":owl: *happy hooting* Hoo hoo! Who pets me? YOU pet me!",
+    ":owl: *puffs up to twice normal size* I am LARGE with joy.",
+    ":owl: *clicks beak softly* That's owl morse code for 'thank you.'",
+    ":owl: *does the owl head bob* Processing... processing... yes. Good pets.",
+    # Snakes
+    ":snake: *boops your hand with snoot* Boop!",
+    ":snake: *wraps gently around your arm* You are warm. I am staying.",
+    ":snake: *does a periscope* Ssssurveying the area for more petsssss.",
+    ":snake: *flicks tongue* You taste like... friendship.",
+    ":snake: *curls into a cinnamon roll* I am a danger noodle of happiness.",
+    # Otters
+    ":otter: *floats on back, holds your hand* This is otter protocol.",
+    ":otter: *juggles a rock* Look! LOOK! Are you watching?!",
+    ":otter: *squeak squeak squeak* Translation: 'MORE.'",
+    ":otter: *slides down your arm* Weeeee! Again! AGAIN!",
+    ":otter: *wraps in seaweed blanket* Cozy. Now pet the belly.",
+    # Wolves
+    ":wolf: *awooooo* That's 'thank you' in wolf.",
+    ":wolf: *play bows* I'm big but I'm baby.",
+    ":wolf: *leans entire body weight against you* This is how wolves hug.",
+    ":wolf: *ears go all the way forward* Maximum attention: ENGAGED.",
+    # Ducks
+    ":duck: *happy quacking* QUACK QUACK QUACK QUACK",
+    ":duck: *wiggles tail feathers* Duck twerking. You're welcome.",
+    ":duck: *presents you a bread crumb* It's not much but it's honest work.",
+    ":duck: *splashes in a puddle* I'm making it rain! ...water!",
+    # Turtles
+    ":turtle: *slowly extends neck for more pets* ...wait for it... ...waaaait... ok yes good.",
+    ":turtle: *retreats into shell* *peeks out* ...is there more?",
+    ":turtle: *happy slow blinks* In turtle time, I'm going CRAZY right now.",
+    ":turtle: *inches toward you* Hold on... almost... there... ok pet me.",
+    # Frogs
+    ":frog: *ribbit of contentment* :sparkling_heart:",
+    ":frog: *sits on your keyboard* I am a paperweight now. Accept it.",
+    ":frog: *puffs up throat* BRRRRRRP. That's frog for 'I like you.'",
+    ":frog: *catches a fly mid-pet* Sorry, reflex. Where were we?",
+    # Unicorns
+    ":unicorn: *sparkles everywhere* Great, now there's glitter on everything.",
+    ":unicorn: *nuzzles with horn carefully* Bonk. Gentle bonk. Magical bonk.",
+    ":unicorn: *rainbow mane flowing* I am MAJESTIC and also please scratch behind the ear.",
+    ":unicorn: *stamps hoof* More! MORE! The magic demands it!",
+    # Dragons
+    ":dragon: *purrs with a rumble that shakes the building* Oops. Indoor voice.",
+    ":dragon: *tiny smoke puff of contentment* That's dragon for blushing.",
+    ":dragon: *curls around you protectively* You are my hoard now.",
+    ":dragon: *shows belly* Only YOU may touch the treasure belly.",
+    ":dragon: *happy wing flap* Sorry about the papers. And the lamp. And the--",
+    # Multiple animals chaos
+    ":dog2::cat2: *the dog and cat are fighting over who gets petted first*",
+    ":penguin::otter: *penguin and otter holding hands while you pet them both*",
+    ":rabbit2::hamster: *tiny animals pile on your lap* There's a queue now.",
+    ":parrot::owl: *birds arguing about whose turn it is* SQUAWK! HOOT!",
+    ":fox_face::wolf: *canine cousins doing synchronized tail wags*",
+]
+
+
+async def _handle_pet(text: str, **kwargs) -> str:
+    """Respond to affectionate interactions with random animal reactions."""
+    return random.choice(_PET_REACTIONS)
+
+
+# ---------------------------------------------------------------------------
 # Command registry
 # ---------------------------------------------------------------------------
 
 # Each entry: (compiled_regex, async_handler_function)
 # Handler receives the cleaned message text, returns formatted string or None.
 FAST_COMMANDS = [
+    # Pet the bot (fun interactions -- check before memory to avoid agent overhead)
+    (_PET_RE, _handle_pet),
     # Memory commands (v1.9)
     (_REMEMBER_RE, _handle_remember),
     (_RECALL_RE, _handle_recall),
