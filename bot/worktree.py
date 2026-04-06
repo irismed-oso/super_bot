@@ -39,12 +39,24 @@ async def create(thread_ts: str, description: str) -> str:
 
     If the worktree already exists (follow-up message in the same thread),
     returns the existing path without running git commands.
+
+    Handles stale branches/worktrees by pruning and deleting conflicting
+    branches before retrying.
     """
     path = worktree_path(thread_ts)
     if os.path.exists(path):
         return path
 
     branch = branch_name(description)
+
+    # Prune stale worktree references first
+    await asyncio.create_subprocess_exec(
+        "git", "worktree", "prune",
+        cwd=MIC_TRANSFORMER_PATH,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+
     proc = await asyncio.create_subprocess_exec(
         "git", "worktree", "add", path, "-b", branch,
         cwd=MIC_TRANSFORMER_PATH,
@@ -52,6 +64,23 @@ async def create(thread_ts: str, description: str) -> str:
         stderr=asyncio.subprocess.PIPE,
     )
     _, stderr = await proc.communicate()
+
+    if proc.returncode != 0 and b"already exists" in stderr:
+        # Branch exists from a previous task -- delete it and retry
+        await asyncio.create_subprocess_exec(
+            "git", "branch", "-D", branch,
+            cwd=MIC_TRANSFORMER_PATH,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        proc = await asyncio.create_subprocess_exec(
+            "git", "worktree", "add", path, "-b", branch,
+            cwd=MIC_TRANSFORMER_PATH,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        _, stderr = await proc.communicate()
+
     if proc.returncode != 0:
         raise RuntimeError(f"git worktree add failed: {stderr.decode()}")
     return path
