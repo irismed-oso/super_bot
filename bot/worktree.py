@@ -103,6 +103,17 @@ async def stash(thread_ts: str) -> None:
     )
 
 
+def _word_match(keyword: str, text: str) -> bool:
+    """Check if keyword appears as a whole word (or multi-word phrase) in text.
+
+    Prevents false positives like 'pr' matching 'prune' or 'add' matching 'address'.
+    Multi-word keywords (e.g. 'pull request') use simple substring matching.
+    """
+    if " " in keyword:
+        return keyword in text
+    return bool(re.search(rf"\b{re.escape(keyword)}\b", text))
+
+
 def is_code_task(prompt: str) -> bool:
     """Heuristic: does this prompt suggest file modification?
 
@@ -128,7 +139,8 @@ def is_code_task(prompt: str) -> bool:
     lower = prompt.lower()
 
     # If any code-change keyword is present, it's a code task
-    if any(kw in lower for kw in code_change_keywords):
+    # Use word-boundary matching to avoid false positives (e.g. "pr" in "prune")
+    if any(_word_match(kw, lower) for kw in code_change_keywords):
         return True
 
     # Only if no code keywords AND has readonly keywords, then it's readonly

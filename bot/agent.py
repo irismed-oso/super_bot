@@ -197,6 +197,36 @@ async def run_agent(
             "num_turns": num_turns,
             "partial_texts": partial_texts,
         }
+    except Exception as exc:
+        # SDK sometimes raises generic Exception instead of ProcessError
+        # (e.g. "Fatal error in message reader" at query.py:655)
+        stderr_output = "\n".join(stderr_lines[-20:])
+        if session_id:
+            log.warning(
+                "agent.generic_error_retrying",
+                session_id=session_id,
+                error=str(exc),
+                cwd=effective_cwd,
+            )
+            return await run_agent(
+                prompt, None, cwd=cwd,
+                on_text=on_text, on_message=on_message, max_turns=max_turns,
+            )
+        log.error(
+            "agent.generic_error",
+            session_id=session_id,
+            error=str(exc),
+            cwd=effective_cwd,
+            stderr_preview=stderr_output[:200],
+        )
+        error_detail = stderr_output or f"Claude Code error: {str(exc)[:300]}. CWD: {effective_cwd}"
+        return {
+            "session_id": session_id,
+            "result": error_detail,
+            "subtype": "error_internal",
+            "num_turns": num_turns,
+            "partial_texts": partial_texts,
+        }
 
     log.info(
         "agent.run_end",
