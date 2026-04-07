@@ -93,6 +93,54 @@ def _build_add_dirs() -> list[str]:
     return dirs
 
 
+def _format_error_detail(
+    exc: BaseException,
+    stderr_output: str,
+    cwd: str,
+    *,
+    exit_code: int | None,
+) -> str:
+    """
+    Build a human-readable error detail string for Slack.
+
+    Surfaces information that the SDK's own exception messages hide:
+    - The exception type name (so we can tell SDK errors from auth errors apart)
+    - Chained __cause__ / __context__ when present
+    - A diagnostic hint when stderr is empty AND the SDK message contains
+      "Check stderr output for details" — that combination is the signature
+      of an opaque CLI failure (auth, missing CLI binary, MCP startup) and
+      always means "go run `claude --print` directly on the host".
+    """
+    parts: list[str] = []
+
+    if stderr_output:
+        parts.append(stderr_output.strip())
+    else:
+        parts.append(f"{type(exc).__name__}: {str(exc)}")
+        if exc.__cause__ is not None:
+            parts.append(f"caused by {type(exc.__cause__).__name__}: {exc.__cause__}")
+        elif exc.__context__ is not None:
+            parts.append(f"during handling of {type(exc.__context__).__name__}: {exc.__context__}")
+
+    if exit_code is not None:
+        parts.append(f"(exit code {exit_code})")
+
+    parts.append(f"CWD: {cwd}")
+
+    # Diagnostic hint for the opaque-CLI-failure pattern
+    if not stderr_output and "Check stderr output for details" in str(exc):
+        parts.append(
+            "DIAGNOSTIC: stderr is empty and the SDK reports a CLI failure. "
+            "This usually means the underlying `claude` CLI exited before our "
+            "stderr callback could capture anything (auth failure, missing CLI, "
+            "MCP server crash). Run on the host as the bot user to see the real "
+            "error: `cd " + cwd + " && echo hi | claude --print "
+            "--permission-mode=bypassPermissions 2>&1`"
+        )
+
+    return "\n".join(parts)
+
+
 async def run_agent(
     prompt: str,
     session_id: str | None,
@@ -187,9 +235,11 @@ async def run_agent(
             session_id=session_id,
             exit_code=exc.exit_code,
             cwd=effective_cwd,
-            stderr_preview=stderr_output[:200],
+            stderr_preview=stderr_output[:1000],
         )
-        error_detail = stderr_output or f"Claude Code exited with code {exc.exit_code}. CWD: {effective_cwd}"
+        error_detail = _format_error_detail(
+            exc, stderr_output, effective_cwd, exit_code=exc.exit_code,
+        )
         return {
             "session_id": session_id,
             "result": error_detail,
@@ -206,6 +256,7 @@ async def run_agent(
                 "agent.generic_error_retrying",
                 session_id=session_id,
                 error=str(exc),
+                error_type=type(exc).__name__,
                 cwd=effective_cwd,
             )
             return await run_agent(
@@ -216,10 +267,16 @@ async def run_agent(
             "agent.generic_error",
             session_id=session_id,
             error=str(exc),
+            error_type=type(exc).__name__,
+            error_repr=repr(exc),
+            cause=repr(exc.__cause__) if exc.__cause__ else None,
+            context=repr(exc.__context__) if exc.__context__ else None,
             cwd=effective_cwd,
-            stderr_preview=stderr_output[:200],
+            stderr_preview=stderr_output[:1000],
         )
-        error_detail = stderr_output or f"Claude Code error: {str(exc)[:300]}. CWD: {effective_cwd}"
+        error_detail = _format_error_detail(
+            exc, stderr_output, effective_cwd, exit_code=None,
+        )
         return {
             "session_id": session_id,
             "result": error_detail,
