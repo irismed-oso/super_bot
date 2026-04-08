@@ -24,13 +24,22 @@ def worktree_path(thread_ts: str) -> str:
     return os.path.join(WORKTREE_BASE, f"worktree-{thread_ts}")
 
 
-def branch_name(task_description: str) -> str:
+def branch_name(task_description: str, thread_ts: str = "") -> str:
     """Slugify task description into a branch name.
 
-    Example: "fix the timeout bug" -> "superbot/fix-the-timeout-bug"
+    thread_ts is appended so repeat invocations of the same phrase
+    (e.g. "eyemed status") don't collide with stale branches left by
+    prior runs. Dots in thread_ts are stripped so the result is a
+    valid ref.
+
+    Example: ("fix the timeout bug", "1712345678.123456")
+        -> "superbot/fix-the-timeout-bug-1712345678123456"
     """
     slug = re.sub(r"[^a-z0-9]+", "-", task_description.lower().strip())
     slug = slug[:40].strip("-")
+    if thread_ts:
+        suffix = thread_ts.replace(".", "")
+        return f"superbot/{slug}-{suffix}" if slug else f"superbot/task-{suffix}"
     return f"superbot/{slug}"
 
 
@@ -47,7 +56,7 @@ async def create(thread_ts: str, description: str) -> str:
     if os.path.exists(path):
         return path
 
-    branch = branch_name(description)
+    branch = branch_name(description, thread_ts)
 
     # Prune stale worktree references first
     await asyncio.create_subprocess_exec(
@@ -117,13 +126,16 @@ def _word_match(keyword: str, text: str) -> bool:
 def is_code_task(prompt: str) -> bool:
     """Heuristic: does this prompt suggest file modification?
 
-    Conservative: defaults to True (code task) when uncertain because
-    worktrees are cheap. Returns False only for clearly read-only prompts.
+    Defaults to False (read-only) when uncertain. Creating worktrees
+    for read-only queries is not free: each worktree pins a branch,
+    and repeat invocations of the same phrase (e.g. "eyemed status")
+    used to collide with stale branches from prior runs and abort the
+    task. We'd rather miss an implicit code task and run it in the
+    main repo than block every status query.
 
-    Code-change keywords take precedence over read-only keywords to avoid
-    false negatives (e.g., "improve status check" should be a code task).
+    Code-change keywords are matched with word boundaries to avoid
+    false positives (e.g. "pr" in "prune").
     """
-    # Strong signals for code changes - if present, it's definitely a code task
     code_change_keywords = [
         "improve", "fix", "change", "update", "add", "modify", "refactor",
         "implement", "create", "delete", "remove", "write", "edit",
@@ -131,21 +143,5 @@ def is_code_task(prompt: str) -> bool:
         "rewrite", "optimize", "enhance",
     ]
 
-    readonly_keywords = [
-        "what", "why", "how", "explain", "describe", "show me", "list",
-        "find", "search", "read", "look at", "tell me",
-    ]
-
     lower = prompt.lower()
-
-    # If any code-change keyword is present, it's a code task
-    # Use word-boundary matching to avoid false positives (e.g. "pr" in "prune")
-    if any(_word_match(kw, lower) for kw in code_change_keywords):
-        return True
-
-    # Only if no code keywords AND has readonly keywords, then it's readonly
-    # Note: removed "check" from readonly_keywords as it's ambiguous
-    return not any(
-        lower.startswith(kw) or f" {kw} " in lower
-        for kw in readonly_keywords
-    )
+    return any(_word_match(kw, lower) for kw in code_change_keywords)
