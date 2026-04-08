@@ -1,0 +1,19 @@
+[Unit]
+Description=SuperBot worktree garbage collection
+Documentation=https://github.com/irismed-oso/super_bot
+After=network.target
+
+[Service]
+Type=oneshot
+User=bot
+Group=bot
+WorkingDirectory=/home/bot/super_bot
+EnvironmentFile=-/home/bot/.env
+ExecStart=/home/bot/super_bot/.venv/bin/python /home/bot/super_bot/scripts/worktree_gc.py --apply
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=superbot-worktree-gc
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
