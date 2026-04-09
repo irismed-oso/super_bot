@@ -1,4 +1,12 @@
-"""Tests for bot.worktree classifier and branch naming."""
+"""Tests for bot.worktree classifier, branch naming, and create() recovery."""
+
+import asyncio
+import subprocess
+import tempfile
+from pathlib import Path
+from unittest import mock
+
+import pytest
 
 from bot import worktree
 
@@ -55,3 +63,73 @@ class TestBranchName:
 
     def test_no_thread_ts_preserves_legacy_shape(self):
         assert worktree.branch_name("fix bug") == "superbot/fix-bug"
+
+
+def _init_repo(path: Path) -> None:
+    """Initialize a bare-minimum git repo with one commit."""
+    subprocess.run(["git", "init", "-q", "-b", "main", str(path)], check=True)
+    subprocess.run(
+        ["git", "-C", str(path), "config", "user.email", "t@t"], check=True
+    )
+    subprocess.run(
+        ["git", "-C", str(path), "config", "user.name", "t"], check=True
+    )
+    (path / "README").write_text("init\n")
+    subprocess.run(["git", "-C", str(path), "add", "."], check=True)
+    subprocess.run(
+        ["git", "-C", str(path), "commit", "-qm", "init"], check=True
+    )
+
+
+class TestCreateRecovery:
+    """Integration tests for create() against a real git repo."""
+
+    def test_branch_checked_out_elsewhere_surfaces_error(self, monkeypatch):
+        # Simulate the 2026-04-08 failure mode: the branch already
+        # exists AND is checked out in a stale worktree, so
+        # `git branch -D` fails. create() must surface the real
+        # reason instead of silently retrying.
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            repo = tmp_path / "mic_transformer"
+            repo.mkdir()
+            _init_repo(repo)
+
+            monkeypatch.setattr(worktree, "MIC_TRANSFORMER_PATH", str(repo))
+            monkeypatch.setattr(worktree, "WORKTREE_BASE", str(tmp_path))
+
+            # Create a stale worktree holding the branch that the
+            # next create() call will want.
+            stale_ts = "1111111111.000"
+            branch = worktree.branch_name("eyemed status", stale_ts)
+            stale_path = tmp_path / f"worktree-stale"
+            subprocess.run(
+                ["git", "-C", str(repo), "worktree", "add",
+                 str(stale_path), "-b", branch],
+                check=True,
+            )
+
+            # Now call create() with the SAME thread_ts — this is the
+            # retry-after-failure case. Branch exists, is checked out,
+            # branch -D will fail, and we must see a helpful error.
+            with pytest.raises(RuntimeError) as excinfo:
+                asyncio.run(worktree.create(stale_ts, "eyemed status"))
+            msg = str(excinfo.value)
+            assert "branch -D" in msg
+            assert branch in msg
+            assert "checked out" in msg or "used by worktree" in msg
+
+    def test_happy_path_creates_worktree(self, monkeypatch):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            repo = tmp_path / "mic_transformer"
+            repo.mkdir()
+            _init_repo(repo)
+
+            monkeypatch.setattr(worktree, "MIC_TRANSFORMER_PATH", str(repo))
+            monkeypatch.setattr(worktree, "WORKTREE_BASE", str(tmp_path))
+
+            ts = "2222222222.000"
+            path = asyncio.run(worktree.create(ts, "fix a bug"))
+            assert Path(path).is_dir()
+            assert Path(path).name == f"worktree-{ts}"

@@ -13,6 +13,10 @@ import asyncio
 import os
 import re
 
+import structlog
+
+log = structlog.get_logger(__name__)
+
 MIC_TRANSFORMER_PATH = os.environ.get(
     "MIC_TRANSFORMER_CWD", "/home/bot/mic_transformer"
 )
@@ -75,13 +79,33 @@ async def create(thread_ts: str, description: str) -> str:
     _, stderr = await proc.communicate()
 
     if proc.returncode != 0 and b"already exists" in stderr:
-        # Branch exists from a previous task -- delete it and retry
-        await asyncio.create_subprocess_exec(
+        # Branch exists from a previous task -- delete it and retry.
+        # With per-thread branch names this should only fire if the
+        # same thread is retried after a prior failure; if it fires
+        # for another reason, we want loud diagnostics.
+        log.warning(
+            "worktree.branch_exists_retry",
+            branch=branch,
+            stderr=stderr.decode(errors="replace").strip(),
+        )
+        del_proc = await asyncio.create_subprocess_exec(
             "git", "branch", "-D", branch,
             cwd=MIC_TRANSFORMER_PATH,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
+        _, del_stderr = await del_proc.communicate()
+        if del_proc.returncode != 0:
+            # Most common reason: branch is checked out in another
+            # worktree. Surface it instead of silently retrying the
+            # same failing worktree-add.
+            raise RuntimeError(
+                f"git branch -D {branch} failed (returncode="
+                f"{del_proc.returncode}): "
+                f"{del_stderr.decode(errors='replace').strip()}. "
+                f"Original worktree-add error: "
+                f"{stderr.decode(errors='replace').strip()}"
+            )
         proc = await asyncio.create_subprocess_exec(
             "git", "worktree", "add", path, "-b", branch,
             cwd=MIC_TRANSFORMER_PATH,
@@ -91,7 +115,10 @@ async def create(thread_ts: str, description: str) -> str:
         _, stderr = await proc.communicate()
 
     if proc.returncode != 0:
-        raise RuntimeError(f"git worktree add failed: {stderr.decode()}")
+        raise RuntimeError(
+            f"git worktree add failed (returncode={proc.returncode}): "
+            f"{stderr.decode(errors='replace').strip()}"
+        )
     return path
 
 
