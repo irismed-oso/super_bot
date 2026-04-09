@@ -1,0 +1,13 @@
+[Unit]
+Description=Run SuperBot worktree GC daily
+Documentation=https://github.com/irismed-oso/super_bot
+
+[Timer]
+# Every day at 04:17 VM local time, with ±15m jitter.
+OnCalendar=*-*-* 04:17:00
+RandomizedDelaySec=15m
+Persistent=true
+Unit=superbot-worktree-gc.service
+
+[Install]
+WantedBy=timers.target
