@@ -4,7 +4,7 @@ import re
 from slack_bolt.app.async_app import AsyncApp
 from bot.access_control import is_allowed, is_allowed_channel, is_bot_message
 from bot.deduplication import is_seen, mark_seen
-from bot import task_state, formatter, worktree, progress, session_map, activity_log, git_activity, db
+from bot import task_state, formatter, worktree, progress, session_map, activity_log, git_activity, db, event_logger
 from bot.heartbeat import Heartbeat
 from bot.queue_manager import QueuedTask, enqueue, queue_depth
 from bot.deploy_state import resolve_repo
@@ -176,9 +176,12 @@ def register(app: AsyncApp) -> None:
             heartbeat.start(client, progress_msg)
             _inner_cb = progress.make_on_message(client, channel, thread_ts, progress_msg, heartbeat=heartbeat)
 
+        _event_log_cb = event_logger.make_event_logger(db_session_fk)
+
         async def on_message_cb(message):
             if _inner_cb:
                 await _inner_cb(message)
+            await _event_log_cb(message)
 
         task_started_at = __import__("time").time()
 

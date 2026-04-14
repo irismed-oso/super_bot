@@ -54,6 +54,12 @@ def make_on_message(client, channel: str, thread_ts: str, progress_msg: dict | N
     async def on_message_cb(message: AssistantMessage):
         nonlocal last_milestone
 
+        # Guard: agent.py now forwards UserMessage + ResultMessage too so the
+        # event logger can see tool_result / final result. The progress
+        # callback only cares about the agent's own turns.
+        if not isinstance(message, AssistantMessage):
+            return
+
         # Increment turn count on every AssistantMessage
         if heartbeat is not None:
             heartbeat.turn_count += 1
