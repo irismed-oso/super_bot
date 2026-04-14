@@ -59,10 +59,25 @@ CREATE TABLE IF NOT EXISTS agent_executions (
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS agent_events (
+    id              BIGSERIAL PRIMARY KEY,
+    session_fk      INT REFERENCES sessions(id),
+    turn_index      INT NOT NULL,
+    event_type      TEXT NOT NULL CHECK (event_type IN ('text', 'tool_use', 'tool_result', 'result')),
+    tool_name       TEXT,
+    tool_use_id     TEXT,
+    payload         JSONB,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 CREATE INDEX IF NOT EXISTS idx_messages_session ON messages(session_fk);
 CREATE INDEX IF NOT EXISTS idx_executions_session ON agent_executions(session_fk);
 CREATE INDEX IF NOT EXISTS idx_sessions_created ON sessions(created_at);
+CREATE INDEX IF NOT EXISTS idx_events_session ON agent_events(session_fk, turn_index);
+CREATE INDEX IF NOT EXISTS idx_events_created ON agent_events(created_at);
 """
+
+PAYLOAD_MAX_CHARS = 10_000
 
 
 async def init() -> bool:
@@ -139,6 +154,50 @@ async def log_message(
             )
     except Exception as exc:
         log.warning("db.log_message_failed", error=str(exc))
+
+
+def _truncate_for_payload(value):
+    """Cap string fields at PAYLOAD_MAX_CHARS so one rogue tool output can't bloat the DB."""
+    if isinstance(value, str) and len(value) > PAYLOAD_MAX_CHARS:
+        return value[:PAYLOAD_MAX_CHARS] + f"...[truncated {len(value) - PAYLOAD_MAX_CHARS} chars]"
+    if isinstance(value, dict):
+        return {k: _truncate_for_payload(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_truncate_for_payload(v) for v in value]
+    return value
+
+
+async def log_event(
+    session_fk: int | None,
+    turn_index: int,
+    event_type: str,
+    *,
+    tool_name: str | None = None,
+    tool_use_id: str | None = None,
+    payload: dict | None = None,
+) -> None:
+    """Log one agent event (text block, tool_use, tool_result, or final result).
+
+    event_type must be one of: 'text', 'tool_use', 'tool_result', 'result'.
+    payload is JSONB; string fields inside are truncated to PAYLOAD_MAX_CHARS.
+    """
+    if not _pool or session_fk is None:
+        return
+    try:
+        import json
+        safe_payload = _truncate_for_payload(payload) if payload else None
+        payload_json = json.dumps(safe_payload) if safe_payload is not None else None
+        async with _pool.acquire() as conn:
+            await conn.execute(
+                """
+                INSERT INTO agent_events
+                    (session_fk, turn_index, event_type, tool_name, tool_use_id, payload)
+                VALUES ($1, $2, $3, $4, $5, $6::jsonb)
+                """,
+                session_fk, turn_index, event_type, tool_name, tool_use_id, payload_json,
+            )
+    except Exception as exc:
+        log.warning("db.log_event_failed", error=str(exc), event_type=event_type)
 
 
 async def log_execution(

@@ -22,6 +22,7 @@ from claude_agent_sdk import (
     ProcessError,
     ResultMessage,
     TextBlock,
+    UserMessage,
     query,
 )
 
@@ -211,11 +212,19 @@ async def run_agent(
                         await on_text(combined)
                 if on_message:
                     await on_message(message)
+            elif isinstance(message, UserMessage):
+                # Tool results arrive on UserMessage. Forward so event loggers
+                # can capture them; the progress callback already ignores
+                # non-AssistantMessage inputs.
+                if on_message:
+                    await on_message(message)
             elif isinstance(message, ResultMessage):
                 new_session_id = message.session_id
                 result_text = message.result
                 subtype = message.subtype
                 num_turns = message.num_turns
+                if on_message:
+                    await on_message(message)
     except ProcessError as exc:
         stderr_output = "\n".join(stderr_lines[-20:])
         # If session resume failed, retry with a fresh session
