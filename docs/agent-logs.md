@@ -15,6 +15,12 @@ python scripts/query_agent_log.py --thread-ts 1712000000.123456 --channel C08QJG
 python scripts/query_agent_log.py --session abc-123-def
 ```
 
+**On `superbot-vm`**, run as the `bot` user with the VM's socket-based connection string:
+
+```bash
+sudo -u bot bash -c 'cd /home/bot/super_bot && SUPERBOT_DATABASE_URL=postgresql:///superbot .venv/bin/python scripts/query_agent_log.py --list-recent 5'
+```
+
 The script prints: session header, Slack-facing messages, per-run execution metadata, and the full per-turn event trail (text, tool_use, tool_result, result).
 
 ## How to pass a session to another agent
@@ -27,9 +33,10 @@ If you only have the Claude SDK `session_id` (printed in `agent.run_end` journal
 
 ## Connection
 
-- Default: `postgresql://hanjing@localhost:5432/superbot`
-- Override with the `SUPERBOT_DATABASE_URL` env var.
-- The DB is created lazily by `bot/db.py` at bot startup (`db.init`). If it's missing, run the bot once or create it manually: `createdb -U hanjing superbot`.
+- **Laptop default**: `postgresql://hanjing@localhost:5432/superbot` (TCP, role `hanjing`, no password — matches the local dev setup).
+- **On `superbot-vm`**: the bot runs as user `bot` against a unix socket. `/home/bot/.env` sets `SUPERBOT_DATABASE_URL=postgresql:///superbot` and that's what you need to pass through when invoking the CLI — running `query_agent_log.py` without it will fail with `password authentication failed for user "hanjing"` because asyncpg falls back to the laptop default.
+- Override anywhere with the `SUPERBOT_DATABASE_URL` env var.
+- The DB is created lazily by `bot/db.py` at bot startup (`db.init`). If it's missing locally, run the bot once or create it manually: `createdb -U hanjing superbot`.
 
 ## Schema
 
