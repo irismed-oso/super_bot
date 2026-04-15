@@ -86,6 +86,16 @@ def make_on_message(client, channel: str, thread_ts: str, progress_msg: dict | N
         elif any(t in _READ_TOOLS for t in tools):
             milestone = "Reading files..."
 
+        # Fallback: any tool use updates heartbeat.last_activity so the
+        # "Starting up..." string doesn't stick for long MCP-only tasks.
+        # We update state without posting -- the next heartbeat tick picks
+        # it up. Fix for the 2026-04-15 symptom where a 25-minute task
+        # stayed on "Starting up..." because MCP tools aren't in
+        # _READ_TOOLS/_WRITE_TOOLS.
+        if milestone is None and tools and heartbeat is not None:
+            tool_label = ", ".join(sorted(set(tools))[:3])
+            heartbeat.last_activity = f"Using {tool_label}..."
+
         if milestone is not None and milestone != last_milestone:
             last_milestone = milestone
 

@@ -65,3 +65,35 @@ def test_no_diagnostic_when_message_lacks_signature():
     exc = Exception("some other error")
     detail = _format_error_detail(exc, stderr_output="", cwd=CWD, exit_code=None)
     assert "DIAGNOSTIC" not in detail
+
+
+def test_long_running_opaque_failure_names_oom():
+    """A >5min opaque CLI failure should suggest OOM as the likely cause."""
+    exc = Exception("Command failed with exit code 1 (exit code: 1)\nError output: Check stderr output for details")
+    detail = _format_error_detail(
+        exc, stderr_output="", cwd=CWD, exit_code=1, elapsed_seconds=1546.0,
+    )
+    assert "DIAGNOSTIC" in detail
+    assert "OOM" in detail or "oom" in detail.lower()
+    assert "dmesg" in detail
+    assert "Elapsed before failure: 1546s" in detail
+
+
+def test_short_opaque_failure_uses_generic_hint():
+    """A short opaque failure should not assert OOM -- it's probably auth."""
+    exc = Exception("Command failed with exit code 1 (exit code: 1)\nError output: Check stderr output for details")
+    detail = _format_error_detail(
+        exc, stderr_output="", cwd=CWD, exit_code=1, elapsed_seconds=4.0,
+    )
+    assert "DIAGNOSTIC" in detail
+    assert "auth" in detail.lower()
+    # Should still mention OOM as a possibility in the generic case
+    assert "OOM" in detail or "oom" in detail.lower()
+
+
+def test_elapsed_seconds_optional():
+    """elapsed_seconds is optional -- old callers still work."""
+    exc = ValueError("boom")
+    detail = _format_error_detail(exc, stderr_output="", cwd=CWD, exit_code=None)
+    assert "ValueError: boom" in detail
+    assert "Elapsed before failure" not in detail

@@ -14,6 +14,7 @@ Key design decisions (from CONTEXT.md / RESEARCH.md):
 
 import asyncio
 import os
+import time
 
 import structlog
 from claude_agent_sdk import (
@@ -94,12 +95,39 @@ def _build_add_dirs() -> list[str]:
     return dirs
 
 
+def _snapshot_memory() -> str | None:
+    """Return a one-line memory snapshot (MemAvailable + swap) or None.
+
+    Reads /proc/meminfo directly. Never raises -- returns None if anything
+    goes wrong. Used to correlate opaque CLI crashes with memory pressure.
+    """
+    try:
+        with open("/proc/meminfo") as f:
+            info = {}
+            for line in f:
+                key, _, rest = line.partition(":")
+                parts = rest.split()
+                if parts:
+                    info[key] = int(parts[0])  # kB
+        total_mb = info.get("MemTotal", 0) // 1024
+        avail_mb = info.get("MemAvailable", 0) // 1024
+        swap_mb = info.get("SwapTotal", 0) // 1024
+        swap_free_mb = info.get("SwapFree", 0) // 1024
+        return (
+            f"mem avail {avail_mb}/{total_mb} MiB, "
+            f"swap {swap_free_mb}/{swap_mb} MiB"
+        )
+    except Exception:
+        return None
+
+
 def _format_error_detail(
     exc: BaseException,
     stderr_output: str,
     cwd: str,
     *,
     exit_code: int | None,
+    elapsed_seconds: float | None = None,
 ) -> str:
     """
     Build a human-readable error detail string for Slack.
@@ -109,8 +137,9 @@ def _format_error_detail(
     - Chained __cause__ / __context__ when present
     - A diagnostic hint when stderr is empty AND the SDK message contains
       "Check stderr output for details" — that combination is the signature
-      of an opaque CLI failure (auth, missing CLI binary, MCP startup) and
-      always means "go run `claude --print` directly on the host".
+      of an opaque CLI failure (auth, missing CLI binary, MCP startup, or
+      the Node subprocess being OOM-killed on a memory-starved VM).
+    - Memory snapshot and elapsed time to help correlate long-task OOM crashes.
     """
     parts: list[str] = []
 
@@ -128,16 +157,40 @@ def _format_error_detail(
 
     parts.append(f"CWD: {cwd}")
 
+    if elapsed_seconds is not None:
+        parts.append(f"Elapsed before failure: {int(elapsed_seconds)}s")
+
+    mem = _snapshot_memory()
+    if mem:
+        parts.append(f"Memory at failure: {mem}")
+
     # Diagnostic hint for the opaque-CLI-failure pattern
     if not stderr_output and "Check stderr output for details" in str(exc):
-        parts.append(
-            "DIAGNOSTIC: stderr is empty and the SDK reports a CLI failure. "
-            "This usually means the underlying `claude` CLI exited before our "
-            "stderr callback could capture anything (auth failure, missing CLI, "
-            "MCP server crash). Run on the host as the bot user to see the real "
-            "error: `cd " + cwd + " && echo hi | claude --print "
-            "--permission-mode=bypassPermissions 2>&1`"
-        )
+        # Long runtime + empty stderr strongly suggests OOM of the Node CLI
+        # subprocess on a memory-starved VM (2026-04-15 incident: 25m46s
+        # task crash on a 1.9 GiB VM with no swap).
+        long_running = elapsed_seconds is not None and elapsed_seconds > 300
+        if long_running:
+            hint = (
+                "DIAGNOSTIC: stderr is empty after a long run. The `claude` "
+                "CLI (Node) likely died silently mid-task. On this VM the most "
+                "common cause is the Node subprocess being OOM-killed -- long "
+                "multi-turn tool use accumulates memory and the VM has limited "
+                "RAM/swap. Check `dmesg -T | grep -i kill` and `free -h` on "
+                "the host. If memory is fine, fall back to `cd " + cwd +
+                " && echo hi | claude --print --permission-mode=bypassPermissions 2>&1` "
+                "for auth/CLI checks."
+            )
+        else:
+            hint = (
+                "DIAGNOSTIC: stderr is empty and the SDK reports a CLI failure. "
+                "This usually means the underlying `claude` CLI exited before "
+                "our stderr callback could capture anything (auth failure, "
+                "missing CLI binary, MCP startup, or OOM). Run on the host as "
+                "the bot user to see the real error: `cd " + cwd + " && echo "
+                "hi | claude --print --permission-mode=bypassPermissions 2>&1`"
+            )
+        parts.append(hint)
 
     return "\n".join(parts)
 
@@ -198,6 +251,7 @@ async def run_agent(
     subtype = "unknown"
     num_turns = 0
     partial_texts = []
+    started_at = time.monotonic()
 
     try:
         async for message in query(prompt=prompt, options=options):
@@ -239,15 +293,19 @@ async def run_agent(
                 prompt, None, cwd=cwd,
                 on_text=on_text, on_message=on_message, max_turns=max_turns,
             )
+        elapsed = time.monotonic() - started_at
         log.error(
             "agent.process_error",
             session_id=session_id,
             exit_code=exc.exit_code,
             cwd=effective_cwd,
+            elapsed_seconds=int(elapsed),
+            memory=_snapshot_memory(),
             stderr_preview=stderr_output[:1000],
         )
         error_detail = _format_error_detail(
-            exc, stderr_output, effective_cwd, exit_code=exc.exit_code,
+            exc, stderr_output, effective_cwd,
+            exit_code=exc.exit_code, elapsed_seconds=elapsed,
         )
         return {
             "session_id": session_id,
@@ -272,6 +330,7 @@ async def run_agent(
                 prompt, None, cwd=cwd,
                 on_text=on_text, on_message=on_message, max_turns=max_turns,
             )
+        elapsed = time.monotonic() - started_at
         log.error(
             "agent.generic_error",
             session_id=session_id,
@@ -281,10 +340,13 @@ async def run_agent(
             cause=repr(exc.__cause__) if exc.__cause__ else None,
             context=repr(exc.__context__) if exc.__context__ else None,
             cwd=effective_cwd,
+            elapsed_seconds=int(elapsed),
+            memory=_snapshot_memory(),
             stderr_preview=stderr_output[:1000],
         )
         error_detail = _format_error_detail(
-            exc, stderr_output, effective_cwd, exit_code=None,
+            exc, stderr_output, effective_cwd,
+            exit_code=None, elapsed_seconds=elapsed,
         )
         return {
             "session_id": session_id,
