@@ -89,6 +89,18 @@ If auth fails again:
 2. Test directly: `gcloud compute ssh superbot-vm --zone=us-west1-a --command='sudo -u bot bash -c "cd /home/bot/mic_transformer && echo hi | claude --print --permission-mode=bypassPermissions 2>&1"'` — should print a reply, not a 401.
 3. If `.credentials.json` was somehow recreated and is winning over the env var, move it aside again.
 
+## Agent capabilities on the VM
+
+The agent runs with `cwd=/home/bot/mic_transformer` as user `bot` on `superbot-vm`. That VM has a GCP service account attached with Drive and GCS read access — Application Default Credentials resolve automatically via the metadata server, so `google.auth.default()` just works (no OAuth, no keyfile, no `gcloud auth login` needed).
+
+### Known failure mode: Google Drive / Sheets URLs (observed 2026-04-21)
+
+When given a `docs.google.com/spreadsheets/...` URL, the agent reaches for `WebFetch`, gets 401, and concludes "I have no credentials." That conclusion is wrong — the VM has ADC.
+
+The correct path is documented in `mic_transformer/CLAUDE.md` → Google Drive: Drive API + ADC + openpyxl (for xlsx) or Drive export to CSV (for native Sheets). The Sheets API itself will 403 because our service account doesn't have domain-wide delegation for the `spreadsheets` scope — that's a dead end, always go through Drive.
+
+If the agent reports "can't access that sheet," push back; it figures it out on the second try.
+
 ## Restarting the service
 
 ```bash
