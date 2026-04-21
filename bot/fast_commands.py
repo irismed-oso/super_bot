@@ -347,6 +347,100 @@ async def _handle_update_creds(text: str, **kwargs) -> str:
         return f"Failed to update credentials: {exc}"
 
 
+# Read-path patterns. The authoritative source is GCP Secret Manager via
+# credential_manager.get_credentials(); the agent path would otherwise grep the
+# mic_transformer repo for CSV rows (stale) or parrot thread history, both of
+# which are wrong. Accepted phrasings — all must capture payer ($1) + location
+# ($2), in either order:
+#   "get creds vsp MSOC"
+#   "creds for MSOC VSP"
+#   "what is the VSP login for MSOC"
+#   "what's the MSOC VSP password"
+#   "what VSP credentials do we have for MSOC"
+_CRED_NOUN = r"(?:cred(?:ential)?s?|login|username|password)"
+_GET_CREDS_RES = [
+    # "get creds <payer> <location>" (explicit)
+    re.compile(
+        rf"^\s*(?:get|show|what(?:'s|\s+is|\s+are)?|do\s+we\s+have)\s+"
+        rf"(?:the\s+)?{_CRED_NOUN}\s+(?:for\s+)?(eyemed|vsp)\s+(?:for\s+)?(\S+)",
+        re.IGNORECASE,
+    ),
+    # "get creds <payer> <location>" (fast form)
+    re.compile(
+        rf"^\s*(?:get|show|fetch)\s+{_CRED_NOUN}\s+(eyemed|vsp)\s+(\S+)",
+        re.IGNORECASE,
+    ),
+    # "what is the <payer> <noun> for <location>" or "<location>'s <payer> <noun>"
+    re.compile(
+        rf"\b(eyemed|vsp)\s+{_CRED_NOUN}\s+(?:for\s+|of\s+)?(\S+)",
+        re.IGNORECASE,
+    ),
+    # "what is <location> <payer> <noun>" / "<location> <payer> creds"
+    re.compile(
+        rf"\b(\S+)\s+(eyemed|vsp)\s+{_CRED_NOUN}\b",
+        re.IGNORECASE,
+    ),
+]
+
+
+async def _handle_get_creds(text: str, **kwargs) -> str:
+    """Read payer portal credentials from GCP Secret Manager (authoritative)."""
+    payer = location_raw = None
+    for idx, pattern in enumerate(_GET_CREDS_RES):
+        match = pattern.search(text)
+        if not match:
+            continue
+        # The 4th regex swaps the capture order: <location> <payer>.
+        if idx == 3:
+            location_raw, payer = match.group(1), match.group(2)
+        else:
+            payer, location_raw = match.group(1), match.group(2)
+        break
+
+    if not payer or not location_raw:
+        return (
+            "Usage: `get creds <eyemed|vsp> <location>`\n"
+            "Example: `get creds vsp MSOC`"
+        )
+
+    payer = payer.lower()
+
+    # Normalize location using mic_transformer's canonical list, same as update.
+    try:
+        import sys
+        sys.path.insert(0, "/home/bot/mic_transformer")
+        from scripts.slack_bot.locations import normalize_location, get_all_locations
+        location = normalize_location(location_raw)
+        all_locations = get_all_locations()
+    except ImportError:
+        location = location_raw
+        all_locations = None
+
+    if all_locations and location not in all_locations and location == location_raw:
+        return (
+            f"Unknown location `{location_raw}`. Known locations:\n"
+            + ", ".join(f"`{loc}`" for loc in all_locations)
+        )
+
+    try:
+        creds = credential_manager.get_credentials(payer, location)
+    except Exception as exc:
+        log.error("credential_read.failed", payer=payer, location=location, error=str(exc))
+        return f"Failed to read credentials: {exc}"
+
+    if not creds:
+        return (
+            f"No *{payer.upper()}* credentials in Secret Manager for *{location}*.\n"
+            f"Populate with: `update creds {payer} {location} <username> <password>`"
+        )
+
+    return (
+        f"*{payer.upper()}* credentials for *{location}* (from GCP Secret Manager):\n"
+        f"Username: `{creds.get('username', '?')}`\n"
+        f"Password: `{creds.get('password', '?')}`"
+    )
+
+
 # ---------------------------------------------------------------------------
 # Deploy guard: "deploy superbot" or "deploy force superbot"
 # Blocks if an agent task is running (unless "force" is present).
@@ -592,6 +686,8 @@ FAST_COMMANDS = [
     (_LIST_MEMORIES_RE, _handle_list_memories),
     # Health dashboard (v1.4)
     (_BOT_HEALTH_RE, _handle_bot_health),
+    # Credential read (must come before update so "update creds" isn't mis-matched)
+    *[(pattern, _handle_get_creds) for pattern in _GET_CREDS_RES],
     # Credential update
     (_UPDATE_CREDS_RE, _handle_update_creds),
     # Deploy guard

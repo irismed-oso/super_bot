@@ -41,6 +41,10 @@ RULES (apply to every task):
 - When the user wants to update portal credentials for a location, tell them to use:
   `update creds <eyemed|vsp> <location> <username> <password>`
   This is a fast-path command that writes directly to GCP Secret Manager.
+- When the user asks to READ portal credentials (e.g. "what's the VSP login for MSOC", "get creds vsp Beverly", "MSOC VSP password"), tell them to use:
+  `get creds <eyemed|vsp> <location>`
+  This fast-path reads from GCP Secret Manager and is the ONLY correct source.
+  Never read `config/payer_logins.csv` or `config/eyemed_payer_logins.csv` in the mic_transformer repo to answer credential questions -- the CSV is a stale fallback, and GCP Secret Manager is authoritative. Never repeat a credential you saw earlier in the thread or remembered from a previous task -- always direct the user at `get creds` so they get the live value.
 """.strip()
 
 
