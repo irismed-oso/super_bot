@@ -15,6 +15,24 @@ from bot import memory_recall
 from bot import thread_scanner
 from config import BOT_USER_ID
 
+_MENTION_RE = re.compile(r"<@[A-Z0-9]+(?:\|[^>]+)?>")
+_SENT_USING_FOOTER_RE = re.compile(r"\s*\*[Ss]ent\s+using\*.*$", re.DOTALL)
+
+
+def _clean_message_text(text: str) -> str:
+    """Strip Slack mentions and trailing context-block footers from a message.
+
+    Handles plain and labeled user mentions (`<@U123>`, `<@U123|Claude>`) and
+    trailing `*Sent using* ...` footers that Slack appends when a message is
+    posted via integrations (e.g. the Claude Code MCP). Without stripping the
+    footer, exact-match fast-path commands like `bot health` fail and the
+    is_code_task classifier misfires on the footer text.
+    """
+    text = _MENTION_RE.sub("", text)
+    text = _SENT_USING_FOOTER_RE.sub("", text)
+    return text.strip()
+
+
 _DEPLOY_CMD_RE = re.compile(
     r"deploy\s+(?:force\s+)?(\S+)\s*$",
     re.IGNORECASE,
@@ -89,7 +107,7 @@ def register(app: AsyncApp) -> None:
         channel = event["channel"]
         text = event.get("text", "")
         user_id = event.get("user", "")
-        clean_text = re.sub(r"<@[A-Z0-9]+>", "", text).strip()
+        clean_text = _clean_message_text(text)
 
         # DB: upsert session and log user input
         db_session_fk = await db.upsert_session(channel, thread_ts, user_id)

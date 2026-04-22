@@ -19,15 +19,11 @@ Slack bridge that runs as a systemd service on a GCP VM and processes Slack ment
 
 **Do not consider a SuperBot fix complete until the smoke test passes.** The only true verification is "real Slack message in, real Slack message out" — unit tests and offline harnesses are insufficient because they don't exercise the production VM, systemd env, or live `claude` subprocess.
 
-### Important caveat: Slack MCP appends a footer
+### Slack client requirements
 
-When Claude Code (me) sends a message via `mcp__claude_ai_Slack__slack_send_message`, Slack automatically appends a context block like `*Sent using* <@U0A3LP3CR8F|Claude>` to the message. After SuperBot strips the `<@bot>` mention, the prompt that reaches `bot/handlers.py` looks like `bot health *Sent using*` (not `bot health`).
+Smoke tests must be posted via a **user token** or the `mcp__claude_ai_Slack__slack_send_message` MCP tool, not via a bot token. SuperBot's `is_bot_message` guard (`bot/access_control.py`) filters any event with a `bot_id`, so `xoxb-` token posts never reach the agent and silently show up as `filtered_bot_message` in the journal.
 
-Consequences:
-- **Fast-path commands match exactly**, so anything I send via Slack MCP will NOT hit the fast path. Every smoke test from me will go through the full Claude Agent SDK, taking 30s–5min instead of <5s.
-- **The code-task classifier in `bot/worktree.py`** also misfires on the footer text and creates an unnecessary worktree.
-
-Until both are fixed, my smoke tests must use the Deep smoke procedure below — there is no working "Quick smoke" path for me. Humans typing in Slack directly do NOT get the footer, so the fast path still works for them.
+Slack appends a `*Sent using* <@U0A3LP3CR8F|Claude>` context block when messages are posted via integrations (including the Claude Code MCP). As of the fix in `bot/handlers.py::_clean_message_text`, SuperBot now strips both labeled mentions and the `*Sent using*` footer before matching, so fast-path commands like `bot health` work from MCP-posted messages.
 
 ### Deep smoke (the only working path for me, ~30s–5min)
 
@@ -60,8 +56,10 @@ For agent-stack changes, run the offline harness on the VM before doing the Slac
 
 ```bash
 gcloud compute ssh superbot-vm --zone=us-west1-a \
-  --command='sudo -u bot bash -c "cd /home/bot/super_bot && .venv/bin/python scripts/test_agent.py --prompt \"say hi\" --timeout 60"'
+  --command='sudo -u bot bash -c "set -a; . /home/bot/.env; set +a; cd /home/bot/super_bot && PYTHONPATH=. .venv/bin/python scripts/test_agent.py --timeout 60 \"say hi\""'
 ```
+
+The `set -a; . /home/bot/.env; set +a;` prefix is required: `sudo -u bot bash` does not source `.env`, so without it the claude CLI dies with "Not logged in · Please run /login" even though `ANTHROPIC_API_KEY` is in the file. The prompt is a positional argument (no `--prompt` flag). `PYTHONPATH=.` is needed because `scripts/test_agent.py` imports `bot.agent`.
 
 If this fails, fix the agent first — no point hitting Slack until the offline harness is green.
 
@@ -74,11 +72,24 @@ gcloud compute ssh superbot-vm --zone=us-west1-a \
 
 ## Known issues to fix (surfaced by 2026-04-07 smoke test)
 
-1. **Fast-path matcher should ignore Slack context-block footers.** When messages are sent via Slack MCP (or any client that adds a `context` block), SuperBot's mention-stripper preserves trailing markdown like `*Sent using*`, breaking exact-match commands like `bot health`. Fix in `bot/handlers.py` mention-stripping or `bot/fast_commands.py` matcher: trim trailing `*Sent using*...` and any `<@USERID>` patterns after the primary text.
-2. **Worktree code-task classifier is over-eager.** "bot health *Sent using*" was misclassified as a code task and a worktree was created. Investigate `bot/worktree.py` keyword-matching — likely matching on a substring in the footer.
+1. ~~Fast-path matcher should ignore Slack context-block footers.~~ **Fixed** in `bot/handlers.py::_clean_message_text` — strips labeled `<@U|label>` mentions and trailing `*Sent using*` blocks. Also resolves #2 (the same footer caused the is_code_task classifier to misfire).
+2. ~~Worktree code-task classifier is over-eager on `bot health *Sent using*`.~~ **Resolved** by #1 (the footer no longer reaches the classifier).
 3. **Heartbeat `last_activity` never advances past "Starting up..."** when the agent runs tools without producing text blocks. The on_text callback in `bot/agent.py:154-165` only fires for `TextBlock`s; tool-only turns leave the heartbeat stale. Consider also tagging activity from `on_message` (ToolUseBlock).
 4. **Generic-Exception handler in `bot/agent.py:200-229` swallows real error details.** Today's 401 surfaced as opaque "Command failed with exit code 1 / Check stderr output for details". Need to capture `repr(exc)` and any chained exception detail when `stderr_lines` is empty.
 5. **`thedotmack` plugin SessionEnd hook errors** (Bun not installed) pollute journalctl. Either install bun or remove the plugin from `/home/bot/.claude/plugins/`.
+
+## VM firewall policy (mic_transformer)
+
+The VM's `/home/bot/mic_transformer` checkout stays permanently on the `vm/accumulated-*` branch (currently `vm/accumulated-2026-04-21`), not `develop`. This is a deliberate "firewall" so VM-origin edits (bot-spawned tasks, manual fixes on the VM) cannot leak into `develop`.
+
+**To sync the VM with the latest `develop`:**
+```bash
+gcloud compute ssh superbot-vm --zone=us-west1-a \
+  --command='sudo -u bot bash -c "cd /home/bot/mic_transformer && git fetch origin && git merge origin/develop"'
+```
+Develop merges *in*, VM commits never PR up directly.
+
+**To upstream a VM-origin commit**: cherry-pick it from `vm/accumulated-*` onto a fresh branch off `origin/develop` on the laptop, then open a normal PR. Never PR the whole accumulated branch.
 
 ## Auth Notes
 
