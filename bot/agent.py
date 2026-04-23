@@ -40,6 +40,25 @@ MIC_TRANSFORMER_CWD = os.path.realpath(
 TIMEOUT_SECONDS = 1800  # 30 minutes
 MAX_TURNS = 25          # locked decision (CONTEXT.md Safety Limits)
 
+# Appended to the claude_code system preset on every turn. Corrects a
+# recurring false conclusion: when handed a docs.google.com URL the agent
+# tries WebFetch, gets 401, and tells the user it has no Drive access.
+# The VM has ADC via its GCP service account.
+SYSTEM_PROMPT_APPEND = """\
+Google Drive / Sheets access: this VM has Application Default Credentials \
+via its attached GCP service account with Drive and GCS read access. \
+google.auth.default() works without any OAuth or keyfile setup.
+
+For any docs.google.com/spreadsheets/... or drive.google.com/... URL, DO NOT \
+use WebFetch (it will 401). Use the Drive API with ADC:
+  - Native Google Sheets: drive.files().export_media(fileId=..., mimeType='text/csv')
+  - Uploaded .xlsx: drive.files().get_media(fileId=...) then open with openpyxl
+The Sheets API itself will 403 (no domain-wide delegation) — always go through Drive.
+
+Do not tell the user you lack Drive credentials. If a first attempt fails, \
+try the Drive-export path before giving up.\
+"""
+
 
 def _build_mcp_servers() -> dict:
     """Build MCP server config dict from available credentials."""
@@ -191,6 +210,11 @@ async def run_agent(
         mcp_servers=mcp_servers,
         add_dirs=add_dirs,
         stderr=lambda line: stderr_lines.append(line),
+        system_prompt={
+            "type": "preset",
+            "preset": "claude_code",
+            "append": SYSTEM_PROMPT_APPEND,
+        },
     )
 
     new_session_id = session_id
