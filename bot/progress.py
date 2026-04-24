@@ -140,7 +140,11 @@ async def post_result(
             task_text=result.get("task_text", ""),
         )
     else:
-        msg = _format_completion(result.get("result", "") or "", is_code_task)
+        msg = _format_completion(
+            result.get("result", "") or "",
+            result.get("partial_texts", []),
+            is_code_task,
+        )
 
     # Surface PR URL prominently if present
     pr_match = PR_URL_RE.search(result.get("result", "") or "")
@@ -206,8 +210,18 @@ def _timeout_suggestion(task_text: str) -> str:
     return "Check `/sb-status` for current state."
 
 
-def _format_completion(result_text: str, is_code_task: bool) -> str:
-    """Format a completion message."""
-    if not result_text:
-        return "Done."
-    return result_text
+def _format_completion(
+    result_text: str, partial_texts: list, is_code_task: bool
+) -> str:
+    """Format a completion message.
+
+    Falls back to the last partial text when the SDK's ResultMessage.result
+    is empty — this happens when the agent's final turn was tool-use only
+    with no closing TextBlock. Without this fallback the user sees "Done."
+    with no content even though the agent produced output.
+    """
+    if result_text:
+        return result_text
+    if partial_texts:
+        return partial_texts[-1]
+    return "Done."
