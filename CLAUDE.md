@@ -74,9 +74,9 @@ gcloud compute ssh superbot-vm --zone=us-west1-a \
 
 1. ~~Fast-path matcher should ignore Slack context-block footers.~~ **Fixed** in `bot/handlers.py::_clean_message_text` — strips labeled `<@U|label>` mentions and trailing `*Sent using*` blocks. Also resolves #2 (the same footer caused the is_code_task classifier to misfire).
 2. ~~Worktree code-task classifier is over-eager on `bot health *Sent using*`.~~ **Resolved** by #1 (the footer no longer reaches the classifier).
-3. **Heartbeat `last_activity` never advances past "Starting up..."** when the agent runs tools without producing text blocks. The on_text callback in `bot/agent.py:154-165` only fires for `TextBlock`s; tool-only turns leave the heartbeat stale. Consider also tagging activity from `on_message` (ToolUseBlock).
-4. **Generic-Exception handler in `bot/agent.py:200-229` swallows real error details.** Today's 401 surfaced as opaque "Command failed with exit code 1 / Check stderr output for details". Need to capture `repr(exc)` and any chained exception detail when `stderr_lines` is empty.
-5. **`thedotmack` plugin SessionEnd hook errors** (Bun not installed) pollute journalctl. Either install bun or remove the plugin from `/home/bot/.claude/plugins/`.
+3. ~~Heartbeat `last_activity` never advances past "Starting up..."~~ **Fixed** in `bot/progress.py::make_on_message` (PR #17) — any unrecognized ToolUseBlock now sets a generic "Running &lt;tool&gt;..." milestone, with `mcp__` prefix stripped. Also added a stopped-early rendering path so a partial-text fallback no longer ships under a green checkmark.
+4. ~~Generic-Exception handler in `bot/agent.py` swallows real error details.~~ **Fixed** in commit 8b82321 — `_format_error_detail` now captures `repr(exc)`, chained `__cause__` / `__context__`, and adds a "DIAGNOSTIC" hint for the empty-stderr / "Check stderr output for details" signature. Regression coverage in `tests/test_agent_error_detail.py`.
+5. ~~`thedotmack` plugin SessionEnd hook errors pollute journalctl.~~ **Resolved** on 2026-04-27 by `claude plugin uninstall claude-mem@thedotmack --scope user` on `superbot-vm`. The plugin had been installed at user scope but never actually fired in headless `claude --print` mode, so no journal pollution was observed in the 14 days before removal — uninstalled to eliminate the latent risk.
 
 ## VM firewall policy (mic_transformer)
 
