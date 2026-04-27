@@ -208,12 +208,15 @@ def register(app: AsyncApp) -> None:
         task_started_at = __import__("time").time()
 
         async def result_cb(result: dict):
-            # Stop heartbeat: finish() for normal completion, stop() for errors
+            # Stop heartbeat: finish() for normal completion, stop() for errors.
+            # When the SDK reported success but produced no final text, mark the
+            # heartbeat as stopped_early so the user sees a warning instead of a
+            # green checkmark.
             error_subtypes = {"error_timeout", "error_cancelled", "error_internal"}
             if result.get("subtype") in error_subtypes:
                 await heartbeat.stop()
             else:
-                await heartbeat.finish()
+                await heartbeat.finish(stopped_early=progress.is_stopped_early(result))
             # Persist session + CWD for thread continuity
             if result.get("session_id"):
                 session_map.set(channel, thread_ts, result["session_id"], cwd=worktree_path_val)

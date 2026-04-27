@@ -22,6 +22,18 @@ _WRITE_TOOLS = {"Edit", "Write", "MultiEdit"}
 PR_URL_RE = re.compile(r"https://github\.com/[^\s>]+/pull/\d+")
 
 
+def _pretty_tool_name(name: str) -> str:
+    """Make a tool name readable for the heartbeat.
+
+    MCP tools come through as ``mcp__<server>__<tool>`` -- strip the prefix
+    and turn underscores into spaces so the heartbeat shows
+    "Running mic-transformer eyemed status..." instead of the raw id.
+    """
+    if name.startswith("mcp__"):
+        name = name[len("mcp__"):]
+    return name.replace("__", " ").replace("_", " ")
+
+
 async def post_started(
     client, channel: str, thread_ts: str, task_text: str
 ) -> dict | None:
@@ -85,6 +97,10 @@ def make_on_message(client, channel: str, thread_ts: str, progress_msg: dict | N
             milestone = "Committing changes..."
         elif any(t in _READ_TOOLS for t in tools):
             milestone = "Reading files..."
+        elif tools:
+            # Generic fallback so heartbeat last_activity advances off
+            # "Starting up..." even when the agent uses MCP / unrecognized tools.
+            milestone = f"Running {_pretty_tool_name(tools[0])}..."
 
         if milestone is not None and milestone != last_milestone:
             last_milestone = milestone
@@ -124,6 +140,21 @@ def format_elapsed(duration_s: int) -> str:
     return f"{minutes}m {seconds}s"
 
 
+def is_stopped_early(result: dict) -> bool:
+    """True when the SDK reported success but produced no final assistant text.
+
+    The post-result code paints this case differently (warning emoji,
+    "Stopped early" footer) so users don't read a mid-sentence partial as
+    a real answer.
+    """
+    error_subtypes = {"error_timeout", "error_cancelled", "error_internal"}
+    if result.get("subtype", "") in error_subtypes:
+        return False
+    if result.get("result"):
+        return False
+    return bool(result.get("partial_texts"))
+
+
 async def post_result(
     client, channel: str, thread_ts: str, result: dict, is_code_task: bool,
     duration_s: int | None = None,
@@ -131,6 +162,7 @@ async def post_result(
     """Post the final result message to the Slack thread."""
     subtype = result.get("subtype", "")
     error_subtypes = {"error_timeout", "error_cancelled", "error_internal"}
+    stopped_early = is_stopped_early(result)
 
     if subtype in error_subtypes:
         msg = _format_error(
@@ -138,6 +170,13 @@ async def post_result(
             result.get("result", "") or "",
             result.get("partial_texts", []),
             task_text=result.get("task_text", ""),
+        )
+    elif stopped_early:
+        partial = result.get("partial_texts", [])[-1]
+        msg = (
+            ":warning: *Stopped early* — the agent did not produce a final answer. "
+            "Last partial output:\n\n"
+            f"{partial}"
         )
     else:
         msg = _format_completion(
@@ -156,6 +195,8 @@ async def post_result(
         elapsed = format_elapsed(duration_s)
         if subtype in error_subtypes:
             msg += f"\n\n_Failed after {elapsed}_"
+        elif stopped_early:
+            msg += f"\n\n_Stopped early after {elapsed}_"
         else:
             msg += f"\n\n_Completed in {elapsed}_"
 

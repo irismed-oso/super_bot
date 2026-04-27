@@ -63,11 +63,16 @@ class Heartbeat:
                 pass
             self._task = None
 
-    async def finish(self) -> None:
+    async def finish(self, stopped_early: bool = False) -> None:
         """Stop the heartbeat and edit the progress message to show completion.
 
-        Edits the message one final time to show ':white_check_mark: Completed in Xm Ys'.
-        Then stops the timer. Idempotent -- if already stopped, skips the edit.
+        Edits the message one final time. With ``stopped_early=False`` (default)
+        shows ':white_check_mark: Completed in Xm Ys'. With ``stopped_early=True``
+        shows ':warning: Stopped early in Xm Ys' -- used when the SDK reported
+        success but the agent never produced a final assistant text, so the
+        green checkmark would be misleading.
+
+        Idempotent -- if already stopped, skips the edit.
         """
         if self._stopped:
             return
@@ -75,14 +80,21 @@ class Heartbeat:
 
         if self._progress_msg and self._client:
             elapsed = format_elapsed(int(time.time() - self._started_at))
-            text = f":white_check_mark: Completed in {elapsed}"
+            if stopped_early:
+                text = f":warning: Stopped early in {elapsed}"
+            else:
+                text = f":white_check_mark: Completed in {elapsed}"
             try:
                 await self._client.chat_update(
                     channel=self._progress_msg["channel"],
                     ts=self._progress_msg["ts"],
                     text=text,
                 )
-                log.info("heartbeat.finish_edited", elapsed=elapsed)
+                log.info(
+                    "heartbeat.finish_edited",
+                    elapsed=elapsed,
+                    stopped_early=stopped_early,
+                )
             except Exception:
                 log.warning("heartbeat.finish_edit_failed")
 
